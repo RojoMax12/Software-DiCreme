@@ -2,13 +2,12 @@
 
 class producto {
     public $id_producto;
-    public $nombre;
-    public $descripcion;
-    public $precio;
-    public $categoria;
+    public $id_categoria;
+    public $id_formato;
+    public $id_bodega;
+    public $nombre_producto;
     public $fecha_emision;
     public $fecha_vencimiento;
-    public $tipo_litraje;
-    public $lugar_de_guardado;
+    public $precio;
 }
 

@@ -2,13 +2,12 @@
 
 class usuario_distribuidores {
     public $id_usuario_distribuidor;
+    public $id_rol;
+    public $rut_empresa;
     public $nombre_usuario;
     public $contrasena;
     public $correo_electronico;
     public $telefono;
     public $direccion;
     public $comuna;
-    public $rut_empresa;
-    public $id_rol;
-    public $id_despacho;
 }
