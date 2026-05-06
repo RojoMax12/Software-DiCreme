@@ -1,79 +1,14 @@
 <?php
-require_once 'stock.php';
 
-class Producto {
-    private $conn;
-    private $table = "producto";
-
-    public function __construct($db) {
-        $this->conn = $db;
-    }
-
-    public function createOrUpdate($nombre_producto, $categoria, $fecha_emision, $fecha_vencimiento, $tipo_litraje, $lugar_de_guardado, $precio, $cantidad_a_sumar = 1) {
-        try {
-            $this->conn->beginTransaction();
-
-            // 1. Verificar si el producto ya existe por nombre
-            $checkQuery = "SELECT id_producto FROM " . $this->table . " WHERE nombre_producto = :nombre LIMIT 1";
-            $checkStmt = $this->conn->prepare($checkQuery);
-            $checkStmt->execute([':nombre' => $nombre_producto]);
-            $producto_existente = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-            $stock = new Stock($this->conn);
-
-            if ($producto_existente) {
-                // CASO A: EL PRODUCTO YA EXISTE -> ACTUALIZAR STOCK
-                $id_producto = $producto_existente['id_producto'];
-                
-                // Asumiendo que en stock.php tienes un método llamado 'updateIncrement'
-                if (!$stock->updateIncrement($id_producto, $cantidad_a_sumar)) {
-                    throw new Exception("Error al incrementar el stock existente.");
-                }
-                
-                $mensaje = "Stock actualizado correctamente.";
-            } else {
-                // CASO B: EL PRODUCTO NO EXISTE -> CREAR TODO
-                $query = "INSERT INTO " . $this->table . " 
-                    (nombre_producto, categoria, fecha_emision, fecha_vencimiento, tipo_litraje, lugar_de_guardado, precio) 
-                    VALUES (:nombre_producto, :categoria, :fecha_emision, :fecha_vencimiento, :tipo_litraje, :lugar_de_guardado, :precio)
-                    RETURNING id_producto";
-                
-                $stmt = $this->conn->prepare($query);
-                $stmt->execute([
-                    ':nombre_producto' => $nombre_producto,
-                    ':categoria' => $categoria,
-                    ':fecha_emision' => $fecha_emision,
-                    ':fecha_vencimiento' => $fecha_vencimiento,
-                    ':tipo_litraje' => $tipo_litraje,
-                    ':lugar_de_guardado' => $lugar_de_guardado,
-                    ':precio' => $precio
-                ]);
-
-                $id_producto = $stmt->fetchColumn();
-
-                if (!$stock->create($cantidad_a_sumar, $id_producto)) {
-                    throw new Exception("Error al inicializar el stock del nuevo producto.");
-                }
-                
-                $mensaje = "Nuevo producto y stock creados.";
-            }
-
-            $this->conn->commit();
-            return true;
-
-        } catch (Exception $e) {
-            $this->conn->rollBack();
-            echo json_encode(["error_tecnico" => $e->getMessage()]); 
-            error_log("Error en Producto Model: " . $e->getMessage());
-            error_log("Error en Producto::createOrUpdate: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    public function delete($id_producto) {
-        $query = "DELETE FROM " . $this->table . " WHERE id_producto = :id_producto";
-        $stmt = $this->conn->prepare($query);
-        return $stmt->execute([':id_producto' => $id_producto]);
-    }
-
+class producto {
+    public $id_producto;
+    public $nombre;
+    public $descripcion;
+    public $precio;
+    public $categoria;
+    public $fecha_emision;
+    public $fecha_vencimiento;
+    public $tipo_litraje;
+    public $lugar_de_guardado;
 }
+

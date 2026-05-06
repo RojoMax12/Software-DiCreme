@@ -3,7 +3,8 @@ CREATE TABLE usuario_dicreme (
     id_usuario_dicreme SERIAL PRIMARY KEY,
     nombre_usuario VARCHAR(30) NOT NULL,
     contrasena VARCHAR(255) NOT NULL, -- Aumentado para seguridad
-    correo VARCHAR(50) NOT NULL
+    correo VARCHAR(50) NOT NULL,
+    id_rol INT NOT NULL REFERENCES rol(id_rol)
 );
 
 CREATE TABLE usuario_distribuidores (
@@ -14,7 +15,8 @@ CREATE TABLE usuario_distribuidores (
     telefono VARCHAR(30) NOT NULL,
     correo VARCHAR(50) NOT NULL,
     comuna VARCHAR(30) NOT NULL,
-    rut_empresa VARCHAR(30) NOT NULL
+    rut_empresa VARCHAR(30) NOT NULL,
+    id_rol INT NOT NULL REFERENCES rol(id_rol)
 );
 
 -- 2. Productos y Stock (Relación corregida)
@@ -44,7 +46,6 @@ CREATE TABLE pedido (
 
 CREATE TABLE rol (
     id_rol SERIAL PRIMARY KEY,
-    id_usuario INT REFERENCES usuario_dicreme(id_usuario_dicreme),
     nombre_rol VARCHAR(40)
 );
 
