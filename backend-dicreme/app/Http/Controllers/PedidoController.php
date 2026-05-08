@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Http\Controllers;
+use App\Services\PedidoServices;
+use Illuminate\Http\Request;
+
+class PedidoController extends Controller
+{
+    protected $pedidoService;
+
+    public function __construct(PedidoServices $pedidoService)
+    {
+        $this->pedidoService = $pedidoService;
+    }
+
+    public function index()
+    {
+        return response()->json($this->pedidoService->getAllPedidos());
+    }
+
+    public function show($id)
+    {
+        return response()->json($this->pedidoService->getPedidoById($id));
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'id_usuario_distribuidor' => 'required|integer|exists:usuarios_distribuidores,id',
+            'id_producto' => 'required|integer|exists:productos,id',
+            'fecha_creacion' => 'required|date',
+            'id_estado_pedido' => 'required|string|max:255',
+        ]);
+
+        return response()->json($this->pedidoService->createPedido($data), 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $data = $request->validate([
+            'id_usuario_distribuidor' => 'sometimes|required|integer|exists:usuarios_distribuidores,id',
+            'id_producto' => 'sometimes|required|integer|exists:productos,id',
+            'fecha_creacion' => 'sometimes|required|date',
+            'id_estado_pedido' => 'sometimes|required|string|max:255',
+        ]);
+
+        return response()->json($this->pedidoService->updatePedido($id, $data));
+    }
+
+    public function destroy($id)
+    {
+        return response()->json($this->pedidoService->deletePedido($id));
+    }
+}
