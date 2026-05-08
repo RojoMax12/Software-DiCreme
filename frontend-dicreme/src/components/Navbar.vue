@@ -6,7 +6,9 @@
     </div>
 
     <div class="actions">
-      <button class="btn-ingresar">INGRESAR</button>
+      <router-link to="/login">
+        <button class="btn-ingresar">INGRESAR</button>
+      </router-link>
     </div>
   </nav>
 </template>
