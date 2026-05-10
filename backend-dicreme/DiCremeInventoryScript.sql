@@ -45,25 +45,35 @@ CREATE TABLE usuario_distribuidores (
 CREATE TABLE bodega(
     ID SERIAL PRIMARY KEY,
     nombre_bodega VARCHAR(50), -- Se añade nombre para identificarla
-    ubicacion VARCHAR(100)
+    descripcion VARCHAR(255),
+    cantidad_de_elemtos INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE stock (
+    ID SERIAL PRIMARY KEY,
+    cantidad INT NOT NULL DEFAULT 0
+);
+
+
+CREATE TABLE lote (
+    ID SERIAL PRIMARY KEY,
+    ID_producto INT REFERENCES producto(ID),
+    ID_stock INT REFERENCES stock(ID),
+    ID_bodega INT REFERENCES bodega(ID),
+    cantidad_producto INT NOT NULL,
+    fecha_emision DATE NOT NULL,
+    fecha_vencimiento DATE NOT NULL,    
 );
 
 CREATE TABLE producto (
     ID SERIAL PRIMARY KEY,
     ID_categoria INT NOT NULL REFERENCES categoria(ID),
     ID_formato INT NOT NULL REFERENCES formato(ID),
-    ID_bodega INT NOT NULL REFERENCES bodega(ID),
     nombre_producto VARCHAR(100) NOT NULL,
-    fecha_emision DATE NOT NULL,
-    fecha_vencimiento DATE NOT NULL,
     precio INT NOT NULL
 );
 
-CREATE TABLE stock (
-    ID SERIAL PRIMARY KEY,
-    ID_producto INT UNIQUE REFERENCES producto(ID) ON DELETE CASCADE,
-    cantidad INT NOT NULL DEFAULT 0
-);
+
 
 -- 4. Pedidos y Logística
 CREATE TABLE pedido (
@@ -79,7 +89,9 @@ CREATE TABLE despacho (
     ID_pedido INT REFERENCES pedido(ID),
     direccion_entrega VARCHAR(255),
     persona_receptora VARCHAR(40),
-    fecha_de_entrega DATE
+    fecha_de_entrega DATE,
+    comuna VARCHAR(255),
+    estado_despacho VARCHAR(40)
 );
 
 CREATE TABLE pedido_producto ( 
@@ -95,7 +107,7 @@ CREATE TABLE venta (
     ID_pedido INT REFERENCES pedido(ID),
     fecha DATE DEFAULT CURRENT_DATE,
     numero_factura INT,
+    glosa VARCHAR(255),
     estado_pago VARCHAR(40),
-    tipo_producto VARCHAR(40),
     monto_total INT
 );

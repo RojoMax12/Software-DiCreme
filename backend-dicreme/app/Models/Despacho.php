@@ -16,6 +16,7 @@ class Despacho extends Model
         'comuna',
         'fecha_entrega',
         'persona_recibe',
+        'estado_despacho'
     ];
 
 }
