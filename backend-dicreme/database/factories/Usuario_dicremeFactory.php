@@ -20,7 +20,7 @@ class Usuario_dicremeFactory extends Factory
         return [
             'nombre_usuario' => $this->faker->userName(),
             'correo_electronico' => $this->faker->unique()->safeEmail(),
-            'contrasena' => bcrypt('password'), // Contraseña por defecto para pruebas
+            'contrasena' => 'password',
             // Selecciona un ID de la tabla de roles que ya fue poblada
             // SOLUCIÓN: Si existe un rol, toma su ID. Si no, crea uno nuevo.
             'id_rol' => \App\Models\Rol::whereIn('nombre_rol', ['Admin', 'Trabajador'])

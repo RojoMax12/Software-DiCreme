@@ -21,7 +21,7 @@ class Usuario_distribuidoresFactory extends Factory
             'id_rol' => \App\Models\Rol::where('nombre_rol', 'Distribuidor')->first()?->id,
             'rut_empresa' => $this->faker->unique()->numerify('########-#'),
             'nombre_empresa' => $this->faker->company(),
-            'contrasena' => bcrypt('password'), // Contraseña por defecto para pruebas
+            'contrasena' => 'password',
             'direccion' => $this->faker->address(),
             'telefono' => $this->faker->phoneNumber(),
             'correo_electronico' => $this->faker->unique()->safeEmail(),
