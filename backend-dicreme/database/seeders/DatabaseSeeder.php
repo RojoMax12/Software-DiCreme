@@ -25,6 +25,20 @@ class DatabaseSeeder extends Seeder
             \App\Models\Estado_pedido::firstOrCreate(['nombre_estado' => $estado]);
         }
 
+        # Crear un usuario admin si no existe
+        $adminRole = \App\Models\Rol::where('nombre_rol', 'Admin')->first();
+
+        if ($adminRole) {
+            \App\Models\Usuario_dicreme::firstOrCreate(
+                ['correo_electronico' => 'admin@dicreme.cl'],
+                [
+                    'nombre_usuario' => 'admin',
+                    'contrasena' => 'Admin1234',
+                    'id_rol' => $adminRole->id,
+                ]
+            );
+        }
+
         \App\Models\Usuario_dicreme::factory(10)->create();
         \App\Models\Usuario_distribuidores::factory(10)->create();
         \App\Models\Pedido::factory(20)->create();

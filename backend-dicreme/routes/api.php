@@ -1,7 +1,14 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BodegaController;
+use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\FormatoController;
+use App\Http\Controllers\LoteController;
+use App\Http\Controllers\Pedido_productoController;
 use App\Http\Controllers\RolController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\Usuario_dicremeController;
 use App\Http\Controllers\Usuario_distribuidoresController;
 use App\Http\Controllers\DespachoController;
@@ -62,6 +69,55 @@ Route::middleware('jwt.auth')->group(function () {
 	Route::post('/despachos', [DespachoController::class, 'store']);
 	Route::put('/despachos/{id}', [DespachoController::class, 'update']);
 	Route::delete('/despachos/{id}', [DespachoController::class, 'destroy']);
+
+	/* Rutas para el controlador de bodegas */
+	Route::get('/bodegas', [BodegaController::class, 'index']);
+	Route::get('/bodegas/{id}', [BodegaController::class, 'show']);
+	Route::post('/bodegas', [BodegaController::class, 'store']);
+	Route::put('/bodegas/{id}', [BodegaController::class, 'update']);
+	Route::delete('/bodegas/{id}', [BodegaController::class, 'destroy']);
+
+	/* Rutas para el controlador de categorias */
+	Route::get('/categorias', [CategoriaController::class, 'index']);
+	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
+	Route::post('/categorias', [CategoriaController::class, 'store']);
+	Route::put('/categorias/{id}', [CategoriaController::class, 'update']);
+	Route::delete('/categorias/{id}', [CategoriaController::class, 'destroy']);
+
+	/* Rutas para el controlador de formatos */
+	Route::get('/formatos', [FormatoController::class, 'index']);
+	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
+	Route::post('/formatos', [FormatoController::class, 'store']);
+	Route::put('/formatos/{id}', [FormatoController::class, 'update']);
+	Route::delete('/formatos/{id}', [FormatoController::class, 'destroy']);
+
+	/* Rutas para el controlador de lotes */
+	Route::get('/lotes', [LoteController::class, 'index']);
+	Route::get('/lotes/{id}', [LoteController::class, 'show']);
+	Route::post('/lotes', [LoteController::class, 'store']);
+	Route::put('/lotes/{id}', [LoteController::class, 'update']);
+	Route::delete('/lotes/{id}', [LoteController::class, 'destroy']);
+
+	/* Rutas para el controlador de pedido_producto */
+	Route::get('/pedido_producto', [Pedido_productoController::class, 'index']);
+	Route::get('/pedido_producto/{id}', [Pedido_productoController::class, 'show']);
+	Route::post('/pedido_producto', [Pedido_productoController::class, 'store']);
+	Route::put('/pedido_producto/{id}', [Pedido_productoController::class, 'update']);
+	Route::delete('/pedido_producto/{id}', [Pedido_productoController::class, 'destroy']);
+
+	/* Rutas para el controlador de productos */
+	Route::get('/productos', [ProductoController::class, 'index']);
+	Route::get('/productos/{id}', [ProductoController::class, 'show']);
+	Route::post('/productos', [ProductoController::class, 'store']);
+	Route::put('/productos/{id}', [ProductoController::class, 'update']);
+	Route::delete('/productos/{id}', [ProductoController::class, 'destroy']);
+
+	/* Rutas para el controlador de stocks */
+	Route::get('/stocks', [StockController::class, 'index']);
+	Route::get('/stocks/{id}', [StockController::class, 'show']);
+	Route::post('/stocks', [StockController::class, 'store']);
+	Route::put('/stocks/{id}', [StockController::class, 'update']);
+	Route::delete('/stocks/{id}', [StockController::class, 'destroy']);
 
 	/* Rutas para el controlador de ventas */
 	Route::get('/ventas', [VentaController::class, 'index']);

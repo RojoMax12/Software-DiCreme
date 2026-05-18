@@ -6,6 +6,12 @@ use App\Models\Bodega;
 # Repositorio Bodega
 class BodegaRepository
 {
+    # Create
+    public function createBodega($data)
+    {
+        return Bodega::create($data);
+    }
+
     # Geters 
     public function getAllBodegas()
     {
@@ -37,6 +43,24 @@ class BodegaRepository
     }
 
     # Seters
-    # Pendientes hasta completar las relaciones entre los modelos.
+    public function updateBodega($id, $data)
+    {
+        $bodega = Bodega::find($id);
+        if ($bodega) {
+            $bodega->update($data);
+            return $bodega;
+        }
+        return null;
+    }
 
+    # Delete 
+    public function deleteBodegaById($id)
+    {
+        $bodega = Bodega::find($id);
+        if ($bodega) {
+            $bodega->delete();
+            return true;
+        }
+        return false;
+    }
 }
