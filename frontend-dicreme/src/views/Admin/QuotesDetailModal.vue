@@ -23,7 +23,6 @@
         </div>
 
         <div class="modal-body-layout">
-          <!-- Columna Izquierda: Tabla de Productos -->
           <div class="products-column">
             <div class="table-wrapper">
               <table class="products-table">
@@ -53,7 +52,6 @@
             </div>
           </div>
 
-          <!-- Columna Derecha: Información de la Cotización -->
           <div class="info-column">
             <div class="order-meta">
               <div class="meta-item">
@@ -89,9 +87,7 @@
           </div>
         </div>
 
-        <!-- Nueva sección inferior -->
         <div class="modal-footer-layout">
-          <!-- Cuadro Izquierdo: Descuento General -->
           <div class="discount-card">
             <div class="card-header">
               <h4 class="card-title">Descuento general</h4>
@@ -157,7 +153,6 @@
               <ChevronDown :size="20" class="text-gray transition-icon" :class="{ rotated: isAdvancedOpen }" />
             </div>
 
-            <!-- Lista de Descuento Avanzado (Desplegable) -->
             <div v-if="isAdvancedOpen" class="advanced-list">
               <div v-for="product in products" :key="product.id" class="advanced-item">
                 <div class="adv-col">
@@ -195,7 +190,6 @@
             </div>
           </div>
 
-          <!-- Cuadro Derecho: Resumen de montos -->
           <div class="totals-card">
             <div class="card-header">
               <h4 class="card-title">Resumen de montos</h4>
@@ -230,16 +224,40 @@
             </div>
           </div>
         </div>
+
+        <div class="modal-final-actions">
+          <button class="btn-modal btn-cancel" @click="showCancelConfirm = true">
+            <XCircle :size="18" />
+            <span>Cancelar Cotización</span>
+          </button>
+          <button class="btn-modal btn-complete" @click="$emit('complete')">
+            <CheckCircle2 :size="18" />
+            <span>Completar Cotización</span>
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- Cancel Confirmation Overlay -->
+    <ConfirmModal
+      v-if="showCancelConfirm"
+      type="cancel"
+      :order-id="orderId"
+      :is-success="isCancelSuccess"
+      @confirm="handleCancelConfirm"
+      @cancel="showCancelConfirm = false"
+      @accept="handleAcceptCancel"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import ConfirmModal from '../../components/ConfirmModal.vue';
 import { 
   X, Upload, Building2, User, Calendar, 
-  ClipboardList, Settings2, ChevronDown, Eraser 
+  ClipboardList, Settings2, ChevronDown, Eraser,
+  XCircle, CheckCircle2, ClockAlert
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -250,12 +268,23 @@ const props = defineProps<{
   time?: string;
 }>();
 
-defineEmits(['close']);
+const emit = defineEmits(['close', 'cancel', 'complete']);
 
-// Reactive products list - STARTING EMPTY AS REQUESTED
-const products = ref([]);
+const showCancelConfirm = ref(false);
+const isCancelSuccess = ref(false);
 
-// General Discount Logic
+const handleCancelConfirm = () => {
+  isCancelSuccess.value = true;
+};
+
+const handleAcceptCancel = () => {
+  showCancelConfirm.value = false;
+  isCancelSuccess.value = false;
+  emit('cancel');
+};
+
+const products = ref<any[]>([]);
+
 const discountType = ref<'percentage' | 'fixed'>('percentage');
 const discountInput = ref(0);
 const isAdvancedOpen = ref(false);
@@ -909,5 +938,50 @@ const formatNumber = (num: number) => {
   font-size: 1.5rem;
   font-weight: 900;
   color: #322c44;
+}
+
+.modal-final-actions {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.btn-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.btn-cancel {
+  background-color: #fff5f5;
+  color: #fa5252;
+  border: 1px solid #ffc9c9;
+}
+
+.btn-cancel:hover {
+  background-color: #ffe3e3;
+  border-color: #ffa8a8;
+}
+
+.btn-complete {
+  background-color: #ebfbee;
+  color: #2b8a3e;
+  border: 1px solid #8ce99a;
+}
+
+.btn-complete:hover {
+  background-color: #d3f9d8;
+  border-color: #51cf66;
 }
 </style>
