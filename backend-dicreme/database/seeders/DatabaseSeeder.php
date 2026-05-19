@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +14,38 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $roles = ['Admin', 'Trabajador', 'Distribuidor'];
+        $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado'];
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        foreach ($roles as $rol) {
+            \App\Models\Rol::firstOrCreate(['nombre_rol' => $rol]);
+        }
+
+        foreach ($estadosPedido as $estado) {
+            \App\Models\Estado_pedido::firstOrCreate(['nombre_estado' => $estado]);
+        }
+
+        # Crear un usuario admin si no existe
+        $adminRole = \App\Models\Rol::where('nombre_rol', 'Admin')->first();
+
+        if ($adminRole) {
+            \App\Models\Usuario_dicreme::firstOrCreate(
+                ['correo_electronico' => 'admin@dicreme.cl'],
+                [
+                    'nombre_usuario' => 'admin',
+                    'contrasena' => 'Admin1234',
+                    'id_rol' => $adminRole->id,
+                ]
+            );
+        }
+
+        \App\Models\Usuario_dicreme::factory(10)->create();
+        \App\Models\Usuario_distribuidores::factory(10)->create();
+        \App\Models\Pedido::factory(20)->create();
+        \App\Models\Venta::factory(20)->create();
+        \App\Models\Despacho::factory(20)->create();
     }
 }
+
+
+

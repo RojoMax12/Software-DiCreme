@@ -31,6 +31,7 @@ class DespachoController extends Controller
             'fecha_entrega' => 'required|date',
             'persona_recibe' => 'required|string|max:255',
             'comuna' => 'required|string|max:255',
+            'estado_despacho' => 'required|string|max:40',
         ]);
         return response()->json($this->despachoServices->createDespacho($data));
     }
@@ -43,6 +44,7 @@ class DespachoController extends Controller
             'fecha_entrega' => 'required|date',
             'persona_recibe' => 'required|string|max:255',
             'comuna' => 'required|string|max:255',
+            'estado_despacho' => 'required|string|max:40',
         ]);
         return response()->json($this->despachoServices->updateDespacho($id, $data));
     }

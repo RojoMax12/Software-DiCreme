@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('id_pedido');
             $table->string('numero_factura')->unique();
-            $table->date('fecha');
+            $table->date('fecha_venta');
             $table->string('glosa');
             $table->string('estado_pago');
-            $table->integer('total');
+            $table->integer('monto_total');
             $table->timestamps();
         });
     }

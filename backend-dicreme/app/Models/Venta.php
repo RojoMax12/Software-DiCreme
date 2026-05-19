@@ -3,6 +3,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Venta extends Model
 {
@@ -18,5 +19,15 @@ class Venta extends Model
         'estado_pago',
         'monto_total'
     ];
+
+    protected $casts = [
+        'fecha_venta' => 'date',
+        'monto_total' => 'integer',
+    ];
+
+    public function pedido(): HasOne
+    {
+        return $this->hasOne(Pedido::class, 'id_pedido');
+    }
 
 }
