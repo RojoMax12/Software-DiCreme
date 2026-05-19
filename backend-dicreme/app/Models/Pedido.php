@@ -3,6 +3,9 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Pedido extends Model
 {
@@ -11,10 +14,43 @@ class Pedido extends Model
     protected $table = 'pedidos';
 
     protected $fillable = [
-        'id_usuario_distribuidor',
+        'id_distribuidor',
         'id_estado_pedido',
         'id_usuario_dicreme',
         'fecha_creacion',
     ];
 
+    protected $casts = [
+        'fecha_creacion' => 'date',
+    ];
+
+    public function distribuidor(): BelongsTo
+    {
+        return $this->belongsTo(Usuario_distribuidores::class, 'id_distribuidor');
+    }
+
+    public function usuarioDicreme(): BelongsTo
+    {
+        return $this->belongsTo(Usuario_dicreme::class, 'id_usuario_dicreme');
+    }
+
+    public function estadoPedido(): HasOne
+    {
+        return $this->HasOne(Estado_pedido::class, 'id_estado_pedido');
+    }
+
+    public function despacho(): HasOne
+    {
+        return $this->hasOne(Despacho::class, 'id_pedido');
+    }
+
+    public function venta(): HasOne
+    {
+        return $this->hasOne(Venta::class, 'id_pedido');
+    }
+
+    public function pedidoProductos(): HasMany
+    {
+        return $this->hasMany(Pedido_producto::class, 'id_pedido');
+    }
 }
