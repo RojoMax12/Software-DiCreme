@@ -1,6 +1,6 @@
-//datos de prueba
-const productos = [
-  { id: 1, nombre: 'Menta Chips', tipo: 'Premium' },
-  { id: 2, nombre: 'Limón Menta Jengibre', tipo: 'Vegano'},
-  { id: 3, nombre: 'Cookies and Cream', tipo: 'Premium' },
-]
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+
+</head>
