@@ -31,6 +31,16 @@ const router = createRouter({
       name: 'forgot-password',
       component: ForgotPasswordView,
       meta: { hideNavbar: true }
+    },
+    {
+      path: '/admin/quotes',
+      name: 'admin-quotes',
+      component: () => import('../views/Admin/Quotes.vue')
+    },
+    {
+      path: '/admin/orders',
+      name: 'admin-orders',
+      component: () => import('../views/Admin/Orders.vue')
     }
 
   ],
