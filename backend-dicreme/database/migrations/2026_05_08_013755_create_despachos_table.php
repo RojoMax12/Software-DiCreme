@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('comuna');
             $table->date('fecha_entrega');
             $table->string('persona_recibe');
+            $table->string('estado_despacho');
             $table->timestamps();
         });
     }

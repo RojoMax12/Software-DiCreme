@@ -26,10 +26,10 @@ class PedidoController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'id_usuario_distribuidor' => 'required|integer|exists:usuarios_distribuidores,id',
-            'id_producto' => 'required|integer|exists:productos,id',
+            'id_distribuidor' => 'required|integer|exists:usuarios_distribuidores,id',
             'fecha_creacion' => 'required|date',
-            'id_estado_pedido' => 'required|string|max:255',
+            'id_estado_pedido' => 'required|integer|exists:estados_pedido,id',
+            'id_usuario_dicreme' => 'required|integer|exists:usuarios_dicreme,id',
         ]);
 
         return response()->json($this->pedidoService->createPedido($data), 201);
@@ -38,10 +38,10 @@ class PedidoController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
-            'id_usuario_distribuidor' => 'sometimes|required|integer|exists:usuarios_distribuidores,id',
-            'id_producto' => 'sometimes|required|integer|exists:productos,id',
+            'id_distribuidor' => 'sometimes|required|integer|exists:usuarios_distribuidores,id',
             'fecha_creacion' => 'sometimes|required|date',
-            'id_estado_pedido' => 'sometimes|required|string|max:255',
+            'id_estado_pedido' => 'sometimes|required|integer|exists:estados_pedido,id',
+            'id_usuario_dicreme' => 'sometimes|required|integer|exists:usuarios_dicreme,id',
         ]);
 
         return response()->json($this->pedidoService->updatePedido($id, $data));

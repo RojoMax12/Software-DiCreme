@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('usuarios_dicreme', function (Blueprint $table) {
             $table->id();
+            $table->string('nombre_usuario')->unique();
+            $table->string('correo_electronico')->unique();
+            $table->string('contrasena');
+            $table->unsignedBigInteger('id_rol');
             $table->timestamps();
         });
     }
