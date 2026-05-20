@@ -27,11 +27,12 @@ export const authService = {
     }
   },
 
-  async login(correo: string, contrasena: string) {
+  async login(correo: string, contrasena: string, tipoUsuario: string = 'distribuidor') {
     try {
       const response = await api.post('/auth/login', {
         correo_electronico: correo,
-        contrasena: contrasena
+        contrasena: contrasena,
+        tipo_usuario: tipoUsuario
       });
       return response.data;
     } catch (error) {
