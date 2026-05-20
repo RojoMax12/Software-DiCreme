@@ -1,14 +1,30 @@
 <script setup lang="ts">
 import { X, Trash2, Plus, Minus, ShoppingCart } from 'lucide-vue-next';
+import { computed } from 'vue';
 
-// 1. Recibimos la lista de productos agregados desde el Home
-defineProps<{
+// Recibimos la lista de productos agregados desde el Home
+const props = defineProps<{
   isOpen: boolean;
   cartItems: any[]; 
 }>();
 
-// 2. Definimos los eventos para actualizar cantidades o eliminar ítems desde el carrito
-const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
+// Definimos los eventos incluyendo 'checkout' para que el HomeView procese la cotización
+const emit = defineEmits(['close', 'update-quantity', 'remove-item', 'checkout']);
+
+// LÓGICA: Calcula el valor total de los productos en el carrito dinámicamente
+const cartTotal = computed(() => {
+  const totalRaw = props.cartItems.reduce((sum, item) => {
+    // Si el precio viene como String (ej: "$45.990"), limpiamos caracteres no numéricos
+    const cleanPrice = typeof item.price === 'string' 
+      ? Number(item.price.replace(/[^0-9]/g, '')) 
+      : Number(item.price);
+      
+    return sum + (cleanPrice * item.quantity);
+  }, 0);
+
+  // Retorna el string formateado como moneda en Chile (ej: $91.980)
+  return `$${totalRaw.toLocaleString('es-CL')}`;
+});
 </script>
 
 <template>
@@ -69,7 +85,12 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
           </div>
 
           <div class="cart-footer">
-            <button class="btn-checkout">
+            <div v-if="cartItems.length > 0" class="total-row">
+              <span class="total-label">Total estimado:</span>
+              <span class="total-amount">{{ cartTotal }}</span>
+            </div>
+
+            <button class="btn-checkout" @click="emit('checkout')">
               Finalizar Cotización
             </button>
           </div>
@@ -103,9 +124,9 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
 
 .cart-header {
   background-color: var(--DC-pink);
-  padding: 30px 20px;
-  border-bottom-left-radius: 40px;
-  border-bottom-right-radius: 40px;
+  padding: 15px 20px;
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -123,14 +144,14 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
 
 .header-info {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
 }
 
 .cart-title {
   color: white;
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 800;
   margin: 0;
 }
@@ -157,7 +178,7 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
 .cart-item {
   display: flex;
   gap: 12px;
-  background-color: #f5f4f5; /* El gris suave de fondo de tus tarjetas del mockup */
+  background-color: #f5f4f5;
   padding: 12px;
   border-radius: 15px;
   align-items: center;
@@ -215,7 +236,6 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
   color: var(--DC-gray);
 }
 
-/* Selector de cantidad compacto tipo "- 1 +" */
 .item-quantity-selector {
   display: flex;
   align-items: center;
@@ -242,10 +262,30 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
   text-align: center;
 }
 
-/* --- FOOTER --- */
+/* --- FOOTER Y SECCIÓN TOTAL --- */
 .cart-footer {
   padding: 20px;
   border-top: 1px solid #eee;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 5px;
+}
+
+.total-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #555;
+}
+
+.total-amount {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--DC-pink);
 }
 
 .btn-checkout {
@@ -258,6 +298,11 @@ const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
   font-weight: bold;
   font-size: 1rem;
   cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-checkout:hover {
+  background-color: var(--DC-gray);
 }
 
 /* ANIMACIONES */

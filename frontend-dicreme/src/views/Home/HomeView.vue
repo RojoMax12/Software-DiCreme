@@ -170,6 +170,7 @@ const fetchIceCreams = async () => {
         grouped[flavorName].price1l = formattedPrice;
       }
     });
+    
     // Convertimos el objeto agrupado a un array para usar en la UI
     iceCreams.value = Object.values(grouped);
   } catch (error) {
