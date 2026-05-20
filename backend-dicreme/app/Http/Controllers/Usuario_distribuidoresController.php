@@ -27,7 +27,7 @@ class Usuario_distribuidoresController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'correo' => 'required|string|email|max:255|unique:usuarios_distribuidores',
+            'correo_electronico' => 'required|string|email|max:255|unique:usuarios_distribuidores',
             'telefono' => 'required|string|max:20',
             'direccion' => 'required|string|max:255',
             'comuna' => 'required|string|max:255',
@@ -43,7 +43,7 @@ class Usuario_distribuidoresController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
-            'correo' => 'required|string|email|max:255|unique:usuarios_distribuidores,correo_electronico,'.$id,
+            'correo_electronico' => 'required|string|email|max:255|unique:usuarios_distribuidores,correo_electronico,'.$id,
             'telefono' => 'required|string|max:20',
             'direccion' => 'required|string|max:255',
             'comuna' => 'required|string|max:255',
