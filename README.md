@@ -20,7 +20,7 @@ El backend incluye un script SQL llamado `DiCremeInventoryScript.sql` con sintax
 Abre la carpeta raíz del repositorio:
 
 ```bash
-cd /Users/fescobedo2025/Documents/GitHub/Software-DiCreme
+cd /Software-DiCreme
 ```
 
 ## 2. Levantar el backend

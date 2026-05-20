@@ -29,7 +29,7 @@ class Usuario_dicremeController extends Controller
     {
         $data = $request->validate([
             'nombre_usuario' => 'required|string|max:255',
-            'correo' => 'required|string|email|max:255|unique:usuarios_dicreme',
+            'correo_electronico' => 'required|string|email|max:255|unique:usuarios_dicreme',
             'contrasena' => 'required|string|min:8',
             'id_rol' => 'required|integer|exists:roles,id',
         ]);
@@ -41,7 +41,7 @@ class Usuario_dicremeController extends Controller
     {
         $data = $request->validate([
             'nombre_usuario' => 'sometimes|required|string|max:255',
-            'correo' => 'sometimes|required|string|email|max:255|unique:usuarios_dicreme,correo,' . $id,
+            'correo_electronico' => 'sometimes|required|string|email|max:255|unique:usuarios_dicreme,correo_electronico,' . $id,
             'contrasena' => 'sometimes|required|string|min:8',
             'id_rol' => 'sometimes|required|integer|exists:roles,id',
         ]);
