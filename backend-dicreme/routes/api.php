@@ -26,8 +26,42 @@ Route::prefix('auth')->group(function () {
 		Route::post('/logout', [AuthController::class, 'logout']);
 	});
 });
+	/* Rutas para el controlador de usuarios dicreme y distribuidores */
+	Route::post('/usuarios_dicreme', [Usuario_dicremeController::class, 'store']);      
+	Route::post('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'store']); 
+
+	/* Rutas para el controlador de categorias */
+	Route::get('/categorias', [CategoriaController::class, 'index']);
+	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
+	
+
+	/* Rutas para el controlador de formatos */
+	Route::get('/formatos', [FormatoController::class, 'index']);
+	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
+
+
+	/* Rutas para el controlador de productos */
+	Route::get('/productos', [ProductoController::class, 'index']);
+	Route::get('/productos/{id}', [ProductoController::class, 'show']);
+
 
 Route::middleware('jwt.auth')->group(function () {
+
+	/* Rutas para el controlador de categorias */
+	Route::post('/categorias', [CategoriaController::class, 'store']);
+	Route::put('/categorias/{id}', [CategoriaController::class, 'update']);
+	Route::delete('/categorias/{id}', [CategoriaController::class, 'destroy']);
+
+	/* Rutas para el controlador de formatos */
+	Route::post('/formatos', [FormatoController::class, 'store']);
+	Route::put('/formatos/{id}', [FormatoController::class, 'update']);
+	Route::delete('/formatos/{id}', [FormatoController::class, 'destroy']);
+
+	/* Rutas para el controlador de productos */
+	Route::post('/productos', [ProductoController::class, 'store']);
+	Route::put('/productos/{id}', [ProductoController::class, 'update']);
+	Route::delete('/productos/{id}', [ProductoController::class, 'destroy']);
+
 	/* Rutas para el controlador de roles */
 	Route::get('/roles', [RolController::class, 'index']);          // Listar, Index es el nombre de la función que esta en el controlador   
 	Route::get('/roles/{id}', [RolController::class, 'show']);      // Ver uno
@@ -37,15 +71,13 @@ Route::middleware('jwt.auth')->group(function () {
 
 	/*Rutas para el controlador de usuarios distribuidores */
 	Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index']);      
-	Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show']);      
-	Route::post('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'store']);        
+	Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show']);             
 	Route::put('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update']);    
 	Route::delete('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'destroy']); 
 
 	/* Rutas para el controlador de usuarios dicreme */
 	Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
-	Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);      
-	Route::post('/usuarios_dicreme', [Usuario_dicremeController::class, 'store']);        
+	Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
 	Route::put('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'update']);    
 	Route::delete('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'destroy']); 
 
@@ -77,20 +109,7 @@ Route::middleware('jwt.auth')->group(function () {
 	Route::put('/bodegas/{id}', [BodegaController::class, 'update']);
 	Route::delete('/bodegas/{id}', [BodegaController::class, 'destroy']);
 
-	/* Rutas para el controlador de categorias */
-	Route::get('/categorias', [CategoriaController::class, 'index']);
-	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
-	Route::post('/categorias', [CategoriaController::class, 'store']);
-	Route::put('/categorias/{id}', [CategoriaController::class, 'update']);
-	Route::delete('/categorias/{id}', [CategoriaController::class, 'destroy']);
-
-	/* Rutas para el controlador de formatos */
-	Route::get('/formatos', [FormatoController::class, 'index']);
-	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
-	Route::post('/formatos', [FormatoController::class, 'store']);
-	Route::put('/formatos/{id}', [FormatoController::class, 'update']);
-	Route::delete('/formatos/{id}', [FormatoController::class, 'destroy']);
-
+	
 	/* Rutas para el controlador de lotes */
 	Route::get('/lotes', [LoteController::class, 'index']);
 	Route::get('/lotes/{id}', [LoteController::class, 'show']);
@@ -105,12 +124,6 @@ Route::middleware('jwt.auth')->group(function () {
 	Route::put('/pedido_producto/{id}', [Pedido_productoController::class, 'update']);
 	Route::delete('/pedido_producto/{id}', [Pedido_productoController::class, 'destroy']);
 
-	/* Rutas para el controlador de productos */
-	Route::get('/productos', [ProductoController::class, 'index']);
-	Route::get('/productos/{id}', [ProductoController::class, 'show']);
-	Route::post('/productos', [ProductoController::class, 'store']);
-	Route::put('/productos/{id}', [ProductoController::class, 'update']);
-	Route::delete('/productos/{id}', [ProductoController::class, 'destroy']);
 
 	/* Rutas para el controlador de stocks */
 	Route::get('/stocks', [StockController::class, 'index']);
