@@ -14,7 +14,7 @@ class BodegaServices
 		$this->bodegaRepository = $bodegaRepository;
 	}
 
-     # Creators
+    # Creators
 	public function createBodega($data)
 	{
 		return $this->bodegaRepository->createBodega($data);
