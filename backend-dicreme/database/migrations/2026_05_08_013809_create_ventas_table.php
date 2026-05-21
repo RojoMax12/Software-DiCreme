@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('ventas', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_pedido');
+            $table->unsignedBigInteger('id_cotizacion');
             $table->string('numero_factura')->unique();
             $table->date('fecha_venta');
             $table->string('glosa');

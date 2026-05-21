@@ -12,7 +12,7 @@ class Venta extends Model
     protected $table = 'ventas';
 
     protected $fillable = [
-        'id_pedido',
+        'id_cotizacion',
         'numero_factura',
         'fecha_venta',
         'glosa',
@@ -25,9 +25,9 @@ class Venta extends Model
         'monto_total' => 'integer',
     ];
 
-    public function pedido(): HasOne
+    public function cotizacion(): HasOne
     {
-        return $this->hasOne(Pedido::class, 'id_pedido');
+        return $this->hasOne(Cotizacion::class, 'id_cotizacion');
     }
 
 }
