@@ -14,7 +14,7 @@ class Pedido extends Model
     protected $table = 'pedidos';
 
     protected $fillable = [
-        'id_distribuidor',
+        'id_cotizacion',
         'id_estado_pedido',
         'id_usuario_dicreme',
         'fecha_creacion',
@@ -24,10 +24,6 @@ class Pedido extends Model
         'fecha_creacion' => 'date',
     ];
 
-    public function distribuidor(): BelongsTo
-    {
-        return $this->belongsTo(Usuario_distribuidores::class, 'id_distribuidor');
-    }
 
     public function usuarioDicreme(): BelongsTo
     {
@@ -52,5 +48,10 @@ class Pedido extends Model
     public function pedidoProductos(): HasMany
     {
         return $this->hasMany(Pedido_producto::class, 'id_pedido');
+    }
+
+    public function cotizacion(): BelongsTo
+    {
+        return $this->belongsTo(Cotizacion::class, 'id_cotizacion');
     }
 }
