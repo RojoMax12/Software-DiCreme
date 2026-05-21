@@ -1,16 +1,21 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Services\Cotizacion_productoServices;
+use App\Services\CotizacionServices;
 use Illuminate\Http\Request;
 
-class Cotizacion_producto extends Controller
+class CotizacionController extends Controller
 {
-    protected $cotizacionProductoServices;
+    protected $cotizacionServices;
 
-    public function __construct(Cotizacion_productoServices $cotizacionProductoServices)
+    public function __construct(CotizacionServices $cotizacionServices)
     {
-        $this->cotizacionProductoServices = $cotizacionProductoServices;
+        $this->cotizacionServices = $cotizacionServices;
+    }
+
+    public function index()
+    {
+        return response()->json($this->cotizacionServices->getAllCotizaciones());
     }
 
     public function store(Request $request)
@@ -22,12 +27,12 @@ class Cotizacion_producto extends Controller
             'precio_unitario_venta' => 'required|numeric',
         ]);
 
-        return response()->json($this->cotizacionProductoServices->createCotizacionProducto($data), 201);
+        return response()->json($this->cotizacionServices->createCotizacion($data), 201);
     }
 
     public function show($id)
     {
-        return response()->json($this->cotizacionProductoServices->getCotizacionProductoById($id));
+        return response()->json($this->cotizacionServices->getCotizacionById($id));
     }
 
     public function update(Request $request, $id)
@@ -39,11 +44,11 @@ class Cotizacion_producto extends Controller
             'precio_unitario_venta' => 'sometimes|required|numeric',
         ]);
 
-        return response()->json($this->cotizacionProductoServices->updateCotizacionProducto($id, $data));
+        return response()->json($this->cotizacionServices->updateCotizacion($id, $data));
     }
 
     public function destroy($id)
     {
-        return response()->json($this->cotizacionProductoServices->deleteCotizacionProducto($id));
+        return response()->json($this->cotizacionServices->deleteCotizacion($id));
     }
 }

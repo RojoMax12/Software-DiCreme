@@ -40,6 +40,8 @@ Route::prefix('auth')->group(function () {
 	Route::post('/cotizacion_producto', [Cotizacion_productoController::class, 'store']);
 	Route::put('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'update']);
 	Route::delete('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'destroy']);
+	Route::get('/cotizacion_producto/cotizacion/{idCotizacion}', [Cotizacion_productoController::class, 'getByCotizacionId']);
+	Route::get('/cotizacion_producto/producto/{idProducto}', [Cotizacion_productoController::class, 'getByProductoId']);
 
 	/* Rutas para el controlador de usuarios dicreme y distribuidores */
 	Route::post('/usuarios_dicreme', [Usuario_dicremeController::class, 'store']);      

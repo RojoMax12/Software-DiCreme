@@ -41,4 +41,9 @@ class Cotizacion_productoServices
     {
         return $this->cotizacionProductoRepository->deleteCotizacionProducto($id);
     }
+
+    public function getAllCotizacionProductos()
+    {
+        return $this->cotizacionProductoRepository->getAllCotizacionProductos();
+    }
 }

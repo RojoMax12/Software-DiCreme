@@ -31,4 +31,9 @@ class CotizacionServices
     {
         return $this->cotizacionRepository->deleteCotizacion($id);
     }
+
+    public function getAllCotizaciones()
+    {
+        return $this->cotizacionRepository->getAllCotizaciones();
+    }
 }

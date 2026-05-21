@@ -34,4 +34,9 @@ class CotizacionRepository
         }
         return false;
     }
+
+    public function getAllCotizaciones()
+    {
+        return Cotizacion::all();
+    }
 }

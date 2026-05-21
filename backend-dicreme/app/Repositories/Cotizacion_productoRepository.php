@@ -43,4 +43,9 @@ class Cotizacion_productoRepository {
         }
         return false;
     }
+
+    public function getAllCotizacionProductos()
+    {
+        return Cotizacion_producto::all();
+    }
 }
