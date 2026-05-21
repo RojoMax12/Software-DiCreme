@@ -21,8 +21,8 @@ class Cotizacion_productoController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'id_cotizacion' => 'required|integer',
-            'id_producto' => 'required|integer',
+            'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
+            'id_producto' => 'required|integer|exists:productos,id',
             'cantidad' => 'required|integer',
             'precio_unitario_venta' => 'required|numeric',
         ]);
@@ -38,8 +38,8 @@ class Cotizacion_productoController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
-            'id_cotizacion' => 'sometimes|required|integer',
-            'id_producto' => 'sometimes|required|integer',
+            'id_cotizacion' => 'sometimes|required|exists:cotizaciones,id',
+            'id_producto' => 'sometimes|required|exists:productos,id',
             'cantidad' => 'sometimes|required|integer',
             'precio_unitario_venta' => 'sometimes|required|numeric',
         ]);
