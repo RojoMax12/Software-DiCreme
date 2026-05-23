@@ -26,7 +26,7 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'id_pedido' => 'required|integer|exists:pedidos,id',
+            'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
             'numero_factura' => 'required|integer|unique:ventas,numero_factura',
             'fecha' => 'required|date',
             'glosa' => 'required|string|max:255',
@@ -39,7 +39,7 @@ class VentaController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
-            'id_pedido' => 'required|integer|exists:pedidos,id',
+            'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
             'numero_factura' => 'required|integer|unique:ventas,numero_factura',
             'fecha' => 'required|date',
             'glosa' => 'required|string|max:255',

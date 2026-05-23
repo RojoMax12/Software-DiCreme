@@ -44,4 +44,9 @@ class Producto extends Model
         return $this->hasMany(Lote::class, 'id_producto');
     }
 
+    public function cotizacionProductos(): HasMany
+    {
+        return $this->hasMany(Cotizacion_producto::class, 'id_producto');
+    }
+
 }

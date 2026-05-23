@@ -15,6 +15,8 @@ use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\Estado_pedidoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\CotizacionController;
+use App\Http\Controllers\Cotizacion_productoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -26,6 +28,21 @@ Route::prefix('auth')->group(function () {
 		Route::post('/logout', [AuthController::class, 'logout']);
 	});
 });
+
+	Route::get('/cotizaciones', [CotizacionController::class, 'index']);
+	Route::get('/cotizaciones/{id}', [CotizacionController::class, 'show']);
+	Route::post('/cotizaciones', [CotizacionController::class, 'store']);
+	Route::put('/cotizaciones/{id}', [CotizacionController::class, 'update']);
+	Route::delete('/cotizaciones/{id}', [CotizacionController::class, 'destroy']);
+
+	Route::get('/cotizacion_producto', [Cotizacion_productoController::class, 'index']);
+	Route::get('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'show']);
+	Route::post('/cotizacion_producto', [Cotizacion_productoController::class, 'store']);
+	Route::put('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'update']);
+	Route::delete('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'destroy']);
+	Route::get('/cotizacion_producto/cotizacion/{idCotizacion}', [Cotizacion_productoController::class, 'getByCotizacionId']);
+	Route::get('/cotizacion_producto/producto/{idProducto}', [Cotizacion_productoController::class, 'getByProductoId']);
+
 	/* Rutas para el controlador de usuarios dicreme y distribuidores */
 	Route::post('/usuarios_dicreme', [Usuario_dicremeController::class, 'store']);      
 	Route::post('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'store']); 
@@ -46,6 +63,7 @@ Route::prefix('auth')->group(function () {
 
 
 Route::middleware('jwt.auth')->group(function () {
+
 
 	/* Rutas para el controlador de categorias */
 	Route::post('/categorias', [CategoriaController::class, 'store']);
