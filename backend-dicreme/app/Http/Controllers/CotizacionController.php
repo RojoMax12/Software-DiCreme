@@ -31,7 +31,7 @@ class CotizacionController extends Controller
     }
 
     public function show($id)
-    {
+    {   
         return response()->json($this->cotizacionServices->getCotizacionById($id));
     }
 
