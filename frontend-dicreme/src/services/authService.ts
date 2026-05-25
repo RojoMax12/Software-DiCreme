@@ -16,7 +16,7 @@ export const authService = {
     const payload = {
       ...data,
       telefono: `+56${data.telefono}`, // Concatenamos el prefijo para la base de datos
-      id_rol: 2, // Asignamos el rol de distribuidor por defecto
+      id_rol: 3, // Asignamos el rol de distribuidor por defecto
     };
 
     try {
