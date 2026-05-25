@@ -11,7 +11,7 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'add-to-cart']);
 
 const activeImage = ref('');
-const selectedSize = ref<'10L' | '5L' | '1L'>('10L'); // Formato seleccionado por defecto
+const selectedSize = ref<'10L' | '5L' | '2.5L' | '1L'>('10L'); // Formato seleccionado por defecto
 const quantity = ref(1); // Cantidad por defecto
 
 // Resetear estados cuando se abre un producto diferente
@@ -39,6 +39,7 @@ const handleAddToCart = () => {
   // Determinamos el precio correcto según el formato seleccionado
   let chosenPrice = props.product.price10l;
   if (selectedSize.value === '5L') chosenPrice = props.product.price5l;
+  if (selectedSize.value === '2.5L') chosenPrice = props.product.price25l;
   if (selectedSize.value === '1L') chosenPrice = props.product.price1l;
 
   emit('add-to-cart', {
@@ -103,6 +104,18 @@ const handleAddToCart = () => {
                   <div class="btn-main-row">
                     <span class="btn-title">5L</span>
                     <span class="btn-price">{{ product.price5l }}</span>
+                  </div>
+                </button>
+
+                <button 
+                  class="liter-btn"
+                  :class="{ active: selectedSize === '2.5L' }"
+                  @mouseenter="activeImage = product.image25l || product.image"
+                  @click="selectedSize = '2.5L'"
+                >
+                  <div class="btn-main-row">
+                    <span class="btn-title">2.5L</span>
+                    <span class="btn-price">{{ product.price25l }}</span>
                   </div>
                 </button>
 

@@ -6,6 +6,7 @@
       @close="isCartOpen = false" 
       @update-quantity="handleUpdateQuantity"
       @remove-item="handleRemoveItem"
+      @checkout="goToQuotation"
     />
 
     <ProductDetailModal 
@@ -14,15 +15,24 @@
       @close="isDetailOpen = false" 
       @add-to-cart="addToCart"
     />
-    
+
+    <LoginNoticeModal
+      :isOpen="isNoticeOpen"
+      @close="isNoticeOpen = false"
+      @confirm="router.push('/login')"
+    />
+
     <Banner />
     
     <main class="content-container">
-      <SearchBar />
-      
+      <SearchBar 
+        v-model="selectedCategory" 
+        v-model:searchQuery="searchQueryText"
+        :categories="categoriesList"
+      />
       <div class="products-grid">
         <ProductCard 
-          v-for="item in iceCreams" 
+          v-for="item in filteredIceCreams" 
           :key="item.id"
           :name="item.name"
           :category="item.category"
@@ -41,23 +51,100 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import Banner from '@/components/Banner.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import CartModal from '@/components/CartModal.vue'
 import ProductDetailModal from '@/components/ProductDetailModal.vue';
+import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
 import fotoCaja from '@/assets/caja_dicreme.jpg'
 import { ShoppingCart } from 'lucide-vue-next'
 import categoryService from '@/services/categoryService';
 import productService from '@/services/productService';
 
+
 // Estados reactivos
 const isCartOpen = ref(false);
 const isDetailOpen = ref(false);
+const isNoticeOpen = ref(false);
 const selectedProduct = ref<any>(null);
 const cartItems = ref<any[]>([]);
 const iceCreams = ref<any[]>([]);
+const router = useRouter();
+const categoriesList = ref<any[]>([]);
+const selectedCategory = ref<string>('Todas');
+const searchQueryText = ref<string>('');
+
+// Estados autenticación
+const isLoggedIn = ref(false); 
+const currentUser = ref<any>(null);
+
+// revisar el estado de autenicación
+const checkAuthStatus = () => {
+  const token = localStorage.getItem('token');
+  const userParsed = localStorage.getItem('user');
+
+  if (token){
+    isLoggedIn.value = true;
+    if (userParsed) {
+      try {
+        const userObj = JSON.parse(userParsed);
+
+        console.log("Contenido real de lo que hay en 'user':", userObj);
+        // Mapeamos todas las posibilidades típicas de nombres que devuelven las APIs de Laravel
+        currentUser.value = userObj.nombre_empresa || 'Distribuidor';
+      } catch (error) {
+        console.error("Error al parsear el usuario:", error);
+        currentUser.value = 'Distribuidor';
+      }
+    } else {
+      currentUser.value = 'Distribuidor';
+    }
+  } else {
+    isLoggedIn.value = false;
+    currentUser.value = null;
+  }
+};
+
+//Función para cerrar sesión
+const handleLogout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  isLoggedIn.value = false;
+  currentUser.value = null;
+
+  alert('Has cerrado sesión exitosamente.');
+};
+
+const filteredIceCreams = computed(() => {
+  let results = iceCreams.value;
+
+  //filtro 1: por categoría
+  if (selectedCategory.value !== 'Todas' && selectedCategory.value !== '') {
+    if (selectedCategory.value === 'Vegano') {
+      results = results.filter(
+        item => item.category === 'Al agua' || item.category === 'Leche de avena'
+      );
+    } else if (selectedCategory.value === 'Sin lactosa') {
+      results = results.filter(
+        item => item.category === 'Al agua' || item.category === 'Leche de avena'
+      );
+    } else {
+      results = results.filter(item => item.category === selectedCategory.value);
+    }
+  }
+  
+  //filtro 2: por texto de búsqueda
+  if (searchQueryText.value.trim() !== '') {
+    const searchLow = searchQueryText.value.toLowerCase();
+    results = results.filter(item => 
+      item.name.toLowerCase().includes(searchLow)
+    );
+  }
+  return results;  
+});
 
 // Abrir el modal de detalles
 const openDetails = (iceCream: any) => {
@@ -103,6 +190,35 @@ const handleRemoveItem = (payload: { id: number, size: string }) => {
   );
 };
 
+// Función para procesar la cotización e ir a la siguiente pantalla
+const goToQuotation = () => {
+  if (cartItems.value.length === 0) {
+    alert("Tu carrito está vacío.");
+    return;
+  }
+  
+  // ver si hay sesión iniciada
+  const token = localStorage.getItem('token');  
+
+  
+  if (token) {
+      // si esta logueado, que vaya al resumen de la cotización
+      isCartOpen.value = false;
+      router.push('/cotizacion');
+  
+  } else {
+      // si no esta logueado, que abra el modal de aviso para iniciar sesión
+      isNoticeOpen.value = true;
+  }
+};
+
+const handleGoToLogin = () => {
+  isNoticeOpen.value = false;
+  isCartOpen.value = false;
+
+  router.push('/login');
+};
+
 // Función para cargar los productos
 const fetchIceCreams = async () => {
   try {
@@ -119,6 +235,8 @@ const fetchIceCreams = async () => {
 
     const dbProducts = productsResponse.data;
     const dbCategories = categoriesResponse.data;
+
+    categoriesList.value = dbCategories;
 
     // Diccionario de categorías para asignar IDs
     const categoryMap: Record<number, string> = {};
@@ -145,8 +263,9 @@ const fetchIceCreams = async () => {
           category: categoryName,
           color: 'var(--DC-pink)',
           image:fotoCaja,
-          id10l: null, price10dl: 'No disponible',
+          id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
+          id25l: null, price25l: 'No disponible',
           id1l: null, price1l: 'No disponible'
 
         };
@@ -157,20 +276,27 @@ const fetchIceCreams = async () => {
       const formattedPrice = `$${Number(rawPrice).toLocaleString('es-CL')}`;
       console.log(`Producto: ${flavorName}, Formato ID: ${prod.id_formato || prod.ID_formato}, Precio: ${rawPrice}`);
 
-      // identificamos y agrupamos por formato (ID 1 =10L, ID 2 = 5L, ID 3 = 1L)
+      // identificamos y agrupamos por formato (ID 1 =10L, ID 2 = 5L, ID 3 = 2.5L, ID 4 = 1L)
       const formatId = prod.id_formato || prod.ID_formato;
       if (formatId === 1) {
+        // ID 1 es 10L
         grouped[flavorName].id10l = prod.id || prod.ID;
         grouped[flavorName].price10l = formattedPrice;
       } else if (formatId === 2) {
+        // ID 2 es 5L
         grouped[flavorName].id5l = prod.id || prod.ID;
         grouped[flavorName].price5l = formattedPrice;
       } else if (formatId === 3) {
+        // ID 3 es 2.5L
+        grouped[flavorName].id25l = prod.id || prod.ID;
+        grouped[flavorName].price25l = formattedPrice;
+      }else if (formatId === 4) {
+        // ID 4 es 1L
         grouped[flavorName].id1l = prod.id || prod.ID;
         grouped[flavorName].price1l = formattedPrice;
       }
     });
-    
+
     // Convertimos el objeto agrupado a un array para usar en la UI
     iceCreams.value = Object.values(grouped);
   } catch (error) {
@@ -181,7 +307,25 @@ const fetchIceCreams = async () => {
 
 onMounted(() => {
   fetchIceCreams();
+  checkAuthStatus();
+
+  const savedCart = localStorage.getItem('dicreme_temp_cart');
+  if (savedCart) {
+    try {
+      cartItems.value = JSON.parse(savedCart);
+    } catch (error) {
+      console.error('Error al cargar el carrito guardado:', error);
+    }
+  }
 });
+
+watch(
+  cartItems,
+  (newCart) => {
+    localStorage.setItem('dicreme_temp_cart', JSON.stringify(newCart));
+  },
+  { deep: true }
+);
 
 </script>
 
