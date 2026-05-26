@@ -17,6 +17,7 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\Cotizacion_productoController;
+use App\Http\Controllers\Estado_cotizacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->middleware('throttle:auth_limits')->group(function () {
@@ -73,6 +74,7 @@ Route::middleware('throttle:api_escritura')->group(function () {
 		Route::middleware('jwt.auth')->group(function () {
 
 			Route::middleware('throttle:api_escritura')->group(function () {
+
 
 			Route::post('/categorias', [CategoriaController::class, 'store'])->middleware('role: 1');
 			Route::put('/categorias/{id}', [CategoriaController::class, 'update'])->middleware('role: 1');
@@ -132,12 +134,26 @@ Route::middleware('throttle:api_escritura')->group(function () {
 			Route::put('/ventas/{id}', [VentaController::class, 'update'])->middleware('role: 1');
 			Route::delete('/ventas/{id}', [VentaController::class, 'destroy'])->middleware('role: 1');
 
+			Route::post('/cotizacion/{id}/transformar', [CotizacionController::class, 'transformarCotizacionEnPedido'])->middleware('role: 1');
+			Route::get('/cotizaciones/{id}/usuario_dicreme',[CotizacionController::class, 'getallCotizacionesByUsuariodicreme'])->middleware('role: 1');
+
+			Route::get('/pedidos/{id}/usuario_dicreme', [PedidoController::class, 'getallPedidosByUsuariodicreme'])->middleware('role: 1');
+
+
+			Route::post('/estado_cotizacion', [Estado_cotizacionController::class, 'store'])->middleware('role:1');
+			Route::put('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'update'])->middleware('role:1');
+			Route::delete('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'destroy'])->middleware('role:1');
+
 		});
 
 
 		Route::middleware('throttle:api_lectura')->group(function () {
 
-			Route::get('/roles', [RolController::class, 'index']);          // Listar, Index es el nombre de la función que esta en el controlador   
+			Route::get('/estado_cotizacion', [Estado_cotizacionController::class, 'index'])->middleware('role:1');
+			Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1');
+
+
+			Route::get('/roles', [RolController::class, 'index']);        // Listar, Index es el nombre de la función que esta en el controlador   
 			Route::get('/roles/{id}', [RolController::class, 'show']);      // Ver uno
 			
 
