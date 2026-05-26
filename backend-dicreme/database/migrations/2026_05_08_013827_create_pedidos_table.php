@@ -17,6 +17,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_estado_pedido');
             $table->unsignedBigInteger('id_usuario_dicreme');
             $table->date('fecha_creacion');
+            $table->time('hora_creacion');
+            $table->integer('monto_estimado');
+            $table->integer('monto_final');
             $table->timestamps();
         });
     }

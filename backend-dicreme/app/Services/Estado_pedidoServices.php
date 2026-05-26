@@ -2,7 +2,6 @@
 
 namespace App\Services;
 use App\Repositories\Estado_pedidoRepository;
-use App\Models\Estado_pedido;
 
 class Estado_pedidoServices
 {

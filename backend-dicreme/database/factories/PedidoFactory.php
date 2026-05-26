@@ -30,6 +30,9 @@ class PedidoFactory extends Factory
         'id_estado_pedido' => \App\Models\Estado_pedido::where('nombre_estado', 'Validacion')->first()?->id,
 
         'fecha_creacion' => now(), 
+        'hora_creacion' => now()->format('H:i'),
+        'monto_estimado' => $this->faker->numberBetween(1000, 10000),
+        'monto_final' => $this->faker->numberBetween(1000, 10000), // Por defecto, el monto final es igual al estimado, pero puedes ajustarlo según tus necesidades
         ];
     }
 }
