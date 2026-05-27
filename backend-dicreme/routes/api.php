@@ -141,6 +141,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
         Route::get('/pedidos', [PedidoController::class, 'index']);
         Route::get('/pedidos/{id}', [PedidoController::class, 'show']);
+        Route::get('/pedidos/{id}/usuario_distribuidor',[PedidoController::class, 'getallPedidosByUsuariodistribuidor'])->middleware('role:1,3');
         Route::get('/estado_pedido', [Estado_pedidoController::class, 'index']);
         Route::get('/estado_pedido/{id}', [Estado_pedidoController::class, 'show']);
         Route::get('/despachos', [DespachoController::class, 'index']);
