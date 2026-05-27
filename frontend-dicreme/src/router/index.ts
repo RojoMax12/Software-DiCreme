@@ -41,9 +41,15 @@ const router = createRouter({
       path: '/admin/orders',
       name: 'admin-orders',
       component: () => import('../views/Admin/Orders.vue')
+    },
+    {
+      path: '/cotizacion',
+      name: 'quotation',
+      component: () => import('../views/Checkout/QuotationView.vue')
     }
 
   ],
 })
+
 
 export default router

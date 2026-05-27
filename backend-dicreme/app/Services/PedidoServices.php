@@ -1,18 +1,23 @@
 <?php
 
 namespace App\Services;
+
+use App\Models\Usuario_distribuidores;
 use App\Repositories\PedidoRepository;
 use App\Repositories\Usuario_dicremeRepository;
+use App\Repositories\Usuario_distribuidoresRepository;
 
 class PedidoServices
 {
     protected $pedidoRepository;
     protected $usuariodicremeRepository;
+    protected $usuariodistribuidorRepository;
 
-    public function __construct(PedidoRepository $pedidoRepository, Usuario_dicremeRepository $usuariodicremeRepository)
+    public function __construct(PedidoRepository $pedidoRepository, Usuario_dicremeRepository $usuariodicremeRepository, Usuario_distribuidoresRepository $usuariodistribuidorRepository)
     {
         $this->pedidoRepository = $pedidoRepository;
         $this->usuariodicremeRepository = $usuariodicremeRepository;
+        $this->usuariodistribuidorRepository = $usuariodistribuidorRepository;
 
     }
 
@@ -50,6 +55,16 @@ class PedidoServices
         }
     
         return $this->pedidoRepository->getPedidoByUsuario($id_usuario_dicreme);
+    }
+
+    public function getPedidoByUsuario_distribuidores($id_usuario_distribuidor){
+
+        $usuario_distribuidor = $this->usuariodistribuidorRepository->getUsuarioDistribuidorById($id_usuario_distribuidor);
+
+        if(!$usuario_distribuidor){
+            throw new \Exception("El usuario no existe.");
+        }
+        return $this->pedidoRepository->getPedidoByUsuario_distribuidores($id_usuario_distribuidor);
     }
 
 

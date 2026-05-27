@@ -49,4 +49,9 @@ class CotizacionRepository
     { 
         return Cotizacion::where('id_usuario_dicreme', $id)->get();
     }
+
+    public function getCotizacionesByUsuarioDistribuidor($id) 
+    {
+        return Cotizacion::where('id_distribuidor', $id)->get();
+    }
 }

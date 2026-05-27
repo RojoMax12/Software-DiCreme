@@ -2,22 +2,51 @@
 import { ref } from 'vue'
 import { User, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
+import { authService } from '../services/authService'
 
 const router = useRouter()
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const isLoading = ref(false)
+const errorMessage = ref('')
 
 const goBack = () => {
   router.back()
 }
 
-const handleLogin = () => {
-  console.log('Login attempt:', { username: username.value, password: password.value })
-}
+const handleLogin = async () => {
+  if (!username.value || !password.value) {
+    errorMessage.value = 'Por favor, ingresa tu correo y contraseña.'
+    return
+  }
 
-const handleCreateAccount = () => {
-  console.log('Redirect to create account')
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const data = await authService.login(username.value, password.value)
+
+    // Guardamos el token y la info del usuario
+    localStorage.setItem('token', data.access_token || data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+
+    if(data.user.id_rol == 1){
+      router.push('/admin/quotes')
+    }
+    else if(data.user.id_rol == 2){
+
+    }
+    else{
+      router.push('/')
+    }
+    
+  } catch (error: any) {
+    console.error('Login error:', error)
+    errorMessage.value = error.response?.data?.error || error.response?.data?.message || 'Credenciales incorrectas o error de conexión.'
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -33,26 +62,34 @@ const handleCreateAccount = () => {
         <div class="logo-section">
           <img src="../assets/logo_dicreme.png" alt="DiCreme Logo" class="logo" />
         </div>
-        
+
         <div class="divider"></div>
 
         <div class="form-section">
+          <!-- Mensaje de Error -->
+          <div v-if="errorMessage" class="error-banner">
+            {{ errorMessage }}
+          </div>
+
           <div class="input-group">
             <input 
               v-model="username" 
-              type="text" 
-              placeholder="Usuario" 
+              type="email" 
+              placeholder="Correo electrónico" 
               class="custom-input"
+              :disabled="isLoading"
             />
             <User class="input-icon" :size="20" color="#322c44" />
           </div>
-          
+
           <div class="input-group">
             <input 
               v-model="password" 
               :type="showPassword ? 'text' : 'password'" 
               placeholder="Contraseña" 
               class="custom-input"
+              :disabled="isLoading"
+              @keyup.enter="handleLogin"
             />
             <div class="icon-wrapper" @click="showPassword = !showPassword">
               <Eye v-if="!showPassword" class="input-icon clickable" :size="20" color="#322c44" />
@@ -60,15 +97,21 @@ const handleCreateAccount = () => {
             </div>
           </div>
 
-          <button @click="handleLogin" class="btn btn-primary">INGRESAR</button>
-          
+          <button 
+            @click="handleLogin" 
+            class="btn btn-primary"
+            :disabled="isLoading"
+          >
+            {{ isLoading ? 'INGRESANDO...' : 'INGRESAR' }}
+          </button>
+
           <router-link to="/forgot-password" class="forgot-password">
-          ¿Olvidaste tu contraseña?
-        </router-link>
-          
+            ¿Olvidaste tu contraseña?
+          </router-link>
+
           <router-link to="/register" style="width: 100%;">
-          <button class="btn btn-secondary">CREA TU CUENTA</button>
-        </router-link>
+            <button class="btn btn-secondary" :disabled="isLoading">CREA TU CUENTA</button>
+          </router-link>
         </div>
       </div>
     </div>
@@ -88,7 +131,7 @@ const handleCreateAccount = () => {
 .login-wrapper {
   position: relative;
   width: 100%;
-  max-width: 400px; /* Same as login-card */
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -120,7 +163,6 @@ const handleCreateAccount = () => {
   padding: 2rem;
   border-radius: 1.5rem;
   width: 100%;
-  max-width: 400px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
@@ -154,6 +196,18 @@ const handleCreateAccount = () => {
   align-items: center;
 }
 
+.error-banner {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #fff5f5;
+  border: 1px solid #fa5252;
+  border-radius: 0.75rem;
+  color: #fa5252;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .input-group {
   width: 100%;
   position: relative;
@@ -170,6 +224,12 @@ const handleCreateAccount = () => {
   font-size: 1rem;
   outline: none;
   box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.custom-input:focus {
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(228, 134, 159, 0.2);
 }
 
 .custom-input::placeholder {
@@ -208,15 +268,21 @@ const handleCreateAccount = () => {
   transition: all 0.2s ease;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   transform: translateY(-2px);
   filter: brightness(0.9);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.btn:active {
+.btn:active:not(:disabled) {
   transform: translateY(0);
   filter: brightness(0.8);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
 }
 
 .btn-primary {

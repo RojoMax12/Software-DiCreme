@@ -10,11 +10,9 @@
         - {{ category }}
       </p>
 
-      <div class="sizes-container">
-        <button class="size-btn">10L</button>
-        <button class="size-btn">5L</button>
-        <button class="size-btn">1L</button>
-      </div>
+      <button class="details-btn" @click="$emit('view-details')">
+        Ver detalles
+      </button>
     </div>
   </div>
 </template>
@@ -26,6 +24,8 @@ defineProps<{
   categoryColor: string;
   image: string;
 }>();
+
+defineEmits(['view-details']);
 </script>
 
 <style scoped>
@@ -34,7 +34,7 @@ defineProps<{
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  width: 220px; /* Ajusta según el diseño */
+  width: 220px; 
   transition: transform 0.2s;
 }
 
@@ -72,24 +72,14 @@ defineProps<{
   font-weight: 500;
 }
 
-.sizes-container {
-  display: flex;
-  gap: 8px;
-}
-
-.size-btn {
-  background-color: var(--DC-gray); 
-  color: white;
+.details-btn {
+  background-color: var(--DC-pink);
+  color: #fff;
   border: none;
-  border-radius: 4px;
-  padding: 5px 8px;
-  font-size: 0.75rem;
-  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 5px;
   cursor: pointer;
-  flex: 1;
-}
-
-.size-btn:hover {
-  filter: brightness(1.3);
+  font-size: 0.9rem;
+  width: 100%;
 }
 </style>

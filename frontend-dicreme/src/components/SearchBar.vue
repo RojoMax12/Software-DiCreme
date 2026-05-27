@@ -1,6 +1,15 @@
 <script setup lang="ts">
-// 1. Importamos el componente del icono
 import { Search } from 'lucide-vue-next';
+
+// 1. Recibimos la categoría, el texto de búsqueda y la lista de Laravel
+defineProps<{
+  modelValue: string;
+  searchQuery: string; // Sincroniza el texto escrito desde el HomeView
+  categories: any[];
+}>();
+
+// 2. Definimos los emisores para actualizar de forma reactiva al padre
+const emit = defineEmits(['update:modelValue', 'update:searchQuery']);
 </script>
 
 <template>
@@ -9,15 +18,31 @@ import { Search } from 'lucide-vue-next';
       <h2 class="title">Cotiza con DiCreme</h2>
       
       <div class="inputs-group">
-        <select class="category-select">
-          <option selected disabled>Categoría</option>
-          <option>Premium</option>
-          <option>Vegano</option>
-          <option>Tradicional</option>
+        <select 
+          :value="modelValue" 
+          @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+          class="category-select"
+        >
+          <option value="Todas">Categoría</option>
+          <option value="Vegano">Vegano</option>
+          <option value="Sin lactosa">Sin lactosa</option>
+          <option 
+            v-for="cat in categories" 
+            :key="cat.id || cat.ID" 
+            :value="cat.nombre_categoria"
+          >
+            {{ cat.nombre_categoria }}
+          </option>
         </select>
         
         <div class="search-input-wrapper">
-          <input type="text" placeholder="Busca tu helado" class="search-input" />
+          <input 
+            type="text" 
+            :value="searchQuery"
+            @input="emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
+            placeholder="Busca tu helado" 
+            class="search-input" 
+          />
           <Search class="search-icon" :size="20" />
         </div>
       </div>
@@ -57,10 +82,8 @@ import { Search } from 'lucide-vue-next';
   outline: none;
   font-size: 0.9rem;
   cursor: pointer;
-  
 }
 
-/* El wrapper debe ser relativo para que la lupa se posicione adentro */
 .search-input-wrapper {
   position: relative;
   display: flex;
@@ -68,16 +91,15 @@ import { Search } from 'lucide-vue-next';
 }
 
 .search-input {
-  width: 250px; /* Ajusta el ancho según tu mockup */
-  padding-right: 40px; /* Espacio para que el texto no tape la lupa */
+  width: 250px; 
+  padding-right: 40px; 
 }
 
-/* 3. Estilo para la lupa de Lucide */
 .search-icon {
   position: absolute;
   right: 12px;
   color: var(--DC-text-gray);
-  pointer-events: none; /* Para que el click pase al input */
+  pointer-events: none; 
 }
 
 .pink-divider {

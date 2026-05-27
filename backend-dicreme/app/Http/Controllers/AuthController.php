@@ -15,21 +15,38 @@ class AuthController extends Controller
 {
     public function login(Request $request, JwtService $jwtService): JsonResponse
     {
+        // 1. Ya no exigimos 'tipo_usuario' desde el frontend
         $credentials = $request->validate([
-            'tipo_usuario' => ['required', 'string'],
             'correo_electronico' => ['required', 'email'],
             'contrasena' => ['required', 'string'],
         ]);
 
-        $user = $this->resolveUser($credentials['tipo_usuario'], $credentials['correo_electronico']);
+        // 2. Intentamos resolver el usuario buscando primero en una tabla y luego en otra
+        $user = null;
+        $tipoUsuarioCalculado = 'distribuidor';
 
+        // Primero buscamos en el personal interno de DiCreme
+        $user = Usuario_dicreme::where('correo_electronico', $credentials['correo_electronico'])->first();
+        
+        if ($user) {
+            $tipoUsuarioCalculado = 'dicreme';
+        } else {
+            // Si no se encuentra, buscamos en los distribuidores
+            $user = Usuario_distribuidores::where('correo_electronico', $credentials['correo_electronico'])->first();
+        }
+
+        // 3. Validamos la existencia y la contraseña de PostgreSQL
         if (! $user || ! Hash::check($credentials['contrasena'], $user->contrasena)) {
             return response()->json([
                 'message' => 'Credenciales inválidas.',
             ], 401);
         }
 
-        return response()->json($jwtService->issueForUser($user, $this->tokenClaimsForUser($user, $credentials['tipo_usuario'])));
+        // 4. Emitimos el JWT pasando el tipo de usuario detectado automáticamente
+        return response()->json($jwtService->issueForUser(
+            $user, 
+            $this->tokenClaimsForUser($user, $tipoUsuarioCalculado)
+        ));
     }
 
     public function me(Request $request): JsonResponse
