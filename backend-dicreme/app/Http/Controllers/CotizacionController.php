@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Services\CotizacionServices;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CotizacionController extends Controller
 {
