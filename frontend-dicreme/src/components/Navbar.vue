@@ -6,12 +6,20 @@
     </div>
 
     <div class="actions">
+      <button 
+        v-if="$route.path !== '/'" 
+        class="btn-back-catalog" 
+        @click="goToHome"
+      >
+        VOLVER AL CATÁLOGO
+      </button>
+
       <div v-if="isLoggedIn" class="user-logged-zone">
+        <div v-if="$route.path !== '/'" class="divider-line"></div>
+
         <div class="user-info-text">
           <span class="welcome-text">Sesión iniciada: </span>
-          <span class="company-name">
-            {{ currentUser?.id_rol === 3 ? currentUser?.nombre_empresa : currentUser?.nombre_usuario }}
-          </span>
+          <span class="company-name">{{ currentUser?.nombre_empresa || 'Distribuidor' }}</span>
         </div>
         
         <div class="divider-line"></div>
@@ -20,7 +28,7 @@
       </div>
 
       <router-link v-else to="/login">
-        <button class="btn-ingresar">INGRESAR</button>
+        <button class="btn-login">INGRESAR</button>
       </router-link>
     </div>
   </nav>
@@ -34,7 +42,7 @@ const router = useRouter()
 const isLoggedIn = ref(false)
 const currentUser = ref<any>(null)
 
-// Revisa el estado de la autenticación leyendo el localStorage
+// Checks authentication state by reading from localStorage
 const checkAuthStatus = () => {
   const token = localStorage.getItem('token')
   const userParsed = localStorage.getItem('user')
@@ -42,14 +50,13 @@ const checkAuthStatus = () => {
   if (token) {
     isLoggedIn.value = true
     currentUser.value = userParsed ? JSON.parse(userParsed) : null
-    console.log("Este es el usuario de ahroa",currentUser.value)
   } else {
     isLoggedIn.value = false
     currentUser.value = null
   }
 }
 
-// Acción global para destruir la sesión
+// Global action to destroy active session
 const handleLogout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
@@ -57,9 +64,10 @@ const handleLogout = () => {
   isLoggedIn.value = false
   currentUser.value = null
   
+  // Custom elegant alert instead of native browser popup
   alert("Has cerrado sesión exitosamente.")
   
-  // Forzamos un viaje al catálogo limpio para refrescar la vista global
+  // Forces clean navigation back to storefront catalog
   router.push('/').then(() => {
     window.location.reload()
   })
@@ -107,9 +115,27 @@ const goToHome = () => {
 .actions {
   display: flex;
   align-items: center;
+  gap: 16px; /* Holds spacing between the back button and user zones */
 }
 
-/* Contenedor de la zona activa */
+/* 🚨 CORPORATE LOOK FOR BACK TO CATALOG BUTTON */
+.btn-back-catalog {
+  background-color: transparent;
+  border: 1px solid #e4869f; /* var(--DC-pink) fallback */
+  color: #e4869f;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back-catalog:hover {
+  background-color: #e4869f;
+  color: white;
+}
+
 .user-logged-zone {
   display: flex;
   align-items: center;
@@ -122,30 +148,26 @@ const goToHome = () => {
   gap: 6px;
 }
 
-/* Texto de introducción limpio y sutil */
 .welcome-text {
   font-size: 0.9rem;
-  color: #7c7289; /* Gris intermedio */
+  color: #7c7289; 
   font-weight: 400;
 }
 
-/* El nombre destacado sutilmente en el rosa de la marca */
 .company-name {
   font-size: 0.95rem;
-  color: var(--DC-pink); 
+  color: #e4869f; 
   font-weight: 700;
 }
 
-/* Línea vertical divisoria elegante */
 .divider-line {
   width: 1px;
   height: 20px;
   background-color: #eeedee;
 }
 
-/* Botón cerrar sesión estilizado sin sombras pesadas */
 .btn-logout {
-  background-color: #322c44; /* Tu gris oscuro corporativo */
+  background-color: #322c44; 
   color: white;
   border: none;
   padding: 8px 20px;
@@ -161,9 +183,8 @@ const goToHome = () => {
   transform: translateY(-1px);
 }
 
-/* Botón ingresar original */
-.btn-ingresar {
-  background-color: var(--DC-pink); 
+.btn-login {
+  background-color: #e4869f; 
   color: white;
   border: none;
   padding: 8px 25px;
@@ -174,7 +195,7 @@ const goToHome = () => {
   transition: background-color 0.3s ease;
 }
 
-.btn-ingresar:hover {
+.btn-login:hover {
   filter: brightness(1.1);
 }
 </style>
