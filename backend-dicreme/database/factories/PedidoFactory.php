@@ -22,10 +22,11 @@ class PedidoFactory extends Factory
         'id_usuario_dicreme' => \App\Models\Usuario_dicreme::inRandomOrder()->first()?->id 
                                 ?? \App\Models\Usuario_dicreme::factory(),
 
+        'id_usuario_distribuidor' => \App\Models\Usuario_distribuidores::inRandomOrder()->first()?->id
+                                ?? \App\Models\Usuario_distribuidores::factory(),
 
         'id_cotizacion' => \App\Models\Cotizacion::inRandomOrder()->first()?->id
                                 ?? \App\Models\Cotizacion::factory(),
-
         // Busca el estado 'Validacion' (Asegúrate de crearlo en el Seeder antes)
         'id_estado_pedido' => \App\Models\Estado_pedido::where('nombre_estado', 'Validacion')->first()?->id,
 

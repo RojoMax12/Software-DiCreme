@@ -27,6 +27,7 @@ class PedidoController extends Controller
     {
         $data = $request->validate([
             'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
+            'id_usuario_distribuidor' =>'required|integer|exists:usuario_distribuidores,id',
             'fecha_creacion' => 'required|date',
             'id_estado_pedido' => 'required|integer|exists:estados_pedido,id',
             'id_usuario_dicreme' => 'sometimes|integer|exists:usuarios_dicreme,id',
@@ -41,6 +42,7 @@ class PedidoController extends Controller
     {
         $data = $request->validate([
             'id_cotizacion' => 'sometimes|required|integer|exists:cotizaciones,id',
+            'id_usuario_distribuidor' =>'required|integer|exists:usuario_distribuidores,id',
             'fecha_creacion' => 'sometimes|required|date',
             'id_estado_pedido' => 'sometimes|required|integer|exists:estados_pedido,id',
             'id_usuario_dicreme' => 'sometimes|integer|exists:usuarios_dicreme,id',
@@ -59,5 +61,10 @@ class PedidoController extends Controller
     public function getallPedidosByUsuariodicreme($id_usuario_dicreme)
     {
         return response() ->json($this->pedidoService->getPedidoByUsuario($id_usuario_dicreme));
+    }
+
+    public function getallPedidosByUsuariodistribuidor($id_usuario_distribuidor)
+    {
+        return response() ->json($this->pedidoService->getPedidoByUsuario_distribuidores($id_usuario_distribuidor));
     }
 }

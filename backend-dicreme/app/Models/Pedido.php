@@ -17,6 +17,7 @@ class Pedido extends Model
         'id_cotizacion',
         'id_estado_pedido',
         'id_usuario_dicreme',
+        'id_usuario_distribuidor',
         'fecha_creacion',
         'hora_creacion',
         'monto_estimado',
