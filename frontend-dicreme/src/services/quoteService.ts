@@ -7,7 +7,7 @@ export default {
     },
 
     getQuotesByDistributor(idDistribuidor: number){
-        return api.get(`/cotizaciones?id_distribuidor=${idDistribuidor}`);
+        return api.get(`/cotizaciones/${idDistribuidor}/usuario_distribuidor`);
     },
     
     getQuoteById(id: number){

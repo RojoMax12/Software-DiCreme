@@ -6,7 +6,7 @@ export default {
     },
 
     getOrdersByDistributor(distributorId: number) {
-        return api.get(`/pedidos?id_distribuidor=${distributorId}`);
+        return api.get(`/pedidos/${distributorId}/usuario_distribuidor`);
     },
     
     getOrderById(id: number) {
