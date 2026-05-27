@@ -46,8 +46,32 @@ const router = createRouter({
       path: '/cotizacion',
       name: 'quotation',
       component: () => import('../views/Checkout/QuotationView.vue')
+    },
+    {
+      path: '/cotizacion-exitosa',
+      name: 'CotizacionExitosa',
+      component: () => import('@/views/Checkout/SuccesfulQuotationView.vue')
+    },
+    {
+      path: '/mis-cotizaciones',
+      name: 'my-quotations',
+      component: () => import('@/views/Distributor/MyQuotationsView.vue')
+    },
+    {
+    path: '/cotizacion/:id', 
+    name: 'quotation-detail',
+    component: () => import('@/views/Distributor/QuotationDetailView.vue'),
+    },
+    {
+      path: '/mis-pedidos',
+      name: 'my-orders',
+      component: () => import('@/views/Distributor/MyOrdersView.vue')
+    },
+    {
+      path: '/pedido/:id', 
+      name: 'order-detail',
+      component: () => import('@/views/Distributor/OrderDetailView.vue'),
     }
-
   ],
 })
 
