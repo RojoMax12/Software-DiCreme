@@ -26,7 +26,7 @@ class Estado_pedidoController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nombre_estado_pedido' => 'required|string|max:255',
+            'nombre_estado' => 'required|string|max:255',
         ]);
         return response()->json($this->despachoServices->createDespacho($data));
     }
@@ -34,7 +34,7 @@ class Estado_pedidoController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
-            'nombre_estado_pedido' => 'required|string|max:255',
+            'nombre_estado' => 'required|string|max:255',
         ]);
         return response()->json($this->despachoServices->updateDespacho($id, $data));
     }

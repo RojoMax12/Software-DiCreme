@@ -23,8 +23,10 @@ class CotizacionFactory extends Factory
                                 ?? \App\Models\Usuario_dicreme::factory(),
                 'id_distribuidor' => \App\Models\Usuario_distribuidores::inRandomOrder()->first()?->id 
                                 ?? \App\Models\Usuario_distribuidores::factory(),
-                'estado_cotizacion' => $this->faker->randomElement(['Pendiente', 'Aprobada', 'Rechazada']),
-                'fecha_creacion' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),   
+                'id_estado_cotizacion' =>\App\Models\Estado_cotizacion::inRandomOrder()->first()?->id  ,
+                'fecha_creacion' => now(),
+                'hora_creacion' => now()->format('H:i'),
+                'total_cotizacion' => $this->faker->numberBetween(1000, 10000),  
 
             //
         ];

@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('cotizaciones', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_usuario_dicreme');
+            $table->unsignedBigInteger('id_usuario_dicreme')->nullable();
             $table->unsignedBigInteger('id_distribuidor');
-            $table->string('estado_cotizacion');
+            $table->unsignedBigInteger('id_estado_cotizacion');
             $table->date('fecha_creacion');
+            $table->time('hora_creacion');
+            $table->integer('total_cotizacion');
             $table->timestamps();
         });
     }

@@ -31,8 +31,16 @@ const handleLogin = async () => {
     localStorage.setItem('token', data.access_token || data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
 
-    // Redirigir a la página principal
-    router.push('/')
+    if(data.user.id_rol == 1){
+      router.push('/admin/quotes')
+    }
+    else if(data.user.id_rol == 2){
+
+    }
+    else{
+      router.push('/')
+    }
+    
   } catch (error: any) {
     console.error('Login error:', error)
     errorMessage.value = error.response?.data?.error || error.response?.data?.message || 'Credenciales incorrectas o error de conexión.'

@@ -2,15 +2,18 @@
 
 namespace App\Services;
 use App\Repositories\PedidoRepository;
-use App\Models\Pedido;
+use App\Repositories\Usuario_dicremeRepository;
 
 class PedidoServices
 {
     protected $pedidoRepository;
+    protected $usuariodicremeRepository;
 
-    public function __construct(PedidoRepository $pedidoRepository)
+    public function __construct(PedidoRepository $pedidoRepository, Usuario_dicremeRepository $usuariodicremeRepository)
     {
         $this->pedidoRepository = $pedidoRepository;
+        $this->usuariodicremeRepository = $usuariodicremeRepository;
+
     }
 
     public function getAllPedidos()
@@ -37,4 +40,17 @@ class PedidoServices
     {
         return $this->pedidoRepository->deletePedido($id);
     }
+
+    public function getPedidoByUsuario($id_usuario_dicreme) {
+
+        $usuario_dicreme = $this->usuariodicremeRepository->getUsuarioDicremeById($id_usuario_dicreme);
+
+       if(!$usuario_dicreme){
+            throw new \Exception("El usuario no existe.");
+        }
+    
+        return $this->pedidoRepository->getPedidoByUsuario($id_usuario_dicreme);
+    }
+
+
 }

@@ -57,7 +57,7 @@ onMounted(() => {
 
       // Mapeo exacto basado en la estructura real de tu tabla de distribuidores
       company.value = userObj.nombre_empresa || ''
-      companyRut.value = userObj.rut || ''
+      companyRut.value = userObj.rut_empresa || ''
       address.value = userObj.direccion || ''
       email.value = userObj.email || userObj.correo_electronico || ''
       phone.value = userObj.telefono || ''
@@ -123,7 +123,7 @@ const handleConfirmQuotation = async () => {
   }
 
   try {
-    const response = await fetch('http://localhost:8000/api/pedidos', {
+    const response = await fetch('http://localhost:8000/api/cotizacion', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

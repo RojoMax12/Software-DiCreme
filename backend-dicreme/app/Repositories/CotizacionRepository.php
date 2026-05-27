@@ -39,4 +39,14 @@ class CotizacionRepository
     {
         return Cotizacion::all();
     }
+
+    public function getCotizacionConProductos($id)
+    {
+        return Cotizacion::with('cotizacionProductos')->find($id);
+    }
+
+    public function getCotizacionesByUsuario($id)
+    { 
+        return Cotizacion::where('id_usuario_dicreme', $id)->get();
+    }
 }

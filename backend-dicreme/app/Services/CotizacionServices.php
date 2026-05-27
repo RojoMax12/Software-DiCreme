@@ -2,19 +2,44 @@
 
 namespace App\Services;
 use App\Repositories\CotizacionRepository;
+use App\Repositories\PedidoRepository;         // <--- Inyectamos el Repositorio de Pedidos
+use App\Repositories\Pedido_productoRepository; // <--- Inyectamos el Repositorio del Detalle
+use App\Repositories\Usuario_dicremeRepository;
+use App\Models\Cotizacion;
 
 class CotizacionServices
 {
     protected $cotizacionRepository;
+    protected $pedidoRepository;          // <--- Repositorio de Pedidos
+    protected $pedidoProductoRepository;  // <--- Repositorio del Detalle
+    protected $usuariodicremeRepository;
 
-    public function __construct(CotizacionRepository $cotizacionRepository)
+    public function __construct(CotizacionRepository $cotizacionRepository , PedidoRepository $pedidoRepository, Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository)
     {
         $this->cotizacionRepository = $cotizacionRepository;
+        $this->pedidoRepository = $pedidoRepository;
+        $this->pedidoProductoRepository = $pedidoProductoRepository;
+        $this->usuariodicremeRepository = $usuariodicremeRepository;
     }
 
-    public function createCotizacion($data)
+    public function createCotizacion(array $data)
     {
-        return $this->cotizacionRepository->createCotizacion($data);
+        // 1. Creamos la cotización maestra
+        $cotizacion = Cotizacion::create([
+            'id_distribuidor'      => $data['id_distribuidor'],
+            'id_usuario_dicreme'   => $data['id_usuario_dicreme'] ?? null,
+            'id_estado_cotizacion' => $data['id_estado_cotizacion'],
+            'fecha_creacion'       => $data['fecha_creacion'],
+            'hora_creacion'        => $data['hora_creacion'],
+            'total_cotizacion'     => $data['total_cotizacion']
+        ]);
+
+        // 2. Creamos los detalles asociados
+        foreach ($data['cotizacion_productos'] as $producto) {
+            $cotizacion->cotizacionProductos()->create($producto);
+        }
+
+        return $cotizacion->load('cotizacionProductos');
     }
 
     public function getCotizacionById($id)
@@ -36,4 +61,52 @@ class CotizacionServices
     {
         return $this->cotizacionRepository->getAllCotizaciones();
     }
+
+    public function transformarCotizacionEnPedido($idCotizacion)
+    {
+        $cotizacion = $this->cotizacionRepository->getCotizacionConProductos($idCotizacion);
+
+        if (!$cotizacion) {
+            throw new \Exception("La cotización no existe.");
+        }
+
+        // Creamos el pedido
+        $pedido = $this->pedidoRepository->createPedido([
+            'id_cotizacion'      => $cotizacion->id,
+            'id_usuario_dicreme' => $cotizacion->id_usuario_dicreme,
+            'id_estado_pedido'   => 1, // Estado inicial
+            'fecha_pedido'       => now(), 
+            'monto_estimado'     => $cotizacion->total_cotizacion,
+            'monto_final'        => $cotizacion->total_cotizacion,
+        ]);
+
+        // Clonamos los productos
+        foreach ($cotizacion->cotizacionProductos as $item) {
+            $this->pedidoProductoRepository->createPedidoProducto([
+                'id_pedido'    => $pedido->id,
+                'id_producto'  => $item->id_producto, // CORRECCIÓN: Usar ID del producto, no el de la cotización
+                'cantidad'     => $item->cantidad,
+                'precio_venta' => $item->precio_cotizado, 
+            ]);
+        }
+
+        // Actualizamos la cotización (Usando el nombre correcto de la columna)
+        $this->cotizacionRepository->updateCotizacion($cotizacion->id, [
+            'id_estado_cotizacion' => 2 // Suponiendo que 2 es el estado "Validada"
+        ]);
+
+        return $pedido;
+    }
+
+    public function getCotizacionesByUsuario($id_usuario_dicreme) {
+
+        $usuario_dicreme = $this->usuariodicremeRepository->getUsuarioDicremeById($id_usuario_dicreme);
+
+        if(!$usuario_dicreme){
+            throw new \Exception("El usuario no existe.");
+        }
+        
+        return $this->cotizacionRepository->getCotizacionesByUsuario($id_usuario_dicreme);
+    }
+
 }

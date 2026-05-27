@@ -29,7 +29,9 @@ class PedidoController extends Controller
             'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
             'fecha_creacion' => 'required|date',
             'id_estado_pedido' => 'required|integer|exists:estados_pedido,id',
-            'id_usuario_dicreme' => 'required|integer|exists:usuarios_dicreme,id',
+            'id_usuario_dicreme' => 'sometimes|integer|exists:usuarios_dicreme,id',
+            'monto_estimado' => 'required|integer',
+            'monto_final' => 'required|integer',
         ]);
 
         return response()->json($this->pedidoService->createPedido($data), 201);
@@ -41,7 +43,9 @@ class PedidoController extends Controller
             'id_cotizacion' => 'sometimes|required|integer|exists:cotizaciones,id',
             'fecha_creacion' => 'sometimes|required|date',
             'id_estado_pedido' => 'sometimes|required|integer|exists:estados_pedido,id',
-            'id_usuario_dicreme' => 'sometimes|required|integer|exists:usuarios_dicreme,id',
+            'id_usuario_dicreme' => 'sometimes|integer|exists:usuarios_dicreme,id',
+            'monto_estimado' => 'sometimes|required|integer',
+            'monto_final' => 'sometimes|required|integer',
         ]);
 
         return response()->json($this->pedidoService->updatePedido($id, $data));
@@ -50,5 +54,10 @@ class PedidoController extends Controller
     public function destroy($id)
     {
         return response()->json($this->pedidoService->deletePedido($id));
+    }
+
+    public function getallPedidosByUsuariodicreme($id_usuario_dicreme)
+    {
+        return response() ->json($this->pedidoService->getPedidoByUsuario($id_usuario_dicreme));
     }
 }

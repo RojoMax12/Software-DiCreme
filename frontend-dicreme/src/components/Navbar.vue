@@ -9,7 +9,9 @@
       <div v-if="isLoggedIn" class="user-logged-zone">
         <div class="user-info-text">
           <span class="welcome-text">Sesión iniciada: </span>
-          <span class="company-name">{{ currentUser?.nombre_empresa || 'Distribuidor' }}</span>
+          <span class="company-name">
+            {{ currentUser?.id_rol === 3 ? currentUser?.nombre_empresa : currentUser?.nombre_usuario }}
+          </span>
         </div>
         
         <div class="divider-line"></div>
@@ -40,6 +42,7 @@ const checkAuthStatus = () => {
   if (token) {
     isLoggedIn.value = true
     currentUser.value = userParsed ? JSON.parse(userParsed) : null
+    console.log("Este es el usuario de ahroa",currentUser.value)
   } else {
     isLoggedIn.value = false
     currentUser.value = null
