@@ -5,6 +5,7 @@ use App\Repositories\CotizacionRepository;
 use App\Repositories\PedidoRepository;         // <--- Inyectamos el Repositorio de Pedidos
 use App\Repositories\Pedido_productoRepository; // <--- Inyectamos el Repositorio del Detalle
 use App\Repositories\Usuario_dicremeRepository;
+use App\Repositories\Usuario_distribuidoresRepository;
 use App\Models\Cotizacion;
 
 class CotizacionServices
@@ -13,13 +14,16 @@ class CotizacionServices
     protected $pedidoRepository;          // <--- Repositorio de Pedidos
     protected $pedidoProductoRepository;  // <--- Repositorio del Detalle
     protected $usuariodicremeRepository;
+    protected $usuario_distribuidoresRepository;
 
-    public function __construct(CotizacionRepository $cotizacionRepository , PedidoRepository $pedidoRepository, Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository)
+    public function __construct(CotizacionRepository $cotizacionRepository , PedidoRepository $pedidoRepository, 
+    Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository,Usuario_distribuidoresRepository $usuario_distribuidoresRepository)
     {
         $this->cotizacionRepository = $cotizacionRepository;
         $this->pedidoRepository = $pedidoRepository;
         $this->pedidoProductoRepository = $pedidoProductoRepository;
         $this->usuariodicremeRepository = $usuariodicremeRepository;
+        $this->usuario_distribuidoresRepository = $usuario_distribuidoresRepository;
     }
 
     public function createCotizacion(array $data)
@@ -107,6 +111,18 @@ class CotizacionServices
         }
         
         return $this->cotizacionRepository->getCotizacionesByUsuario($id_usuario_dicreme);
+    }
+
+
+    public function getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor) {
+
+        $usuario_distribuidor = $this->usuario_distribuidoresRepository->getUsuarioDistribuidorById($id_usuario_distribuidor);
+
+        if(!$usuario_distribuidor){
+            throw new \Exception("El usuario no existe.");
+        }
+        
+        return $this->cotizacionRepository->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor);
     }
 
 }

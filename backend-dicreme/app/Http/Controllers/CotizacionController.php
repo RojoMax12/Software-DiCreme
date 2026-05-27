@@ -81,4 +81,8 @@ class CotizacionController extends Controller
 
     }
 
+    public function getallCotizacionesByUsuariodistribuidor($id_usuario_distribuidor){
+        return response()->json($this->cotizacionServices->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor));
+    }
+
 }
