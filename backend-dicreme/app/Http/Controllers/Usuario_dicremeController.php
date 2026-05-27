@@ -31,7 +31,7 @@ class Usuario_dicremeController extends Controller
             'nombre_usuario' => 'required|string|max:255',
             'correo_electronico' => 'required|string|email|max:255|unique:usuarios_dicreme',
             'contrasena' => 'required|string|min:8',
-            'id_rol' => 'required|integer|exists:roles,id',
+            'id_rol' => 'required|integer|exists:rol,id',
         ]);
 
         return response()->json($this->usuarioDicremeServices->createUsuarioDicreme($data), 201);
@@ -43,7 +43,7 @@ class Usuario_dicremeController extends Controller
             'nombre_usuario' => 'sometimes|required|string|max:255',
             'correo_electronico' => 'sometimes|required|string|email|max:255|unique:usuarios_dicreme,correo_electronico,' . $id,
             'contrasena' => 'sometimes|required|string|min:8',
-            'id_rol' => 'sometimes|required|integer|exists:roles,id',
+            'id_rol' => 'sometimes|required|integer|exists:rol,id',
         ]);
 
         return response()->json($this->usuarioDicremeServices->updateUsuarioDicreme($id, $data));

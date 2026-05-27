@@ -26,7 +26,7 @@ class PedidoController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'id_distribuidor' => 'required|integer|exists:usuarios_distribuidores,id',
+            'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
             'fecha_creacion' => 'required|date',
             'id_estado_pedido' => 'required|integer|exists:estados_pedido,id',
             'id_usuario_dicreme' => 'required|integer|exists:usuarios_dicreme,id',
@@ -38,7 +38,7 @@ class PedidoController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
-            'id_distribuidor' => 'sometimes|required|integer|exists:usuarios_distribuidores,id',
+            'id_cotizacion' => 'sometimes|required|integer|exists:cotizaciones,id',
             'fecha_creacion' => 'sometimes|required|date',
             'id_estado_pedido' => 'sometimes|required|integer|exists:estados_pedido,id',
             'id_usuario_dicreme' => 'sometimes|required|integer|exists:usuarios_dicreme,id',

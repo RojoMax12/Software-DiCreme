@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<Pedido_producto>
  */
-class PedidoProductoFactory extends Factory
+class Pedido_productoFactory extends Factory
 {
     /**
      * Define the model's default state.

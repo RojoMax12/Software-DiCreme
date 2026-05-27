@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'jwt.auth' => AuthenticateJwt::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
+        ]);
+
+        $middleware->api(append: [
+            \App\Http\Middleware\PurifyInput::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

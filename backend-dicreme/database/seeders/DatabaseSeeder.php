@@ -14,10 +14,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $roles = ['Admin', 'Trabajador', 'Distribuidor'];
+        $roles = ['Admin', 'Dicreme', 'Distribuidor'];
         $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado'];
-        $categorias = ['Normales', 'Premium', 'Vegano', 'Sin Azúcar', 'Sin Lactosa'];
-        $formatos = ['10L', '5L', '1L'];
+        $categorias = ['Al agua', 'Leche de avena', 'Tradicional', 'Sin azúcar'];
+        $formatos = ['10L', '5L', '2.5L', '1L'];
+        
 
         foreach ($roles as $rol) {
             \App\Models\Rol::firstOrCreate(['nombre_rol' => $rol]);
@@ -54,7 +55,7 @@ class DatabaseSeeder extends Seeder
 
         \App\Models\Bodega::factory(5)->create();
         \App\Models\Stock::factory(10)->create();
-        \App\Models\Producto::factory(15)->create();
+        \App\Models\Producto::factory(132)->create();
         \App\Models\Lote::factory(25)->create();
 
         \App\Models\Usuario_dicreme::factory(10)->create();
@@ -63,6 +64,8 @@ class DatabaseSeeder extends Seeder
         \App\Models\Venta::factory(20)->create();
         \App\Models\Despacho::factory(20)->create();
         \App\Models\Pedido_producto::factory(30)->create();
+        \App\Models\Cotizacion::factory(30)->create();
+        \App\Models\Cotizacion_producto::factory(30)->create();
     }
 }
 
