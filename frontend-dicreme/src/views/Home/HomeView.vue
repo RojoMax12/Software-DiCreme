@@ -108,6 +108,10 @@ const checkAuthStatus = () => {
   }
 };
 
+watch(() => router.currentRoute.value.path, () => {
+  checkAuthStatus();
+});
+
 //Función para cerrar sesión
 const handleLogout = () => {
   localStorage.removeItem('token');
