@@ -230,7 +230,7 @@
             <XCircle :size="18" />
             <span>Cancelar Cotización</span>
           </button>
-          <button class="btn-modal btn-complete" @click="$emit('complete')">
+          <button class="btn-modal btn-complete" @click="handleComplete">
             <CheckCircle2 :size="18" />
             <span>Completar Cotización</span>
           </button>
@@ -244,7 +244,7 @@
       type="cancel"
       :order-id="orderId"
       :is-success="isCancelSuccess"
-      @confirm="handleCancelConfirm"
+      @confirm="handleCancel"
       @cancel="showCancelConfirm = false"
       @accept="handleAcceptCancel"
     />
@@ -252,8 +252,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ConfirmModal from '../../components/ConfirmModal.vue';
+import quoteService from '@/services/quoteService';
+import productService from '@/services/productService';
+import productCategoryService from '@/services/productCategoryService';
+import productFormatService from '@/services/productFormatService';
 import { 
   X, Upload, Building2, User, Calendar, 
   ClipboardList, Settings2, ChevronDown, Eraser,
@@ -273,8 +277,13 @@ const emit = defineEmits(['close', 'cancel', 'complete']);
 const showCancelConfirm = ref(false);
 const isCancelSuccess = ref(false);
 
-const handleCancelConfirm = () => {
-  isCancelSuccess.value = true;
+const handleCancel = async () => {
+  try {
+    await quoteService.deleteQuote(Number(props.orderId));
+    isCancelSuccess.value = true;
+  } catch (error) {
+    console.error('Error cancelling quote:', error);
+  }
 };
 
 const handleAcceptCancel = () => {
@@ -283,7 +292,49 @@ const handleAcceptCancel = () => {
   emit('cancel');
 };
 
+const handleComplete = async () => {
+  try {
+    await quoteService.transformQuoteToOrder(props.orderId);
+    emit('complete');
+  } catch (error) {
+    console.error('Error completing quote:', error);
+  }
+};
+
 const products = ref<any[]>([]);
+
+onMounted(async () => {
+  try {
+    const [quoteProdsRes, allProdsRes, catsRes, formatsRes] = await Promise.all([
+      quoteService.getQuoteProducts(props.orderId),
+      productService.getProducts(),
+      productCategoryService.getCategory(),
+      productFormatService.getFormats()
+    ]);
+
+    const prodMap = new Map(allProdsRes.data.map((p: any) => [p.id, p]));
+    const catMap = new Map(catsRes.data.map((c: any) => [c.id, c.nombre_categoria]));
+    const formatMap = new Map(formatsRes.data.map((f: any) => [f.id, f.nombre_formato]));
+
+    products.value = quoteProdsRes.data.map((qp: any) => {
+      const p = prodMap.get(qp.id_producto);
+      const subtotal = qp.cantidad * qp.precio_unitario_venta;
+      return {
+        id: qp.id,
+        name: p ? p.nombre_producto : 'Producto desconocido',
+        format: p ? formatMap.get(p.id_formato) : '-',
+        category: p ? catMap.get(p.id_categoria) : '-',
+        quantity: qp.cantidad,
+        price: Number(qp.precio_unitario_venta).toLocaleString('es-CL'),
+        subtotal: subtotal.toLocaleString('es-CL'),
+        discountType: 'percentage',
+        discountValue: 0
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching quote details:', error);
+  }
+});
 
 const discountType = ref<'percentage' | 'fixed'>('percentage');
 const discountInput = ref(0);

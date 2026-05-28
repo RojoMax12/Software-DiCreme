@@ -144,7 +144,7 @@ const handleConfirmQuotation = async () => {
   // --- MAPEADO DE PAYLOAD ---
   const quotationPayload = {
     id_distribuidor: Number(userId.value),
-    id_usuario_dicreme: 1,
+    id_usuario_dicreme: null,
     id_estado_cotizacion: 1,
     fecha_creacion: dateString,
     hora_creacion: timeString,

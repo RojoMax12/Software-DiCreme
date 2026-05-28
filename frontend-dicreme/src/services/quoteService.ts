@@ -24,5 +24,13 @@ export default {
 
     createQuote(data: unknown){
         return api.post('/cotizaciones', data);
+    },
+
+    getQuoteProducts(idCotizacion: number | string){
+        return api.get(`/cotizacion_producto/cotizacion/${idCotizacion}`);
+    },
+
+    transformQuoteToOrder(idCotizacion: number | string){
+        return api.post(`/cotizacion/${idCotizacion}/transformar`);
     }
 }
