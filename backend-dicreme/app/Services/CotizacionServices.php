@@ -6,6 +6,7 @@ use App\Repositories\PedidoRepository;         // <--- Inyectamos el Repositorio
 use App\Repositories\Pedido_productoRepository; // <--- Inyectamos el Repositorio del Detalle
 use App\Repositories\Usuario_dicremeRepository;
 use App\Repositories\Usuario_distribuidoresRepository;
+use App\Repositories\DespachoRepository;
 use App\Models\Cotizacion;
 
 class CotizacionServices
@@ -15,15 +16,18 @@ class CotizacionServices
     protected $pedidoProductoRepository;  // <--- Repositorio del Detalle
     protected $usuariodicremeRepository;
     protected $usuario_distribuidoresRepository;
+    protected $despachorepository;
 
     public function __construct(CotizacionRepository $cotizacionRepository , PedidoRepository $pedidoRepository, 
-    Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository,Usuario_distribuidoresRepository $usuario_distribuidoresRepository)
+    Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository,
+    Usuario_distribuidoresRepository $usuario_distribuidoresRepository, DespachoRepository $despachorepository)
     {
         $this->cotizacionRepository = $cotizacionRepository;
         $this->pedidoRepository = $pedidoRepository;
         $this->pedidoProductoRepository = $pedidoProductoRepository;
         $this->usuariodicremeRepository = $usuariodicremeRepository;
         $this->usuario_distribuidoresRepository = $usuario_distribuidoresRepository;
+        $this->despachorepository = $despachorepository;
     }
 
     public function createCotizacion(array $data)
@@ -33,6 +37,7 @@ class CotizacionServices
             'id_distribuidor'      => $data['id_distribuidor'],
             'id_usuario_dicreme'   => $data['id_usuario_dicreme'] ?? null,
             'id_estado_cotizacion' => $data['id_estado_cotizacion'],
+            'persona_recibe' => $data['persona_recibe'],
             'fecha_creacion'       => $data['fecha_creacion'],
             'hora_creacion'        => $data['hora_creacion'],
             'total_cotizacion'     => $data['total_cotizacion']
@@ -69,9 +74,14 @@ class CotizacionServices
     public function transformarCotizacionEnPedido($idCotizacion)
     {
         $cotizacion = $this->cotizacionRepository->getCotizacionConProductos($idCotizacion);
+        $usuario = $this->usuario_distribuidoresRepository->getUsuarioDistribuidorById($cotizacion->id_distribuidor);
 
         if (!$cotizacion) {
             throw new \Exception("La cotización no existe.");
+        }
+        
+        if($cotizacion->id_estado_cotizacion !== 3){
+            return false;
         }
 
         // Creamos el pedido
@@ -96,12 +106,97 @@ class CotizacionServices
             ]);
         }
 
-        // Actualizamos la cotización (Usando el nombre correcto de la columna)
-        $this->cotizacionRepository->updateCotizacion($cotizacion->id, [
-            'id_estado_cotizacion' => 3 // Suponiendo que 2 es el estado "Validada"
+        $this->despachorepository->createDespacho([
+            'id_pedido' => $pedido->id,
+            'direccion_entrega' => $usuario->direccion,
+            'comuna' => $usuario->comuna,
+            'fecha_entrega' => null,
+            'persona_recibe' => $cotizacion->persona_recibe,
+            'estado_despacho' => null,
         ]);
 
         return $pedido;
+    }
+
+    public function tomarcotizacionadmin($id_cotizacion, $id_usuario_dicreme){
+
+        $usuario_dicreme = $this->usuariodicremeRepository->getUsuarioDicremeById($id_usuario_dicreme);
+        $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+
+        if(!$cotizacion){
+            return false;
+        }
+        if(!$usuario_dicreme){
+            return null;
+        }
+
+        if($cotizacion->id_usuario_dicreme != null){
+            throw new \Exception("No puedes tomar esta cotizacion, ya tomada");
+        }
+
+        return $this->cotizacionRepository->TomarCotizacionUsuarioDicreme($id_cotizacion, $id_usuario_dicreme);
+    }
+
+    public function Dejarcotizacionadmin($id_cotizacion, $id_usuario_dicreme)
+    {
+        $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+        $usuario = $this->usuariodicremeRepository->getUsuarioDicremeById($id_usuario_dicreme);
+
+        if (!$cotizacion) {
+            return null;
+        }
+
+        if (!$usuario){
+            throw new \Exception("El usuario no existe");
+        }
+
+        if ($cotizacion->id_usuario_dicreme !== (int)$id_usuario_dicreme) {
+            return false;
+        }
+
+        return $this->cotizacionRepository->DejarCotizacionUsuarioDicreme($id_cotizacion);
+    }
+
+    public function Cancelarcotizacionadmin($id_cotizacion, $id_usuario_dicreme)
+    {
+        $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+        $usuario = $this->usuariodicremeRepository->getUsuarioDicremeById($id_usuario_dicreme);
+
+        if (!$cotizacion) {
+            return null;
+        }
+
+        if (!$usuario){
+            throw new \Exception("El usuario no existe");
+        }
+
+        return $this->cotizacionRepository->CancelarCotizacion($id_cotizacion);
+    }
+
+
+    public function validarCotizacion($id_cotizacion, $id_usuario_dicreme){
+        $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+        $usuario = $this->usuariodicremeRepository->getUsuarioDicremeById($id_usuario_dicreme);
+
+        if(!$usuario){
+            throw new \Exception("El usuario no existe");
+        }
+        
+        if ($cotizacion->id_usuario_dicreme !== (int)$id_usuario_dicreme) {
+            return null;
+        }
+
+        if($cotizacion->id_estado_cotizacion == 2) { 
+
+            return $this->cotizacionRepository->cotizacioncompletada($id_cotizacion);
+        }
+        
+        if (!$cotizacion) {
+            throw new \Exception("La cotizacion no existe");
+        }
+
+        return false;
+
     }
 
     public function getCotizacionesByUsuario($id_usuario_dicreme) {

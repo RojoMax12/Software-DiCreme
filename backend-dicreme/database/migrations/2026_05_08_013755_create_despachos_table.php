@@ -16,9 +16,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_pedido');
             $table->string('direccion_entrega');
             $table->string('comuna');
-            $table->date('fecha_entrega');
+            $table->date('fecha_entrega')->nullable();
             $table->string('persona_recibe');
-            $table->string('estado_despacho');
+            $table->string('estado_despacho')->nullable();
             $table->timestamps();
         });
     }
