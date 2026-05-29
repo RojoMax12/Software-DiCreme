@@ -39,4 +39,10 @@ class DespachoRepository
         }
         return false;
     }
+
+    public function getDespachoByIdpedido($id){
+
+        return Despacho::where("id_pedido", $id)->first();
+
+    }
 }

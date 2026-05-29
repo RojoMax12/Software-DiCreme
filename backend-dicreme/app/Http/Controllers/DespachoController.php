@@ -53,4 +53,8 @@ class DespachoController extends Controller
     {
         return response()->json($this->despachoServices->deleteDespacho($id));
     }
+
+    public function getdespachobyidpedido($id){
+        return response()->json($this->despachoServices->despachosbyidpedido($id));
+    }
 }
