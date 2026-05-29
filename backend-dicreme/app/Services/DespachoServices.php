@@ -37,4 +37,8 @@ class DespachoServices
     {
         return $this->despachoRepository->deleteDespacho($id);
     }
+
+    public function despachosbyidpedido($id){
+        return $this->despachoRepository->getDespachoByIdpedido($id);
+    }
 }

@@ -88,7 +88,9 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'destroy'])->middleware('role:1');
         Route::put('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'update'])->middleware('role:1');
         Route::delete('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'destroy'])->middleware('role:1');
+        
         Route::post('/pedidos', [PedidoController::class, 'store']);
+        Route::put('/pedidos/{id_pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])->middleware('role:1,2');
         Route::put('/pedidos/{id}', [PedidoController::class, 'update'])->middleware('role:1,2');
         Route::delete('/pedidos/{id}', [PedidoController::class, 'destroy'])->middleware('role:1');
         Route::post('/estado_pedido', [Estado_pedidoController::class, 'store'])->middleware('role:1');
@@ -148,6 +150,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/estado_pedido', [Estado_pedidoController::class, 'index']);
         Route::get('/estado_pedido/{id}', [Estado_pedidoController::class, 'show']);
         Route::get('/despachos', [DespachoController::class, 'index']);
+        Route::get('/despachos/{id}/pedidos', [DespachoController::class, 'getdespachobyidpedido']);
         Route::get('/despachos/{id}', [DespachoController::class, 'show']);
         Route::get('/bodegas', [BodegaController::class, 'index']);
         Route::get('/bodegas/{id}', [BodegaController::class, 'show']);
