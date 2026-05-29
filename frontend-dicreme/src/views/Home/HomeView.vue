@@ -61,7 +61,7 @@ import ProductDetailModal from '@/components/ProductDetailModal.vue';
 import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
 import fotoCaja from '@/assets/caja_dicreme.jpg'
 import { ShoppingCart } from 'lucide-vue-next'
-import categoryService from '@/services/categoryService';
+import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 
 

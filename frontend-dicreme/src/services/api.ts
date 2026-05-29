@@ -8,7 +8,25 @@ const api = axios.create({
   },
 });
 
-// Interceptor para manejar errores globales (opcional pero recomendado)
+// 🚨 INTERCEPTOR DE PETICIÓN: Inyecta el token automáticamente en cada llamada
+api.interceptors.request.use(
+  (config) => {
+    // Buscamos el token tal cual lo guardas en tu Login y Navbar
+    const token = localStorage.getItem('token');
+    
+    // Si el token existe, se lo pegamos al encabezado Authorization
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para manejar errores globales
 api.interceptors.response.use(
   (response) => response,
   (error) => {

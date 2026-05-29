@@ -78,8 +78,10 @@ class CotizacionServices
         $pedido = $this->pedidoRepository->createPedido([
             'id_cotizacion'      => $cotizacion->id,
             'id_usuario_dicreme' => $cotizacion->id_usuario_dicreme,
+            'id_usuario_distribuidor' => $cotizacion->id_distribuidor,
             'id_estado_pedido'   => 1, // Estado inicial
-            'fecha_pedido'       => now(), 
+            'fecha_creacion'       => now()->toDateString(),
+            'hora_creacion'      => now()->toTimeString(),
             'monto_estimado'     => $cotizacion->total_cotizacion,
             'monto_final'        => $cotizacion->total_cotizacion,
         ]);
@@ -96,7 +98,7 @@ class CotizacionServices
 
         // Actualizamos la cotización (Usando el nombre correcto de la columna)
         $this->cotizacionRepository->updateCotizacion($cotizacion->id, [
-            'id_estado_cotizacion' => 2 // Suponiendo que 2 es el estado "Validada"
+            'id_estado_cotizacion' => 3 // Suponiendo que 2 es el estado "Validada"
         ]);
 
         return $pedido;
