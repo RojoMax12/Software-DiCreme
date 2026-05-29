@@ -17,6 +17,7 @@ class Cotizacion extends Model
         'id_usuario_dicreme',
         'id_distribuidor',
         'id_estado_cotizacion',
+        'persona_recibe',
         'fecha_creacion',
         'hora_creacion',
         'total_cotizacion'

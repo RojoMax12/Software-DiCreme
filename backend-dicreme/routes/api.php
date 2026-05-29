@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BodegaController;
 use App\Http\Controllers\CategoriaController;
@@ -63,6 +62,10 @@ Route::middleware('jwt.auth')->group(function () {
         
         // Mover aquí las escrituras de Cotizaciones para que tengan JWT previo
         Route::post('/cotizaciones', [CotizacionController::class, 'store'])->middleware('role:1,2,3');
+        Route::put('/cotizaciones/{id_cotizacion}/tomarcotizacion/{id_admin}', [CotizacionController::class, 'tomarCotizacion'])->middleware('role:1');
+        Route::put('/cotizaciones/{id_cotizacion}/dejarcotizacion/{id_admin}', [CotizacionController::class, 'DejarCotizacion'])->middleware('role:1');
+        Route::put('/cotizaciones/{id_cotizacion}/cancelarcotizacion/{id_usuario}', [CotizacionController::class, 'cancelarCotizacionadmin'])->middleware('role:1,3');
+        Route::put('/cotizaciones/{id_cotizacion}/validarcotizacion/{id_admin}', [CotizacionController::class, 'validarCotizacion'])->middleware('role:1');
         Route::put('/cotizaciones/{id}', [CotizacionController::class, 'update'])->middleware('role:1,2,3');
         Route::delete('/cotizaciones/{id}', [CotizacionController::class, 'destroy'])->middleware('role:1');
         Route::delete('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'destroy'])->middleware('role:1');
