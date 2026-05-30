@@ -144,14 +144,19 @@ const handleConfirmQuotation = async () => {
   // --- MAPEADO DE PAYLOAD ---
   const quotationPayload = {
     id_distribuidor: Number(userId.value),
-    id_usuario_dicreme: 1,
+    id_usuario_dicreme: null,
     id_estado_cotizacion: 1,
+    persona_recibe: `${firstName.value.trim()} ${lastName.value.trim()}`,
     fecha_creacion: dateString,
     hora_creacion: timeString,
     total_cotizacion: calculatedTotal,
 
     cotizacion_productos: quotationItems.value.map(item => {
-      console.log('Resolving transaction properties for:', item.name, 'Size:', item.size)
+      console.log('Enviando helado:', item.name, '| Claves de ID detectadas:', { 
+        id_producto: item.id_producto, 
+        id: item.id, 
+        producto_id: item.producto_id 
+      })
       
       const resolvedId = resolveProductId(item)
       const resolvedPrice = typeof item.price === 'string' 
@@ -168,6 +173,8 @@ const handleConfirmQuotation = async () => {
 
   // --- DISPARO DE PETICIÓN ÚNICA MEDIANTE REST API ---
   try {
+
+    console.log("Payload que se va a Laravel:", JSON.stringify(quotationPayload, null, 2))
     const response = await quoteService.createQuote(quotationPayload)
     const result = response.data
 

@@ -30,10 +30,11 @@
         v-model:searchQuery="searchQueryText"
         :categories="categoriesList"
       />
+      
       <div class="products-grid">
         <ProductCard 
           v-for="item in filteredIceCreams" 
-          :key="item.id"
+          :key="item.name"
           :name="item.name"
           :category="item.category"
           :categoryColor="item.color"
@@ -42,7 +43,6 @@
         />
       </div>
     </main>
-
 
     <button class="floating-cart" @click="isCartOpen = true">
       <ShoppingCart :size="28" color="white" :stroke-width="2" />
@@ -64,7 +64,6 @@ import { ShoppingCart } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 
-
 // Estados reactivos
 const isCartOpen = ref(false);
 const isDetailOpen = ref(false);
@@ -81,7 +80,7 @@ const searchQueryText = ref<string>('');
 const isLoggedIn = ref(false); 
 const currentUser = ref<any>(null);
 
-// revisar el estado de autenicación
+// Revisar el estado de autenticación
 const checkAuthStatus = () => {
   const token = localStorage.getItem('token');
   const userParsed = localStorage.getItem('user');
@@ -91,9 +90,7 @@ const checkAuthStatus = () => {
     if (userParsed) {
       try {
         const userObj = JSON.parse(userParsed);
-
         console.log("Contenido real de lo que hay en 'user':", userObj);
-        // Mapeamos todas las posibilidades típicas de nombres que devuelven las APIs de Laravel
         currentUser.value = userObj.nombre_empresa || 'Distribuidor';
       } catch (error) {
         console.error("Error al parsear el usuario:", error);
@@ -108,26 +105,26 @@ const checkAuthStatus = () => {
   }
 };
 
-//Función para cerrar sesión
+watch(() => router.currentRoute.value.path, () => {
+  checkAuthStatus();
+});
+
+// Función para cerrar sesión
 const handleLogout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   isLoggedIn.value = false;
   currentUser.value = null;
-
   alert('Has cerrado sesión exitosamente.');
 };
 
+// Computado para filtrar helados por categoría y búsqueda de texto
 const filteredIceCreams = computed(() => {
   let results = iceCreams.value;
 
-  //filtro 1: por categoría
+  // Filtro 1: por categoría
   if (selectedCategory.value !== 'Todas' && selectedCategory.value !== '') {
-    if (selectedCategory.value === 'Vegano') {
-      results = results.filter(
-        item => item.category === 'Al agua' || item.category === 'Leche de avena'
-      );
-    } else if (selectedCategory.value === 'Sin lactosa') {
+    if (selectedCategory.value === 'Vegano' || selectedCategory.value === 'Sin lactosa') {
       results = results.filter(
         item => item.category === 'Al agua' || item.category === 'Leche de avena'
       );
@@ -136,7 +133,7 @@ const filteredIceCreams = computed(() => {
     }
   }
   
-  //filtro 2: por texto de búsqueda
+  // Filtro 2: por texto de búsqueda
   if (searchQueryText.value.trim() !== '') {
     const searchLow = searchQueryText.value.toLowerCase();
     results = results.filter(item => 
@@ -152,16 +149,20 @@ const openDetails = (iceCream: any) => {
   isDetailOpen.value = true;
 };
 
+// --- LÓGICA DEL CARRITO BLINDADA (EVITA DUPLICADOS DE SABOR POR FORMATO) ---
+
 // Agregar un producto al carrito
 const addToCart = (purchaseItem: any) => {
-  //buscamos si ya existe el producto con el mismo sabor y tamaño en el carrito
+  // Comparamos usando el sabor exacto y el tamaño físico
   const existingItem = cartItems.value.find(
-    item => item.id === purchaseItem.id && item.size === purchaseItem.size
+    item => item.name === purchaseItem.name && item.size === purchaseItem.size
   );
 
   if (existingItem) {
+    // Si el helado coincide completamente en sabor y formato, incrementamos
     existingItem.quantity += purchaseItem.quantity;
   } else {
+    // Si es un sabor nuevo (aunque compartan el ID de formato general), se añade como una línea independiente
     cartItems.value.push(purchaseItem);
   }
   
@@ -170,13 +171,14 @@ const addToCart = (purchaseItem: any) => {
 
 // Función para cambiar cantidades desde el carrito lateral
 const handleUpdateQuantity = (payload: { id: number, size: string, change: number }) => {
+  // Buscamos al item específico por su ID único de producto y su formato
   const targetItem = cartItems.value.find(
     item => item.id === payload.id && item.size === payload.size
   );
   
   if (targetItem) {
     targetItem.quantity += payload.change;
-    // Si la cantidad baja a 0 o menos, removemos el producto por completo
+    // Si la cantidad llega a cero, lo sacamos del carrito
     if (targetItem.quantity <= 0) {
       handleRemoveItem(payload);
     }
@@ -190,24 +192,19 @@ const handleRemoveItem = (payload: { id: number, size: string }) => {
   );
 };
 
-// Función para procesar la cotización e ir a la siguiente pantalla
+// Procesar la cotización hacia la siguiente pantalla
 const goToQuotation = () => {
   if (cartItems.value.length === 0) {
     alert("Tu carrito está vacío.");
     return;
   }
   
-  // ver si hay sesión iniciada
   const token = localStorage.getItem('token');  
-
   
   if (token) {
-      // si esta logueado, que vaya al resumen de la cotización
       isCartOpen.value = false;
       router.push('/cotizacion');
-  
   } else {
-      // si no esta logueado, que abra el modal de aviso para iniciar sesión
       isNoticeOpen.value = true;
   }
 };
@@ -215,15 +212,12 @@ const goToQuotation = () => {
 const handleGoToLogin = () => {
   isNoticeOpen.value = false;
   isCartOpen.value = false;
-
   router.push('/login');
 };
 
-// Función para cargar los productos
+// Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
   try {
-
-    //Llamada al backend 
     const [productsResponse, categoriesResponse] = await Promise.all([
       productService.getProducts(),
       categoryService.getCategory()
@@ -238,77 +232,69 @@ const fetchIceCreams = async () => {
 
     categoriesList.value = dbCategories;
 
-    // Diccionario de categorías para asignar IDs
+    // Diccionario de categorías para mapear IDs a nombres legibles
     const categoryMap: Record<number, string> = {};
     dbCategories.forEach((cat: any) => {
-      const catId= cat.id || cat.ID;
+      const catId = cat.id || cat.ID;
       if (catId){
         categoryMap[catId] = cat.nombre_categoria;
       }
     });
 
-    // auxiliar para agrupar los formatos por sabor de helado
+    // Auxiliar para agrupar los formatos individuales bajo el mismo nombre de sabor
     const grouped: Record<string, any> = {};
 
     dbProducts.forEach((prod: any) => {
       const flavorName = prod.nombre_producto;
       const catId = prod.id_categoria || prod.ID_categoria;
-      // obtenemos el nombre real desde el backend o lo definimos como "Sin categoría" si no se encuentra
       const categoryName = categoryMap[catId] || 'Sin categoría';
 
-      //si es la primera vez que vemos este sabor, lo inicializamos
       if (!grouped[flavorName]){
         grouped[flavorName] = {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
-          image:fotoCaja,
+          image: fotoCaja,
           id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',
           id1l: null, price1l: 'No disponible'
-
         };
       }
 
-      //formateamos el precio a moneda local
       const rawPrice = prod.precio_producto || 0;
       const formattedPrice = `$${Number(rawPrice).toLocaleString('es-CL')}`;
       console.log(`Producto: ${flavorName}, Formato ID: ${prod.id_formato || prod.ID_formato}, Precio: ${rawPrice}`);
 
-      // identificamos y agrupamos por formato (ID 1 =10L, ID 2 = 5L, ID 3 = 2.5L, ID 4 = 1L)
       const formatId = prod.id_formato || prod.ID_formato;
+      
+      // Asignamos el ID único de la base de datos de cada helado concreto a su respectivo formato mapeado
       if (formatId === 1) {
-        // ID 1 es 10L
         grouped[flavorName].id10l = prod.id || prod.ID;
         grouped[flavorName].price10l = formattedPrice;
       } else if (formatId === 2) {
-        // ID 2 es 5L
         grouped[flavorName].id5l = prod.id || prod.ID;
         grouped[flavorName].price5l = formattedPrice;
       } else if (formatId === 3) {
-        // ID 3 es 2.5L
         grouped[flavorName].id25l = prod.id || prod.ID;
         grouped[flavorName].price25l = formattedPrice;
-      }else if (formatId === 4) {
-        // ID 4 es 1L
+      } else if (formatId === 4) {
         grouped[flavorName].id1l = prod.id || prod.ID;
         grouped[flavorName].price1l = formattedPrice;
       }
     });
 
-    // Convertimos el objeto agrupado a un array para usar en la UI
     iceCreams.value = Object.values(grouped);
   } catch (error) {
     console.error('Error al cargar los productos:', error);
   }  
-
 }
 
 onMounted(() => {
   fetchIceCreams();
   checkAuthStatus();
 
+  // Recuperación segura del estado persistido del carrito temporal
   const savedCart = localStorage.getItem('dicreme_temp_cart');
   if (savedCart) {
     try {
@@ -319,6 +305,7 @@ onMounted(() => {
   }
 });
 
+// Guardado reactivo profundo en LocalStorage para no perder la persistencia de compra
 watch(
   cartItems,
   (newCart) => {
@@ -326,7 +313,6 @@ watch(
   },
   { deep: true }
 );
-
 </script>
 
 <style scoped>
