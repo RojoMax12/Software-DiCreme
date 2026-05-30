@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Usuario_dicreme;
 use App\Models\Usuario_distribuidores;
 use App\Services\JwtService;
+use App\Services\AuthService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
-{
+{   
+    protected $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
     public function login(Request $request, JwtService $jwtService): JsonResponse
     {
         // 1. Ya no exigimos 'tipo_usuario' desde el frontend
@@ -103,5 +111,52 @@ class AuthController extends Controller
             'name' => $user instanceof Usuario_dicreme ? $user->nombre_usuario : ($user instanceof Usuario_distribuidores ? $user->nombre_empresa : null),
             'email' => $user->correo_electronico ?? null,
         ];
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $correo = $request->validate(['email' => 'required|email']);
+        
+        $resultado = $this->authService->enviarEnlaceRecuperacion($correo);
+
+        if ($resultado == false) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'No encontramos ningún usuario con ese correo.'
+            ], 404);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Enlace de recuperación enviado con éxito.'
+        ], 200);
+    }
+
+    // Endpoint 2: El que procesa el cambio final con la nueva clave
+    public function resetPassword(Request $request)
+    {
+        // Validamos la entrada desde Vue
+        $request->validate([
+            'token' => 'required|string',
+            'password' => 'required|string|min:6|confirmed' // Requiere password_confirmation en el JSON
+        ]);
+
+        try {
+            $this->authService->restablecerContrasena(
+                $request->input('token'),
+                $request->input('password')
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Tu contraseña ha sido restablecida correctamente. Ya puedes iniciar sesión.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 400); // 400 Bad Request por Token inválido/expirado
+        }
     }
 }

@@ -39,4 +39,10 @@ class Usuario_distribuidoresRepository
         }
         return false;
     }
+
+
+    public function getUsuarioDistribuidorByCorreo($correo){
+        
+        return Usuario_distribuidores::where("correo_electronico", $correo)->first();
+    }
 }
