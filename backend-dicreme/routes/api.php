@@ -129,6 +129,7 @@ Route::middleware('jwt.auth')->group(function () {
         
         // Mover aquí las lecturas de Cotizaciones para que tengan JWT previo
         Route::get('/cotizaciones', [CotizacionController::class, 'index'])->middleware('role:1,2,3');
+        Route::get('/cotizaciones/{id}/details', [CotizacionController::class, 'getdetailcotizacion'])->middleware('role:1,2,3');
         Route::get('/cotizaciones/{id}', [CotizacionController::class, 'show'])->middleware('role:1,2,3');
         Route::get('/cotizaciones/{id}/usuario_distribuidor', [CotizacionController::class, 'getallCotizacionesByUsuariodistribuidor'])->middleware('role:1,3');
         Route::get('/cotizacion_producto', [Cotizacion_productoController::class, 'index']);

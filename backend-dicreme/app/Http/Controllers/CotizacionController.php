@@ -205,4 +205,23 @@ class CotizacionController extends Controller
         return response()->json($this->cotizacionServices->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor));
     }
 
+    public function getdetailcotizacion($id){
+        
+        $resultado = $this->cotizacionServices->getDetailCotizacion($id);
+
+        if( $resultado === false){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No existe la cotización'
+            ], 403); 
+        
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Detalles de la cotizacion obtenidas exitosamente',
+            'data' => $resultado
+        ], 200); // 200 OK
+    }
+
 }
