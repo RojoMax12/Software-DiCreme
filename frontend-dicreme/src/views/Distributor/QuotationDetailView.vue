@@ -32,6 +32,24 @@ const fallbackComuna = ref('Comuna Registrada')
 // Captura el ID de la cotización directo desde los parámetros de la URL
 const quotationId = computed(() => Number(route.params.id))
 
+// CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1 o Paso 2)
+const currentStep = computed(() => {
+  if (!quotationData.value) return 1
+  
+  // Intenta obtener el ID desde distintas propiedades comunes por seguridad
+  const rawStatus = quotationData.value.id_estado_cotizacion 
+                 || quotationData.value.estado_id 
+                 || quotationData.value.id_estado;
+                 
+  const statusId = Number(rawStatus);
+  
+  // Imprime en consola para depurar si sigue fallando
+  console.log("Estado de cotización detectado:", statusId, rawStatus);
+
+  // Si el estado es 3 (Completado), vamos al paso 2. Si no, nos quedamos en el 1.
+  return statusId === 3 ? 2 : 1
+})
+
 // --- CARGA DE DATOS EN CADENA Y PARALELO ---
 onMounted(async () => {
   if (!quotationId.value) {
@@ -40,7 +58,6 @@ onMounted(async () => {
     return
   }
 
-  // Carga inicial de datos de respaldo desde el LocalStorage
   const userParsed = localStorage.getItem('user')
   if (userParsed) {
     try {
@@ -63,26 +80,22 @@ onMounted(async () => {
     const response = await quoteService.getQuoteById(quotationId.value)
     quotationData.value = response.data
 
-
-    // Si la cotización cargó con éxito, resolvemos los IDs secundarios
     if (quotationData.value) {
       const idDist = quotationData.value.id_distribuidor
       const idDicreme = quotationData.value.id_usuario_dicreme
 
       const llamadasSecundarias = []
 
-      //Consulta a la pivot + Resolución de productos + Resolución de categorías en tiempo real
+      // Consulta a la pivot + Resolución de productos + Resolución de categorías en tiempo real
       llamadasSecundarias.push(
         quoteProductService.getByQuotationId(quotationId.value)
           .then(async (res: any) => {
             const pivotItems = res.data || []
             
-            // Enriquecimiento multinivel en cascada
             const itemsConDetalle = await Promise.all(
               pivotItems.map(async (pivotItem: any) => {
                 if (pivotItem.id_producto) {
                   try {
-                    // A. Obtenemos los detalles base del producto
                     const prodRes = await productService.getProductById(pivotItem.id_producto)
                     pivotItem.producto = prodRes.data
 
@@ -130,7 +143,6 @@ onMounted(async () => {
         )
       }
 
-      // Ejecutamos ambas consultas concurrentemente
       await Promise.all(llamadasSecundarias)
     }
   } catch (error) {
@@ -141,7 +153,6 @@ onMounted(async () => {
   }
 })
 
-// Mapea el id_estado_cotizacion a la línea de tiempo de 2 pasos
 const getQuoteStatusLabel = (statusId: number): string => {
   const safeId = Number(statusId)
   if (safeId === 1) return 'En revisión'
@@ -161,9 +172,7 @@ const handleGoBack = () => {
 
 <template>
   <div class="quotation-detail-page">
-    <Navbar />
 
-    
     <main class="detail-container">
       <div class="title-section">
         <h2 class="main-title">Resumen Cotización N° {{ String(quotationId).padStart(6, '0') }}</h2>
@@ -227,7 +236,7 @@ const handleGoBack = () => {
                 </span>
                 
                 <span class="item-tag">
-                  - {{ item.producto?.categoria_objeto?.nombre_categoria ?? item.producto?.categoria_nombre ?? 'Categoría' }}
+                  - {{ item.producto?.id_categoria === 1 ? 'Al agua' : item.producto?.id_categoria === 2 ? 'Crema' : item.producto?.categoria_objeto?.nombre_categoria ?? item.producto?.categoria_nombre ?? 'Categoría' }}
                 </span>
                 
                 <div class="item-meta-row">
@@ -243,27 +252,24 @@ const handleGoBack = () => {
           </div> 
 
           <div class="timeline-wrapper">
-            <div class="floating-icon-container" 
-                 :class="Number(quotationData.id_estado_cotizacion ?? 1) === 3 ? 'step-active-2' : 'step-active-1'"
-            >
+            
+            <div class="floating-icon-container" :class="'step-active-' + currentStep">
               <div class="icon-bubble">
-                <FileSearch v-if="Number(quotationData.id_estado_cotizacion ?? 1) < 3" :size="24" color="white" />
+                <FileSearch v-if="currentStep === 1" :size="24" color="white" />
                 <CheckCircle2 v-else :size="24" color="white" />
               </div>
             </div>
 
             <div class="timeline-bar">
-              <div class="timeline-progress-bar" 
-                   :class="Number(quotationData.id_estado_cotizacion ?? 1) === 3 ? 'progress-fill-2' : 'progress-fill-1'"
-              ></div>
+              <div class="timeline-progress-bar" :class="'progress-fill-' + currentStep"></div>
             </div>
 
             <div class="timeline-nodes-row">
-              <div class="timeline-node" :class="{ active: Number(quotationData.id_estado_cotizacion ?? 1) >= 1 }">
+              <div class="timeline-node" :class="{ active: currentStep >= 1 }">
                 <div class="node-dot"></div>
                 <span class="node-text">En revisión</span>
               </div>
-              <div class="timeline-node" :class="{ active: Number(quotationData.id_estado_cotizacion ?? 1) === 3 }">
+              <div class="timeline-node" :class="{ active: currentStep === 2 }">
                 <div class="node-dot"></div>
                 <span class="node-text">Completado</span>
               </div>
@@ -345,22 +351,6 @@ const handleGoBack = () => {
   text-align: left;
 }
 
-.amount-label {
-  font-size: 1.05rem;
-  font-weight: bold;
-  color: #1a1624;
-}
-
-.amount-box-flat {
-  background-color: white;
-  border: 1px solid #e0dde0;
-  border-radius: 25px;
-  padding: 12px 25px;
-  font-size: 1.05rem;
-  font-weight: bold;
-  color: #322c44;
-}
-
 .amount-row.highlighted .amount-box-pink {
   background-color: white;
   border: 2px solid var(--DC-pink);
@@ -369,6 +359,7 @@ const handleGoBack = () => {
   font-size: 1.1rem;
   font-weight: 800;
   color: #1a1624;
+  text-align: left;
 }
 
 .products-box-container {
@@ -408,9 +399,9 @@ const handleGoBack = () => {
 .item-qty { font-size: 0.95rem; font-weight: 800; color: #444; }
 
 .timeline-wrapper {
-  margin: 50px auto 25px auto;
+  margin: 60px auto 30px auto;
   position: relative;
-  width: 80%;
+  width: 75%; 
 }
 
 .timeline-bar {
@@ -419,17 +410,10 @@ const handleGoBack = () => {
   left: 0;
   width: 100%;
   height: 4px;
-  background-color: var(--DC-bg-gray);
+  background-color: #e0dde0;
   z-index: 1;
-  border-radius: 2px;
 }
 
-.timeline-progress-bar {
-  height: 100%;
-  background-color: var(--DC-pink);
-  width: 0%;
-  transition: width 0.4s ease;
-}
 
 .progress-fill-1 { width: 0%; }
 .progress-fill-2 { width: 100%; }
@@ -453,7 +437,7 @@ const handleGoBack = () => {
   height: 14px;
   background-color: #b5b2bc;
   border-radius: 50%;
-  border: 2px solid var(--DC-bg-gray);
+  border: 2px solid var(--DC-bg-light);
   transition: background-color 0.3s ease;
 }
 
@@ -475,9 +459,17 @@ const handleGoBack = () => {
 
 .floating-icon-container {
   position: absolute;
-  top: -45px;
+  top: -46px;
   z-index: 3;
-  transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-50%); 
+  transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.step-active-1 { 
+  left: 35px; 
+}
+.step-active-2 { 
+  left: calc(100% - 35px); 
 }
 
 .icon-bubble {
@@ -490,9 +482,6 @@ const handleGoBack = () => {
   justify-content: center;
   animation: bounce 2s infinite ease-in-out;
 }
-
-.step-active-1 { left: calc(0% - 18px); }
-.step-active-2 { left: calc(100% - 18px); }
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
