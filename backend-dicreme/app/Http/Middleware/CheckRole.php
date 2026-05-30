@@ -13,8 +13,6 @@ class CheckRole
         // Obtener el usuario autenticado por JWT
         $user = auth()->user();
 
-        print_r($user); // Debug: Verificar el usuario autenticado
-
         if (!$user || !in_array($user->id_rol, $roles)) {
             return response()->json(['message' => 'No tienes permisos para realizar esta acción.'], 403);
         }

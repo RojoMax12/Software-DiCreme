@@ -11,14 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('despachos', function (Blueprint $table) {
+        Schema::create('estados_cotizacion', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_pedido');
-            $table->string('direccion_entrega');
-            $table->string('comuna');
-            $table->date('fecha_entrega')->nullable();
-            $table->string('persona_recibe');
-            $table->string('estado_despacho')->nullable();
+            $table->string('nombre_estado')->unique();
             $table->timestamps();
         });
     }
@@ -28,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('despachos');
+        Schema::dropIfExists('estados_cotizacion');
     }
 };

@@ -17,11 +17,16 @@ class Pedido extends Model
         'id_cotizacion',
         'id_estado_pedido',
         'id_usuario_dicreme',
+        'id_usuario_distribuidor',
         'fecha_creacion',
-    ];
+        'hora_creacion',
+        'monto_estimado',
+        'monto_final'
+        ];
 
     protected $casts = [
         'fecha_creacion' => 'date',
+        'hora_creacion' => 'datetime',
     ];
 
 
