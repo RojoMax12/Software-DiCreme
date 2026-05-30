@@ -49,7 +49,7 @@ class AuthService
 
         $token = $tokenPayload['access_token'];
 
-        // URL hacia tu Frontend en Vue.js
+        // URL hacia tu Frontend en Vue.js pepito
         $urlFrontend = "http://localhost:5173/reset-password?token=" . $token;
 
         $correoDestinatario = $usuario->correo_electronico; 
