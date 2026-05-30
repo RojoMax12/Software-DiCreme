@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Services;
-
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -10,7 +9,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 class JwtService
-{
+{   
     public function issueForUser(Authenticatable $user, array $extraClaims = []): array
     {
         $issuedAt = now()->timestamp;

@@ -38,6 +38,8 @@ Route::prefix('auth')->middleware('throttle:auth_limits')->group(function () {
 Route::middleware('throttle:api_escritura')->group(function () {
     // Permitimos que cualquiera se cree una cuenta de distribuidor sin estar logueado aún
     Route::post('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'store']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 Route::middleware('throttle:api_lectura')->group(function() {
