@@ -6,22 +6,33 @@ import { FileText, ShoppingBag, ChevronDown, LogOut } from 'lucide-vue-next'
 const router = useRouter()
 
 // --- ESTADOS REACTIVOS ---
-const username = ref('prueba')
+const username = ref('')
+const isLoggedIn = ref(false)
 const isDropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 // Carga el nombre real del usuario logueado al montar la barra
-onMounted(() => {
+const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
-  if (userParsed) {
+  const token = localStorage.getItem('token')
+  
+  if (userParsed && token) {
     try {
       const userObj = JSON.parse(userParsed)
-      username.value = userObj.nombre_empresa || userObj.nombre || 'prueba'
+      username.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Usuario'
+      isLoggedIn.value = true
     } catch (e) {
       console.error('Error parsing user session inside Navbar:', e)
+      isLoggedIn.value = false
     }
+  } else {
+    isLoggedIn.value = false
+    username.value = ''
   }
-  
+}
+
+onMounted(() => {
+  checkAuth()
   // Agrega el escuchador global para cerrar el menú flotante al hacer clic afuera
   window.addEventListener('click', handleOutsideClick)
 })
@@ -52,68 +63,75 @@ const navigateTo = (path: string) => {
 
 // Destruye la sesión activa y retorna al login principal
 const handleLogout = () => {
-  localStorage.removeItem('user')
+  localStorage.clear()
+  isLoggedIn.value = false
+  username.value = ''
+  isDropdownOpen.value = false
   router.push('/')
 }
 </script>
 
 <template>
   <nav class="dc-navbar">
-    <!-- Contenedor Izquierdo: Logotipo Corporativo -->
     <div class="nav-left" @click="router.push('/')">
       <img src="@/assets/logo_dicreme.png" alt="Di Creme Logo" class="brand-logo" />
       <span class="brand-text">Di Creme</span>
     </div>
 
-    <!-- Contenedor Derecho: Sesión, Dropdown de Avance e Historial y Cierre -->
     <div class="nav-right">
       
-      <!-- --- BOTÓN DE MENÚ FLOTANTE INTERACTIVO --- -->
-      <div class="dropdown-wrapper" ref="dropdownRef">
-        <button class="btn-history-dropdown" @click="toggleDropdown" :class="{ 'btn-active': isDropdownOpen }">
-          <span>Mi Historial</span>
-          <ChevronDown :size="16" class="arrow-icon" :class="{ 'rotate-arrow': isDropdownOpen }" />
+      <template v-if="isLoggedIn">
+        <div class="dropdown-wrapper" ref="dropdownRef">
+          <button class="btn-history-dropdown" @click="toggleDropdown" :class="{ 'btn-active': isDropdownOpen }">
+            <span>Mi Historial</span>
+            <ChevronDown :size="16" class="arrow-icon" :class="{ 'rotate-arrow': isDropdownOpen }" />
+          </button>
+
+          <Transition name="dropdown-fade">
+            <div v-if="isDropdownOpen" class="floating-menu">
+              <div class="menu-arrow-pointer"></div>
+              
+              <!-- Opción 1: Redirección al historial de Cotizaciones -->
+              <button class="menu-item" @click="navigateTo('/mis-cotizaciones')">
+                <FileText :size="18" color="#e4869f" />
+                <div class="item-text-group">
+                  <span class="item-title">Mis Cotizaciones</span>
+                  <span class="item-desc">Revisa propuestas y estados</span>
+                </div>
+              </button>
+
+              <!-- Opción 2: Redirección al historial de Pedidos con el camioncito -->
+              <button class="menu-item" @click="navigateTo('/mis-pedidos')">
+                <ShoppingBag :size="18" color="#322c44" />
+                <div class="item-text-group">
+                  <span class="item-title">Mis Pedidos</span>
+                  <span class="item-desc">Seguimiento de compras</span>
+                </div>
+              </button>
+            </div>
+          </Transition>
+        </div>
+
+        <div class="divider-line"></div>
+
+        <!-- Indicador de Sesión Activa -->
+        <div class="session-info">
+          <span class="session-label">Sesión iniciada:</span>
+          <span class="session-username">{{ username }}</span>
+        </div>
+
+        <!-- Botón de Salida -->
+        <button class="btn-logout-dark" @click="handleLogout">
+          <LogOut :size="14" class="logout-icon" />
+          <span>CERRAR SESIÓN</span>
         </button>
+      </template>
 
-        <!-- Contenedor Flotante del Menú (Aparece dinámicamente con transiciones CSS) -->
-        <Transition name="dropdown-fade">
-          <div v-if="isDropdownOpen" class="floating-menu">
-            <div class="menu-arrow-pointer"></div>
-            
-            <!-- Opción 1: Redirección al historial de Cotizaciones -->
-            <button class="menu-item" @click="navigateTo('/mis-cotizaciones')">
-              <FileText :size="18" color="#e4869f" />
-              <div class="item-text-group">
-                <span class="item-title">Mis Cotizaciones</span>
-                <span class="item-desc">Revisa propuestas y estados</span>
-              </div>
-            </button>
-
-            <!-- Opción 2: Redirección al historial de Pedidos con el camioncito -->
-            <button class="menu-item" @click="navigateTo('/mis-pedidos')">
-              <ShoppingBag :size="18" color="#322c44" />
-              <div class="item-text-group">
-                <span class="item-title">Mis Pedidos</span>
-                <span class="item-desc">Seguimiento de compras</span>
-              </div>
-            </button>
-          </div>
-        </Transition>
-      </div>
-
-      <div class="divider-line"></div>
-
-      <!-- Indicador de Sesión Activa (Estilo image_071ac9.jpg) -->
-      <div class="session-info">
-        <span class="session-label">Sesión iniciada:</span>
-        <span class="session-username">{{ username }}</span>
-      </div>
-
-      <!-- Botón de Salida -->
-      <button class="btn-logout-dark" @click="handleLogout">
-        <LogOut :size="14" class="logout-icon" />
-        <span>CERRAR SESIÓN</span>
+      <!-- Botón de Ingreso si no hay sesión -->
+      <button v-else class="btn-logout-dark" @click="router.push('/login')">
+        <span>INGRESAR</span>
       </button>
+
     </div>
   </nav>
 </template>
