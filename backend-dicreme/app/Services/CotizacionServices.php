@@ -7,6 +7,8 @@ use App\Repositories\Pedido_productoRepository; // <--- Inyectamos el Repositori
 use App\Repositories\Usuario_dicremeRepository;
 use App\Repositories\Usuario_distribuidoresRepository;
 use App\Repositories\DespachoRepository;
+use App\Repositories\Cotizacion_productoRepository;
+use App\Repositories\ProductoRepository;
 use App\Models\Cotizacion;
 
 class CotizacionServices
@@ -17,10 +19,14 @@ class CotizacionServices
     protected $usuariodicremeRepository;
     protected $usuario_distribuidoresRepository;
     protected $despachorepository;
+    protected $cotizacionproductoRepository;
+    protected $productoRepository;
 
     public function __construct(CotizacionRepository $cotizacionRepository , PedidoRepository $pedidoRepository, 
     Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository,
-    Usuario_distribuidoresRepository $usuario_distribuidoresRepository, DespachoRepository $despachorepository)
+    Usuario_distribuidoresRepository $usuario_distribuidoresRepository, DespachoRepository $despachorepository
+    ,Cotizacion_productoRepository $cotizacionproductoRepository,
+    ProductoRepository $productoRepository)
     {
         $this->cotizacionRepository = $cotizacionRepository;
         $this->pedidoRepository = $pedidoRepository;
@@ -28,6 +34,8 @@ class CotizacionServices
         $this->usuariodicremeRepository = $usuariodicremeRepository;
         $this->usuario_distribuidoresRepository = $usuario_distribuidoresRepository;
         $this->despachorepository = $despachorepository;
+        $this->cotizacionproductoRepository = $cotizacionproductoRepository;
+        $this->productoRepository = $productoRepository;
     }
 
     public function createCotizacion(array $data)
@@ -221,5 +229,54 @@ class CotizacionServices
         
         return $this->cotizacionRepository->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor);
     }
+
+    public function getDetailCotizacion($id)
+{
+    // 1. Buscamos la cotización base
+    $cotizacion = $this->cotizacionRepository->getCotizacionById($id);
+
+    if (!$cotizacion) {
+        return false; // No existe
+    }
+
+    // 2. Traemos las relaciones del distribuidor y los registros pivote
+    $usuario_distribuidor = $this->usuario_distribuidoresRepository->getUsuarioDistribuidorById($cotizacion->id_distribuidor);
+    $cotizacion_products = $this->cotizacionproductoRepository->getCotizacionProductosByCotizacionId($cotizacion->id);
+
+    // 3. RECORREMOS LA LISTA: Combinamos el pivote con la info del catálogo del producto
+    $listaProductosData = [];
+
+    foreach ($cotizacion_products as $itemPivote) {
+        // Buscamos el detalle del producto usando el id_producto de la fila intermedia
+        $infoProducto = $this->productoRepository->getProductoById($itemPivote->id_producto);
+
+        if ($infoProducto) {
+            $listaProductosData[] = [
+                'id_producto'           => $infoProducto->id,
+                'nombre_producto'       => $infoProducto->nombre_producto,
+                'id_categoria'          => $infoProducto->id_categoria,
+                'id_formato'            => $infoProducto->id_formato,
+                'cantidad'              => $itemPivote->cantidad,
+                'precio_unitario_venta' => (int) $itemPivote->precio_unitario_venta,
+                'subtotal'              => $itemPivote->cantidad * $itemPivote->precio_unitario_venta
+            ];
+        }
+    }
+
+    // 4. RETORNAMOS EL PAQUETE COMPLETO
+    return [
+        'id_cotizacion'        => $cotizacion->id,
+        'persona_recibe'       => $cotizacion->persona_recibe,
+        'total_cotizacion'     => (float) $cotizacion->total_cotizacion,
+        'id_estado_cotizacion' => $cotizacion->id_estado_cotizacion,
+        'fecha_creacion'       => $cotizacion->created_at,
+
+        // Objeto con la información del distribuidor
+        'distribuidor'         => $usuario_distribuidor, 
+        
+        // Array estructurado con sus productos, cantidades y nombres reales
+        'productos'            => $listaProductosData
+    ];
+}
 
 }
