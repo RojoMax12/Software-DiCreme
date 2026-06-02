@@ -64,6 +64,15 @@ class CotizacionController extends Controller
         return response()->json($this->cotizacionServices->updateCotizacion($id, $data));
     }
 
+    public function updateTotal(Request $request, $id)
+    {
+        $data = $request->validate([
+            'total_cotizacion' => 'required|numeric',
+        ]);
+
+        return response()->json($this->cotizacionServices->updateTotalCotizacion($id, $data['total_cotizacion']));
+    }
+
     public function destroy($id)
     {
         return response()->json($this->cotizacionServices->deleteCotizacion($id));
