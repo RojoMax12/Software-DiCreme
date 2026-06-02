@@ -69,6 +69,11 @@ class CotizacionServices
         return $this->cotizacionRepository->updateCotizacion($id, $data);
     }
 
+    public function updateTotalCotizacion($id, $total)
+    {
+        return $this->cotizacionRepository->updateCotizacion($id, ['total_cotizacion' => $total]);
+    }
+
     public function deleteCotizacion($id)
     {
         return $this->cotizacionRepository->deleteCotizacion($id);

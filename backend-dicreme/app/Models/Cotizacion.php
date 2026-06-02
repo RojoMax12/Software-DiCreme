@@ -47,7 +47,4 @@ class Cotizacion extends Model
     {
         return $this->hasOne(Estado_cotizacion::class, 'id_estado_cotizacion');
     }
-
-    
-
 }
