@@ -16,8 +16,11 @@ class Cotizacion extends Model
     protected $fillable = [
         'id_usuario_dicreme',
         'id_distribuidor',
-        'estado_cotizacion',
+        'id_estado_cotizacion',
+        'persona_recibe',
         'fecha_creacion',
+        'hora_creacion',
+        'total_cotizacion'
     ];
 
     public function usuarioDicreme(): BelongsTo
@@ -40,6 +43,8 @@ class Cotizacion extends Model
         return $this->hasOne(Pedido::class, 'id_cotizacion');
     }
 
-    
-
+    public function estadoCotizacion(): HasOne
+    {
+        return $this->hasOne(Estado_cotizacion::class, 'id_estado_cotizacion');
+    }
 }
