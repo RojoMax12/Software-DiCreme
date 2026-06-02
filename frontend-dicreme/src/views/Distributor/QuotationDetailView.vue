@@ -76,75 +76,39 @@ onMounted(async () => {
   try {
     isLoading.value = true
 
-    // Obtener el objeto plano de la cotización
-    const response = await quoteService.getQuoteById(quotationId.value)
-    quotationData.value = response.data
+    // llamada a la API
+    const response = await quoteService.getQuoteDetails(quotationId.value)
+    const payload = response.data.data || response.data
 
-    if (quotationData.value) {
-      const idDist = quotationData.value.id_distribuidor
-      const idDicreme = quotationData.value.id_usuario_dicreme
+    if(payload){
+      quotationData.value = payload
 
-      const llamadasSecundarias = []
+      distributorData.value = payload.distribuidor || {}
 
-      // Consulta a la pivot + Resolución de productos + Resolución de categorías en tiempo real
-      llamadasSecundarias.push(
-        quoteProductService.getByQuotationId(quotationId.value)
-          .then(async (res: any) => {
-            const pivotItems = res.data || []
-            
-            const itemsConDetalle = await Promise.all(
-              pivotItems.map(async (pivotItem: any) => {
-                if (pivotItem.id_producto) {
-                  try {
-                    const prodRes = await productService.getProductById(pivotItem.id_producto)
-                    pivotItem.producto = prodRes.data
+      productsData.value = (payload.productos || []).map((prod: any) => {
 
-                    if (pivotItem.producto && pivotItem.producto.id_categoria) {
-                      try {
-                        const catRes = await productCategoryService.getCategoryById(pivotItem.producto.id_categoria)
-                        pivotItem.producto.categoria_objeto = catRes.data
-                      } catch (catErr) {
-                        console.error(`Error resolviendo categoría ID ${pivotItem.producto.id_categoria}:`, catErr)
-                      }
-                    }
-
-                  } catch (err) {
-                    console.error(`Error resolviendo maestro para producto ID ${pivotItem.id_producto}:`, err)
-                  }
-                }
-                return pivotItem
-              })
-            )
-            
-            productsData.value = itemsConDetalle
-          })
-          .catch((err: any) => console.error("Error cargando productos desde la tabla pivot:", err))
-      )
-
-      // Carga del distribuidor (Cliente) desde distributorService
-      if (idDist) {
-        llamadasSecundarias.push(
-          distributorService.getDistributorById(idDist)
-            .then((res: any) => { 
-              distributorData.value = res.data 
-            })
-            .catch((err: any) => console.error("Error en distributorService:", err))
-        )
-      }
-
-      // Carga del usuario interno (Trabajador) desde userService usando getUserById
-      if (idDicreme) {
-        llamadasSecundarias.push(
-          userService.getUserById(idDicreme)
-            .then((res: any) => { 
-              usuarioDicremeData.value = res.data 
-            })
-            .catch((err: any) => console.error("Error en userService:", err))
-        )
-      }
-
-      await Promise.all(llamadasSecundarias)
+        const formatos: Record<number, string> = {
+          1: '10L',
+          2: '5L',
+          3: '2.5L',
+          4: '1L'
+        }
+        return {
+          cantidad: prod.cantidad,
+          precio_unitario_venta: prod.precio_unitario_venta,
+          producto: {
+            name: prod.nombre_producto,
+            id_categoria: prod.id_categoria,
+            // Aquí asignamos el texto usando el diccionario, si no lo encuentra usa '10L'
+            formato: formatos[prod.id_formato] || '10L',
+            precio: prod.precio_unitario_venta
+          }
+        }
+      })
+    } else {
+      errorMessage.value = 'No se encontraron los detalles de la cotización.'
     }
+
   } catch (error) {
     console.error('Error fetching quotation details:', error)
     errorMessage.value = 'Hubo un problema al conectar con el servidor.'
@@ -201,14 +165,14 @@ const handleGoBack = () => {
             <p class="info-text"><strong>Empresa:</strong> {{ distributorData?.nombre_empresa || fallbackCompany }}</p>
             <p class="info-text"><strong>Rut empresa:</strong> {{ distributorData?.rut_empresa || distributorData?.rut || 'N/A' }}</p>
             <p class="info-text"><strong>Dirección:</strong> {{ distributorData?.direccion || fallbackAddress }}</p>
-            <p class="info-text"><strong>Comuna:</strong> {{ usuarioDicremeData?.comuna || usuarioDicremeData?.nombre_comuna || fallbackComuna }}</p>
+            <p class="info-text"><strong>Comuna:</strong> {{ distributorData?.comuna || fallbackComuna }}</p>
           </div>
 
           <div class="amount-group">
             <div class="amount-row highlighted">
               <span class="amount-label">Monto Estimado:</span>
               <div class="amount-box-pink">
-                {{ formatCurrency(quotationData.total_cotizacion ?? quotationData.total) }}
+                {{ formatCurrency(quotationData?.total_cotizacion) }}
               </div>
             </div>
           </div>
@@ -241,7 +205,7 @@ const handleGoBack = () => {
                 
                 <div class="item-meta-row">
                   <span class="item-spec">
-                    {{ item.producto?.size ?? item.producto?.formato ?? '10L' }} - 
+                    {{ item.producto?.formato ?? '10L' }} - 
                     {{ formatCurrency((item.precio_unitario_venta ?? item.precio) ?? (item.producto?.precio || 0)) }}
                   </span>
                   
@@ -277,7 +241,7 @@ const handleGoBack = () => {
           </div>
 
           <div class="status-display-box">
-            Estado de la cotización: <span class="capitalize-text">{{ quotationData.estado_nombre ?? getQuoteStatusLabel(quotationData.id_estado_cotizacion) }}</span>
+            Estado de la cotización: <span class="capitalize-text">{{ quotationData?.estado_nombre ?? getQuoteStatusLabel(quotationData?.id_estado_cotizacion) }}</span>
           </div>
 
           <div class="action-row">
@@ -407,8 +371,8 @@ const handleGoBack = () => {
 .timeline-bar {
   position: absolute;
   top: 6px;
-  left: 0;
-  width: 100%;
+  left: 35px; /* Corrección de posición de la barra gris */
+  width: calc(100% - 70px); /* Corrección del ancho de la barra gris */
   height: 4px;
   background-color: #e0dde0;
   z-index: 1;
