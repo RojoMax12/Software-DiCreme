@@ -8,7 +8,7 @@ import boxPlaceholderImage from '@/assets/caja_dicreme.jpg'
 const route = useRoute()
 const router = useRouter()
 
-// --- ESTADOS REACTIVOS ---
+// ESTADOS REACTIVOS
 const orderData = ref<any>(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -23,7 +23,7 @@ const fallbackName = ref('Representante Di Creme')
 // Captura el ID del pedido directo desde los parámetros de la URL
 const orderId = computed(() => Number(route.params.id))
 
-// --- CARGA DE DATOS DESDE LA API ---
+// Carga de datos
 onMounted(async () => {
   if (!orderId.value) {
     errorMessage.value = 'ID de pedido no válido.'

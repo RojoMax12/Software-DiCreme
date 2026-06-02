@@ -32,5 +32,9 @@ export default {
 
     transformQuoteToOrder(idCotizacion: number | string){
         return api.post(`/cotizacion/${idCotizacion}/transformar`);
+    },
+
+    getQuoteDetails(id: number) {
+        return api.get(`/cotizaciones/${id}/details`);
     }
 }
