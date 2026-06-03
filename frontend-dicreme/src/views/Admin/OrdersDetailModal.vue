@@ -39,9 +39,9 @@
                 <tbody>
                   <tr v-for="product in products" :key="product.id">
                     <td class="bold-text">{{ product.name }}</td>
-                    <td>{{ product.format }}</td>
+                    <td>{{ formato(product.format) }}</td>
                     <td>
-                      <span class="category-badge">{{ product.category }}</span>
+                      <span class="category-badge">{{ category(product.category) }}</span>
                     </td>
                     <td>{{ product.quantity }}</td>
                     <td>${{ formatNumber(product.price) }}</td>
@@ -99,7 +99,7 @@
                 </div>
                 <div class="summary-line">
                   <span class="summary-label">Descuento total aplicado</span>
-                  <span class="summary-value text-pink">- ${{ formatNumber(discount || 0) }}</span>
+                  <span class="summary-value text-pink">- ${{ formatNumber(currentDiscount || 0) }}</span>
                 </div>
                 <div class="summary-line highlight">
                   <span class="summary-label">Total Final</span>
@@ -115,11 +115,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { 
   X, Upload, Building2, Calendar, 
   ClipboardList, LayoutGrid
 } from 'lucide-vue-next';
+import orderService from '@/services/orderService';
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
+const backendSubtotal = ref(0);
+const backendDiscount = ref(0);
+const backendTotal = ref(0);
+
+
+
+
 
 const props = defineProps<{
   orderId: number | string;
@@ -137,16 +148,90 @@ defineEmits(['close']);
 const products = ref<any[]>([]);
 
 const subtotalAmount = computed(() => {
-  return products.value.reduce((acc, curr) => acc + curr.subtotal, 0);
+  if (products.value.length > 0) {
+    return products.value.reduce((acc, curr) => acc + curr.subtotal, 0);
+  }
+  return backendSubtotal.value; // Fallback al valor crudo del backend
 });
 
+// Capturamos el descuento global que necesitas pintar
+const currentDiscount = computed(() => {
+  return props.discount || backendDiscount.value || 0;
+});
+
+// El total final neto de la operación
 const totalAmount = computed(() => {
   if (props.total) return props.total;
-  return subtotalAmount.value - (props.discount || 0);
+  if (backendTotal.value) return backendTotal.value;
+  return subtotalAmount.value - currentDiscount.value;
 });
 
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('es-CL').format(Math.round(num));
+};
+
+const formato = (CategoryId: number) => {
+  switch (CategoryId) {
+    case 1: return '10L';
+    case 2: return '5L';
+    case 3: return '2.5L';
+    case 4: return '1L';
+  }
+};
+
+const category = (CategoryId: number) =>
+{
+  switch (CategoryId) {
+    case 1: return 'Al agua';
+    case 2: return 'Leche de avena';
+    case 3: return 'Tradicional ';
+    case 4: return 'Sin azúcar';
+  }
+};
+
+const getproducts = async () => {
+  try {
+    const response = await orderService.getOrderDetails(Number(props.orderId));
+    const orderData = response.data?.data; 
+
+    console.log('Objeto interno de la cotización/pedido:', orderData);
+
+    if (orderData) {
+      // 🎯 CAPTURA DEL DESCUENTO TOTAL GLOBAL: Aquí guardamos los datos del backend
+      backendSubtotal.value = Number(orderData.subtotal_cotizacion || 0);
+      backendDiscount.value = Number(orderData.descuento_total || 0);
+      backendTotal.value = Number(orderData.total_cotizacion || 0);
+
+      if (orderData.productos) {
+        products.value = orderData.productos.map((p: any) => {
+          const cantidadItem = Number(p.cantidad || p.pivot?.cantidad || p.quantity || 0);
+          const precioItem = Number(p.precio_unitario_venta || p.pivot?.precio_unitario_venta || p.price || 0);
+          
+          return {
+            id: p.id_producto || p.id,
+            name: p.nombre_producto || 'Producto desconocido',
+            format: p.nombre_formato || p.format || p.id_formato || '-',
+            category: p.nombre_categoria || p.category || p.id_categoria || '-',
+            quantity: cantidadItem,
+            price: precioItem,
+            subtotal: cantidadItem * precioItem,
+            
+            // Los productos individuales nacen sin descuento avanzado asignado en esta vista
+            discountType: 'none',
+            discountValue: 0,
+          };
+        });
+      }
+    } else {
+      console.warn('No se encontraron datos dentro de response.data.data:', orderData);
+    }
+
+    console.log('Resultado final del Proxy de Vue ya mapeado:', products.value);
+
+  } catch (error) {
+    console.error('Error al obtener los productos del pedido/cotización:', error);
+    notify('No se pudieron cargar los productos del detalle.', 'error');
+  }
 };
 
 const getStatusClass = (status: string | undefined) => {
@@ -162,6 +247,10 @@ const getStatusClass = (status: string | undefined) => {
     default: return 'status-generic';
   }
 };
+
+onMounted(() => {
+  getproducts();
+});
 </script>
 
 <style scoped>
