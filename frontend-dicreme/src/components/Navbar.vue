@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { FileText, ShoppingBag, ChevronDown, LogOut } from 'lucide-vue-next'
+import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
+import DistributorSideMenu from '@/components/DistributorSideMenu.vue'
 
 const router = useRouter()
 
 // --- ESTADOS REACTIVOS ---
 const username = ref('')
 const isLoggedIn = ref(false)
-const isDropdownOpen = ref(false)
-const dropdownRef = ref<HTMLElement | null>(null)
+const isSideMenuOpen = ref(false) // Controla la barra lateral
 
-// Carga el nombre real del usuario logueado al montar la barra
+// Carga el nombre real del usuario logueado
 const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
   const token = localStorage.getItem('token')
@@ -19,7 +19,7 @@ const checkAuth = () => {
   if (userParsed && token) {
     try {
       const userObj = JSON.parse(userParsed)
-      username.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Usuario'
+      username.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Distribuidor'
       isLoggedIn.value = true
     } catch (e) {
       console.error('Error parsing user session inside Navbar:', e)
@@ -33,298 +33,228 @@ const checkAuth = () => {
 
 onMounted(() => {
   checkAuth()
-  // Agrega el escuchador global para cerrar el menú flotante al hacer clic afuera
-  window.addEventListener('click', handleOutsideClick)
 })
 
-// Limpia el evento global al destruir el componente para evitar fugas de memoria
-onUnmounted(() => {
-  window.removeEventListener('click', handleOutsideClick)
-})
-
-// Alterna la visibilidad del menú flotante evitando la propagación inmediata
-const toggleDropdown = (event: Event) => {
-  event.stopPropagation()
-  isDropdownOpen.value = !isDropdownOpen.value
-}
-
-// Cierra el menú si el clic del usuario ocurre fuera del contenedor del dropdown
-const handleOutsideClick = (event: MouseEvent) => {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
-    isDropdownOpen.value = false
-  }
-}
-
-// Navegación fluida hacia las respectivas vistas históricas
-const navigateTo = (path: string) => {
-  isDropdownOpen.value = false
-  router.push(path)
-}
-
-// Destruye la sesión activa y retorna al login principal
+// Cierra la sesión y redirige al catálogo
 const handleLogout = () => {
   localStorage.clear()
   isLoggedIn.value = false
   username.value = ''
-  isDropdownOpen.value = false
+  isSideMenuOpen.value = false
+  router.push('/')
+}
+
+const goToHome = () => {
   router.push('/')
 }
 </script>
 
 <template>
-  <nav class="dc-navbar">
-    <div class="nav-left" @click="router.push('/')">
-      <img src="@/assets/logo_dicreme.png" alt="Di Creme Logo" class="brand-logo" />
-      <span class="brand-text">Di Creme</span>
-    </div>
+  <div>
+    <DistributorSideMenu 
+      v-if="isLoggedIn"
+      :isOpen="isSideMenuOpen" 
+      @close="isSideMenuOpen = false" 
+    />
 
-    <div class="nav-right">
-      
-      <template v-if="isLoggedIn">
-        <div class="dropdown-wrapper" ref="dropdownRef">
-          <button class="btn-history-dropdown" @click="toggleDropdown" :class="{ 'btn-active': isDropdownOpen }">
-            <span>Mi Historial</span>
-            <ChevronDown :size="16" class="arrow-icon" :class="{ 'rotate-arrow': isDropdownOpen }" />
-          </button>
-
-          <Transition name="dropdown-fade">
-            <div v-if="isDropdownOpen" class="floating-menu">
-              <div class="menu-arrow-pointer"></div>
-              
-              <!-- Opción 1: Redirección al historial de Cotizaciones -->
-              <button class="menu-item" @click="navigateTo('/mis-cotizaciones')">
-                <FileText :size="18" color="#e4869f" />
-                <div class="item-text-group">
-                  <span class="item-title">Mis Cotizaciones</span>
-                  <span class="item-desc">Revisa propuestas y estados</span>
-                </div>
-              </button>
-
-              <!-- Opción 2: Redirección al historial de Pedidos con el camioncito -->
-              <button class="menu-item" @click="navigateTo('/mis-pedidos')">
-                <ShoppingBag :size="18" color="#322c44" />
-                <div class="item-text-group">
-                  <span class="item-title">Mis Pedidos</span>
-                  <span class="item-desc">Seguimiento de compras</span>
-                </div>
-              </button>
-            </div>
-          </Transition>
-        </div>
-
-        <div class="divider-line"></div>
-
-        <!-- Indicador de Sesión Activa -->
-        <div class="session-info">
-          <span class="session-label">Sesión iniciada:</span>
-          <span class="session-username">{{ username }}</span>
-        </div>
-
-        <!-- Botón de Salida -->
-        <button class="btn-logout-dark" @click="handleLogout">
-          <LogOut :size="14" class="logout-icon" />
-          <span>CERRAR SESIÓN</span>
+    <nav class="dc-navbar">
+      <div class="nav-left">
+        <button 
+          v-if="isLoggedIn" 
+          class="btn-menu" 
+          @click="isSideMenuOpen = true" 
+          title="Menú lateral"
+        >
+          <Menu :size="24" />
         </button>
-      </template>
+        
+        <div class="brand-group" @click="goToHome">
+          <img src="@/assets/logo_dicreme.png" alt="Di Creme Logo" class="brand-logo" />
+          <div class="brand-info">
+            <span class="brand-text">Di Creme</span>
+          </div>
+        </div>
+      </div>
 
-      <!-- Botón de Ingreso si no hay sesión -->
-      <button v-else class="btn-logout-dark" @click="router.push('/login')">
-        <span>INGRESAR</span>
-      </button>
+      <div class="nav-right">
+        <template v-if="isLoggedIn">
+          <div class="session-display">
+            <div class="user-avatar">
+              <UserIcon :size="20" />
+            </div>
+            <div class="user-details">
+              <span class="user-role">Sesión Distribuidor</span>
+              <span class="user-name">{{ username }}</span>
+            </div>
+          </div>
 
-    </div>
-  </nav>
+          <button class="btn-logout-icon" @click="handleLogout" title="Cerrar Sesión">
+            <LogOut :size="20" />
+          </button>
+        </template>
+
+        <template v-else>
+          <button class="btn-login" @click="router.push('/login')">
+            <span>INGRESAR</span>
+          </button>
+        </template>
+      </div>
+    </nav>
+  </div>
 </template>
 
 <style scoped>
-/* --- ESTILOS ESTRUCTURALES DEL NAVBAR --- */
 .dc-navbar {
   background-color: white;
-  height: 70px;
+  height: 80px;
   padding: 0 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   position: sticky;
   top: 0;
-  z-index: 999;
+  z-index: 990; 
   font-family: sans-serif;
 }
 
 .nav-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
+}
+
+.btn-menu {
+  background: none;
+  border: none;
+  color: #322c44;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.btn-menu:hover {
+  background-color: #f6f4f6;
+  color: #e4869f;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
   cursor: pointer;
 }
 
 .brand-logo {
-  height: 50px;
+  height: 55px;
   object-fit: contain;
 }
 
+.brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
 .brand-text {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #1a1624;
   font-style: italic;
+  line-height: 1;
 }
 
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
 }
 
-.divider-line {
-  width: 1px;
-  height: 24px;
-  background-color: #e0dde0;
-}
-
-.session-info {
-  font-size: 0.9rem;
-  color: #7c7289;
-}
-
-.session-username {
-  color: #e4869f;
-  font-weight: bold;
-  margin-left: 5px;
-}
-
-/* --- ESTILOS DEL BOTÓN DEL DROPDOWN --- */
-.dropdown-wrapper {
-  position: relative;
-}
-
-.btn-history-dropdown {
-  background-color: #f6f4f6;
-  border: 1px solid #e0dde0;
-  color: #322c44;
-  padding: 8px 18px;
-  border-radius: 20px;
-  font-weight: 700;
-  font-size: 0.88rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.btn-history-dropdown:hover, .btn-active {
-  background-color: #fff0f3;
-  border-color: #fad2dc;
-  color: #e4869f;
-}
-
-.arrow-icon {
-  transition: transform 0.2s ease;
-}
-
-.rotate-arrow {
-  transform: rotate(180deg);
-}
-
-/* --- MENÚ FLOTANTE DROPDOWN DESPLEGABLE --- */
-.floating-menu {
-  position: absolute;
-  top: 45px;
-  right: 0;
-  background-color: white;
-  border: 1px solid #fad2dc;
-  border-radius: 14px;
-  box-shadow: 0 10px 25px rgba(228, 134, 159, 0.15);
-  padding: 8px;
-  width: 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 1000;
-}
-
-/* Flecha apuntadora superior del menú flotante */
-.menu-arrow-pointer {
-  position: absolute;
-  top: -6px;
-  right: 20px;
-  width: 10px;
-  height: 10px;
-  background-color: white;
-  border-left: 1px solid #fad2dc;
-  border-top: 1px solid #fad2dc;
-  transform: rotate(45deg);
-}
-
-.menu-item {
-  background: none;
-  border: none;
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 10px;
+.session-display {
   display: flex;
   align-items: center;
   gap: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  text-align: left;
+  background-color: #f8f7f8;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid #eeedee;
 }
 
-.menu-item:hover {
-  background-color: #fff0f3;
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  background-color: #e4869f;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.item-text-group {
+.user-details {
   display: flex;
   flex-direction: column;
 }
 
-.item-title {
-  font-size: 0.9rem;
+.user-role {
+  font-size: 0.7rem;
+  color: #9793a0;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.user-name {
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #1a1624;
+  color: #322c44;
 }
 
-.item-desc {
-  font-size: 0.72rem;
-  color: #888;
-  margin-top: 1px;
-}
-
-/* --- BOTÓN CERRAR SESIÓN (Estilo exacto de tu imagen) --- */
-.btn-logout-dark {
+.btn-logout-icon {
   background-color: #3b354d;
   color: white;
   border: none;
-  padding: 9px 18px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
-  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-logout-icon:hover {
+  background-color: #e4869f;
+  transform: scale(1.05);
+}
+
+/* --- ESTILO PARA VISITANTES --- */
+.btn-login {
+  background-color: #3b354d;
+  color: white;
+  border: none;
+  padding: 11px 26px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-.btn-logout-dark:hover {
+.btn-login:hover {
   background-color: #1a1624;
 }
 
-.logout-icon {
-  margin-top: -1px;
-}
-
-/* --- TRANSICIONES ANIMADAS (Vue Transition) --- */
-.dropdown-fade-enter-active, .dropdown-fade-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dropdown-fade-enter-from, .dropdown-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+@media (max-width: 768px) {
+  .dc-navbar {
+    padding: 0 20px;
+  }
+  .user-details {
+    display: none;
+  }
 }
 </style>
