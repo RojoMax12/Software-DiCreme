@@ -33,6 +33,11 @@ const router = createRouter({
       meta: { hideNavbar: true }
     },
     {
+      path: '/admin',
+      name: 'admin-home',
+      component: () => import('../views/Admin/AdminHomeView.vue')
+    },
+    {
       path: '/admin/quotes',
       name: 'admin-quotes',
       component: () => import('../views/Admin/Quotes.vue')
