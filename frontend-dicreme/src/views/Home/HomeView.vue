@@ -149,10 +149,18 @@ const openDetails = (iceCream: any) => {
   isDetailOpen.value = true;
 };
 
-// --- LÓGICA DEL CARRITO BLINDADA (EVITA DUPLICADOS DE SABOR POR FORMATO) ---
-
 // Agregar un producto al carrito
 const addToCart = (purchaseItem: any) => {
+const baseProduct = iceCreams.value.find(p => p.name === purchaseItem.name);
+
+  if (baseProduct && !purchaseItem.id) {
+    // Le inyectamos el ID exacto dependiendo del tamaño que eligió el usuario
+    if (purchaseItem.size === '10L') purchaseItem.id = baseProduct.id10l;
+    else if (purchaseItem.size === '5L') purchaseItem.id = baseProduct.id5l;
+    else if (purchaseItem.size === '2.5L') purchaseItem.id = baseProduct.id25l;
+    else if (purchaseItem.size === '1L') purchaseItem.id = baseProduct.id1l;
+  }
+
   // Comparamos usando el sabor exacto y el tamaño físico
   const existingItem = cartItems.value.find(
     item => item.name === purchaseItem.name && item.size === purchaseItem.size
@@ -167,7 +175,8 @@ const addToCart = (purchaseItem: any) => {
   }
   
   console.log("Estado actual del carrito Di Creme:", cartItems.value);
-};
+
+}
 
 // Función para cambiar cantidades desde el carrito lateral
 const handleUpdateQuantity = (payload: { id: number, size: string, change: number }) => {
