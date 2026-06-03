@@ -66,7 +66,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::post('/cotizaciones', [CotizacionController::class, 'store'])->middleware('role:1,2,3');
         Route::put('/cotizaciones/{id_cotizacion}/tomarcotizacion/{id_admin}', [CotizacionController::class, 'tomarCotizacion'])->middleware('role:1');
         Route::put('/cotizaciones/{id_cotizacion}/dejarcotizacion/{id_admin}', [CotizacionController::class, 'DejarCotizacion'])->middleware('role:1');
-        Route::put('/cotizaciones/{id_cotizacion}/cancelarcotizacion/{id_usuario}', [CotizacionController::class, 'cancelarCotizacionadmin'])->middleware('role:1,3');
+        Route::put('/cotizaciones/{id_cotizacion}/cancelarcotizacion/{id_usuario}', [CotizacionController::class, 'cancelarCotizacion'])->middleware('role:1,3');
         Route::put('/cotizaciones/{id_cotizacion}/validarcotizacion/{id_admin}', [CotizacionController::class, 'validarCotizacion'])->middleware('role:1');
         Route::put('/cotizaciones/{id}', [CotizacionController::class, 'update'])->middleware('role:1,2,3');
         Route::put('/cotizaciones/{id}/total', [CotizacionController::class, 'updateTotal'])->middleware('role:1,2,3');
@@ -149,6 +149,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
         Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
         Route::get('/pedidos', [PedidoController::class, 'index']);
+        Route::get('/pedidos/{id}/details', [PedidoController::class, 'getdetailpedido'])->middleware('role:1,2,3');
         Route::get('/pedidos/{id}', [PedidoController::class, 'show']);
         Route::get('/pedidos/{id}/usuario_distribuidor',[PedidoController::class, 'getallPedidosByUsuariodistribuidor'])->middleware('role:1,3');
         Route::get('/estado_pedido', [Estado_pedidoController::class, 'index']);

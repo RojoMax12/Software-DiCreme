@@ -96,7 +96,7 @@ const totalEstimated = computed(() => {
 })
 
 // Envía el payload plano y corregido rumbo al endpoint del backend
-const handleConfirmQuotation = async () => {
+const   handleConfirmQuotation = async () => {
   
   // --- VALIDACIONES DE ENTRADA VISUAL ---
   if (!email.value.trim()) { triggerAlert('Por favor, ingresa el correo electrónico.'); return; }

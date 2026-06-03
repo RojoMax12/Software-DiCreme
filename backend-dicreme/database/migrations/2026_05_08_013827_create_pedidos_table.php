@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('id_cotizacion');
             $table->unsignedBigInteger('id_estado_pedido');
-            $table->unsignedBigInteger('id_usuario_dicreme');
+            $table->unsignedBigInteger('id_usuario_dicreme')->nullable();
             $table->unsignedBigInteger('id_usuario_distribuidor');
             $table->date('fecha_creacion');
             $table->time('hora_creacion');

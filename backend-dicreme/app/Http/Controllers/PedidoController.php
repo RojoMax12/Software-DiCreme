@@ -69,22 +69,41 @@ class PedidoController extends Controller
     }
 
     public function cambiarEstado($id_pedido)
-{
-    try {
-        // Ejecutamos la función secuencial interna
-        $pedidoActualizado = $this->pedidoService->actualizarEstadoPedido($id_pedido);
+    {
+        try {
+            // Ejecutamos la función secuencial interna
+            $pedidoActualizado = $this->pedidoService->actualizarEstadoPedido($id_pedido);
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => "El pedido avanzó a la siguiente etapa correctamente.",
-            'data'    => $pedidoActualizado
-        ], 200);
+            return response()->json([
+                'status'  => 'success',
+                'message' => "El pedido avanzó a la siguiente etapa correctamente.",
+                'data'    => $pedidoActualizado
+            ], 200);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => $e->getMessage()
-        ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
-}
+
+    public function getdetailpedido($id){
+        
+        $resultado = $this->pedidoService->getDetailPedido($id);
+
+        if( $resultado === false){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No existe el pedido'
+            ], 403); 
+        
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Detalles de la cotizacion obtenidas exitosamente',
+            'data' => $resultado
+        ], 200); // 200 OK
+    }
 }

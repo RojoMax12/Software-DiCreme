@@ -247,6 +247,8 @@ import {
   FileSearch,
   LayoutGrid
 } from 'lucide-vue-next';
+import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
+
 
 // Pagination logic
 const itemsPerPage = 10;
@@ -259,9 +261,13 @@ const searchQuery = ref('');
 const statusFilter = ref('all');
 const isStatusDropdownOpen = ref(false);
 
+
 // Modal state
 const isModalOpen = ref(false);
 const selectedOrderId = ref<number | string>('');
+
+const { notify } = useNotification(); // Extraemos la función de notificación del composable
+
 
 const selectedOrder = computed(() => {
   return orders.value.find((o: any) => o.id === selectedOrderId.value);
@@ -346,14 +352,15 @@ const formatDate = (dateString: string) => {
 
 const takeQuote = async (quoteId: number) => {
   try {
-    await quoteService.updateQuote(quoteId, {
-      id_usuario_dicreme: currentUser.value.id,
-      id_estado_cotizacion: 2 // 'En Revision'
-    });
+    const responseValidacion = await quoteService.takeQuote(quoteId, currentUser.value.id);
+    notify(responseValidacion.data.message, 'success');
+
+
     await fetchQuotes();
   } catch (error) {
-    console.error('Error taking quote:', error);
-  }
+    
+    notify(error.response?.data?.message || 'Error', 'error');
+  } 
 };
 
 onMounted(async () => {
