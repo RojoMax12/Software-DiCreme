@@ -377,6 +377,11 @@ const handleGoBack = () => {
   z-index: 1;
 }
 
+.timeline-progress-bar {
+  height: 100%;
+  background-color: var(--DC-pink);
+  transition: width 0.4s ease;
+}
 
 .progress-fill-1 { width: 0%; }
 .progress-fill-2 { width: 100%; }
