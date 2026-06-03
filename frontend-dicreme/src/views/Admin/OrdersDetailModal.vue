@@ -80,7 +80,7 @@
                 </div>
                 <div class="meta-text">
                   <span class="meta-label">Estado</span>
-                  <span class="status-badge" :class="getStatusClass(status)">
+                  <span class="status-badge" :class="getStatusClass(status, statusId)">
                     {{ status }}
                   </span>
                 </div>
@@ -125,6 +125,7 @@ const props = defineProps<{
   orderId: number | string;
   distributor?: string;
   status?: string;
+  statusId?: number;
   date?: string;
   time?: string;
   total?: number;
@@ -150,11 +151,15 @@ const formatNumber = (num: number) => {
 
 const getStatusClass = (status: string | undefined) => {
   switch (status) {
-    case 'En validación': return 'status-validation';
+    case 'Por pagar': return 'status-unpaid';
+    case 'Pagada': return 'status-paid';
     case 'En preparación': return 'status-preparation';
     case 'En despacho': return 'status-shipping';
     case 'Entregado': return 'status-completed';
-    default: return '';
+    case 'En validación': return 'status-validation';
+    case 'Pendiente': return 'status-pending';
+    case 'Cancelado': return 'status-cancelled';
+    default: return 'status-generic';
   }
 };
 </script>
@@ -343,10 +348,11 @@ const getStatusClass = (status: string | undefined) => {
   margin-top: 4px;
 }
 
-.status-validation { background-color: #fff4e6; color: #fd7e14; border: 1px solid #fd7e14; }
+.status-unpaid { background-color: #fff0f3; color: #e4869f; border: 1px solid #e4869f; }
+.status-paid { background-color: #ebfbee; color: #37b24d; border: 1px solid #37b24d; }
 .status-preparation { background-color: #e7f5ff; color: #1c7ed6; border: 1px solid #1c7ed6; }
 .status-shipping { background-color: #dcd5ff; color: #6741d9; border: 1px solid #6741d9; }
-.status-completed { background-color: #ebfbee; color: #37b24d; border: 1px solid #37b24d; }
+.status-completed { background-color: #e6fffa; color: #087f5b; border: 1px solid #087f5b; }
 
 .table-wrapper {
   background-color: white;

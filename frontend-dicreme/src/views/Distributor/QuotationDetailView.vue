@@ -42,9 +42,6 @@ const currentStep = computed(() => {
                  || quotationData.value.id_estado;
                  
   const statusId = Number(rawStatus);
-  
-  // Imprime en consola para depurar si sigue fallando
-  console.log("Estado de cotización detectado:", statusId, rawStatus);
 
   // Si el estado es 3 (Completado), vamos al paso 2. Si no, nos quedamos en el 1.
   return statusId === 3 ? 2 : 1
@@ -86,6 +83,8 @@ onMounted(async () => {
       distributorData.value = payload.distribuidor || {}
 
       productsData.value = (payload.productos || []).map((prod: any) => {
+
+        console.log('Producto raw:', prod)
 
         const formatos: Record<number, string> = {
           1: '10L',

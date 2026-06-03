@@ -1,16 +1,31 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 import Navbar from './components/Navbar.vue';
+import AdminNavbar from './components/AdminNavbar.vue';
+import AdminSideMenu from './components/AdminSideMenu.vue';
 // 1. Importamos el estado global de notificaciones
 import { useNotification } from '@/composables/useNotification';
 
 const route = useRoute();
 // 2. Extraemos el arreglo de notificaciones reactivas
 const { notifications } = useNotification();
+
+const isAdminSidebarOpen = ref(false);
+
+const toggleAdminSidebar = () => {
+  isAdminSidebarOpen.value = !isAdminSidebarOpen.value;
+};
 </script>
 
 <template>
-  <Navbar v-if="!route.meta.hideNavbar" />
+  <template v-if="!route.meta.hideNavbar">
+    <template v-if="route.path.startsWith('/admin')">
+      <AdminNavbar @toggleSidebar="toggleAdminSidebar" />
+      <AdminSideMenu :isOpen="isAdminSidebarOpen" @close="isAdminSidebarOpen = false" />
+    </template>
+    <Navbar v-else />
+  </template>
   <router-view/>
 
 

@@ -125,12 +125,15 @@ const   handleConfirmQuotation = async () => {
 
   // Fallback indexing database mapping layer to prevent NaN values from reaching the server
   const resolveProductId = (item: any): number => {
+    console.log("🔍 INSPECCIONANDO PRODUCTO DEL CARRITO:", item)
+    
     // If the cart item already contains an ID, use it directly
     if (item.id_producto) return Number(item.id_producto)
+    if (item.producto_id) return Number(item.producto_id)
     if (item.id) return Number(item.id)
 
-    // Fallback: Resolve ID dynamically using format volume size context
-    return getFormatIdBySize(item.size)
+    console.error('No se pudo resolver el ID del producto para el item:', item)
+    return 0;
   }
 
   // --- CÁLCULO ARITMÉTICO DEL TOTAL ENTERO ---
