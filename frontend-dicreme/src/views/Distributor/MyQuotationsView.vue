@@ -33,7 +33,6 @@ onMounted(async () => {
     } catch (error) {
       console.error('Error fetching historical quotations:', error)
       
-      // 🚨 MOCKUP DE RESPALDO: Se activa si la API de cotizaciones se cae o está en mantención
       quotations.value = [
         { id: 1, fecha_creacion: '2026-05-26', hora_creacion: '16:26:00', id_estado_cotizacion: 1, total_cotizacion: 139100 },
         { id: 2, fecha_creacion: '2026-05-12', hora_creacion: '11:15:00', id_estado_cotizacion: 2, total_cotizacion: 84500 },
@@ -51,6 +50,7 @@ onMounted(async () => {
 const getStatusLabel = (statusId: number): string => {
   if (statusId === 1 || statusId === 2) return 'En Revisión'
   if (statusId === 3) return 'Completado'
+  if (statusId === 4) return 'Cancelado'
   return 'Desconocido'
 }
 
@@ -58,6 +58,7 @@ const getStatusLabel = (statusId: number): string => {
 const getStatusClassName = (statusId: number): string => {
   if (statusId === 1 || statusId === 2) return 'status-review'
   if (statusId === 3) return 'status-completed'
+  if (statusId === 4) return 'status-cancelled'
   return ''
 }
 
@@ -253,6 +254,12 @@ const handleGoBack = () => {
   background-color: #f0fdf4;
   color: #16a34a;
   border: 1px solid #dcfce7;
+}
+
+.status-cancelled {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
 }
 
 .loading-state, .empty-state {

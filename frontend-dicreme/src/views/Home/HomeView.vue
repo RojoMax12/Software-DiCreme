@@ -48,6 +48,9 @@
       <ShoppingCart :size="28" color="white" :stroke-width="2" />
     </button>
   </div>
+  <div>
+    <Footer />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -63,6 +66,7 @@ import fotoCaja from '@/assets/caja_dicreme.jpg'
 import { ShoppingCart } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
+import Footer from '@/components/Footer.vue'
 
 // Estados reactivos
 const isCartOpen = ref(false);
