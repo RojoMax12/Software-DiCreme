@@ -41,6 +41,8 @@ class CotizacionController extends Controller
         $data['fecha_creacion'] = now()->toDateString();
         $data['hora_creacion']  = now()->toTimeString();
 
+        $data['subtotal_cotizacion'] = $data['total_cotizacion'];
+
         return response()->json($this->cotizacionServices->createCotizacion($data), 201);
     }
 
@@ -107,14 +109,14 @@ class CotizacionController extends Controller
     $cotizacionActualizada = $this->cotizacionServices->tomarcotizacionadmin($id_cotizacion, $id_usuario_dicreme);
 
         if($cotizacionActualizada === false){
-            response()->json([
+            return response()->json([
             'status'  => 'error',
             'message' => 'La cotizacion no existe',
         ], 404);
         }
 
         if($cotizacionActualizada === null){
-            response()->json([
+            return response()->json([
             'status'  => 'error',
             'message' => 'el usuario no existe',
         ], 404);
@@ -182,32 +184,34 @@ class CotizacionController extends Controller
         ], 200); // 200 OK
     }
 
-    public function validarCotizacion($id, $id_usuario_dicreme){
-
-        $resultado = $this->cotizacionServices->validarCotizacion($id, $id_usuario_dicreme);
-
-        if( $resultado === false){
-            return response()->json([
-                'status' => 'error',
-                'message' => 'La cotizacion no se pudo validar, ya que no esta en estado de revision'
-            ], 403); // 403 Forbidden (Prohibido)
-
-        }
-
-        if( $resultado === null){
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No tienes permisos para validar esta cotización porque está asignada a otro administrador.'
-            ], 403); 
+    public function validarCotizacion(Request $request, $id, $id_usuario_dicreme)
+    {
         
+        $request->validate([
+            'discountType' => 'required|in:percentage,fixed,none',
+            'discountInput' => 'required|numeric|min:0', 
+            'productos' => 'nullable|array',
+            'productos.*.id_cotizacion_producto' => 'required|integer',
+            'productos.*.discountType' => 'required|in:percentage,fixed,none',
+            'productos.*.discountValue' => 'required|numeric|min:0', 
+        ]);
+
+        try {
+
+            // 2. Llamamos a tu función del servicio pasando los 3 datos
+            $this->cotizacionServices->validarCotizacion($id, $id_usuario_dicreme, $request->all());
+
+            return response()->json([
+                'status' => 'success',
+                'message' => '¡Cotización validada, montos aplicados y pasada a estado Completado con éxito!'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al validar la cotización: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'La cotización fue validada',
-            'data' => $resultado
-        ], 200); // 200 OK
-
     }
 
     public function getallCotizacionesByUsuariodistribuidor($id_usuario_distribuidor){
