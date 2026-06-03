@@ -44,8 +44,8 @@
                       <span class="category-badge">{{ product.category }}</span>
                     </td>
                     <td>{{ product.quantity }}</td>
-                    <td>${{ product.price }}</td>
-                    <td class="text-right bold-text">${{ product.subtotal }}</td>
+                    <td>${{ formatNumber(product.price) }}</td>
+                    <td class="text-right bold-text">${{ formatNumber(product.subtotal) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -157,7 +157,7 @@
               <div v-for="product in products" :key="product.id" class="advanced-item">
                 <div class="adv-col">
                   <span class="adv-product-name">{{ product.name }}</span>
-                  <span class="adv-subtotal-val">${{ product.subtotal }}</span>
+                  <span class="adv-subtotal-val">${{ formatNumber(product.subtotal) }}</span>
                 </div>
                 <div class="adv-col">
                   <select v-model="product.discountType" class="adv-select">
@@ -249,6 +249,7 @@
       @accept="handleAcceptCancel"
     />
   </div>
+
 </template>
 
 <script setup lang="ts">
@@ -263,6 +264,19 @@ import {
   ClipboardList, Settings2, ChevronDown, Eraser,
   XCircle, CheckCircle2, ClockAlert
 } from 'lucide-vue-next';
+import { useNotification } from '@/composables/useNotification';
+
+interface ProductItem {
+  id: number;
+  name: string;
+  format: string;
+  category: string;
+  quantity: number;
+  price: number;       // Mantenido como número
+  subtotal: number;    // Mantenido como número
+  discountType: 'percentage' | 'fixed' | 'none';
+  discountValue: number;
+}
 
 const props = defineProps<{
   orderId: number | string;
@@ -272,17 +286,39 @@ const props = defineProps<{
   time?: string;
 }>();
 
-const emit = defineEmits(['close', 'cancel', 'complete']);
+const emit = defineEmits(['close', 'cancel', 'complete', 'notificar']);
 
 const showCancelConfirm = ref(false);
 const isCancelSuccess = ref(false);
+const { notify } = useNotification();
+
+
+
+const obtenerUsuarioInicial = () => {
+  const userStored = localStorage.getItem('user');
+  if (userStored) {
+    const userObj = JSON.parse(userStored);
+    return {
+      id: userObj.id,
+      name: userObj.nombre_usuario || userObj.name
+    };
+  }
+  return { id: 0, name: '' };
+};
+
+
+const currentUser = ref(obtenerUsuarioInicial());
+
 
 const handleCancel = async () => {
   try {
-    await quoteService.deleteQuote(Number(props.orderId));
+    const response = await quoteService.cancelQuote(Number(props.orderId), currentUser.value.id);
+    notify(response.data.message, 'success');
+
     isCancelSuccess.value = true;
   } catch (error) {
     console.error('Error cancelling quote:', error);
+    notify(error.response?.data?.message || 'Error', 'error');
   }
 };
 
@@ -294,16 +330,44 @@ const handleAcceptCancel = () => {
 
 const handleComplete = async () => {
   try {
-    await quoteService.transformQuoteToOrder(props.orderId);
+    const discountPayload = {
+      discountType: discountType.value,              // 'percentage', 'fixed' o 'none'
+      discountInput: Number(discountInput.value) || 0, // Valor del descuento general
+      productos: products.value.map((p) => ({
+        id_cotizacion_producto: p.id,                 // ID de la tabla intermedia
+        discountType: p.discountType,                 // 'percentage', 'fixed' o 'none'
+        discountValue: Number(p.discountValue) || 0   // Valor del descuento por producto
+      }))
+    };
+
+
+    const responseValidacion = await quoteService.validateQuote(
+      Number(props.orderId), 
+      currentUser.value.id, 
+      discountPayload 
+    );
+
+    console.log('Respuesta de validación:', responseValidacion);
+
+    notify(responseValidacion.data.message, 'success');
+
+
+    const responseTransformacion = await quoteService.transformQuoteToOrder(Number(props.orderId));
+    notify(responseTransformacion.data.message, 'success');
+
     emit('complete');
-  } catch (error) {
-    console.error('Error completing quote:', error);
+
+  } catch (error: any) {
+    console.error('Error al completar la cotización:', error);
+    const errorMsg = error.response?.data?.message || 'Hubo un error al procesar la cotización.';
+    notify(errorMsg, 'error');
   }
 };
 
-const products = ref<any[]>([]);
+const products = ref<ProductItem[]>([]);
 
 onMounted(async () => {
+
   try {
     const [quoteProdsRes, allProdsRes, catsRes, formatsRes] = await Promise.all([
       quoteService.getQuoteProducts(props.orderId),
@@ -319,15 +383,16 @@ onMounted(async () => {
     products.value = quoteProdsRes.data.map((qp: any) => {
       const p = prodMap.get(qp.id_producto);
       const subtotal = qp.cantidad * qp.precio_unitario_venta;
+      
       return {
         id: qp.id,
         name: p ? p.nombre_producto : 'Producto desconocido',
         format: p ? formatMap.get(p.id_formato) : '-',
         category: p ? catMap.get(p.id_categoria) : '-',
         quantity: qp.cantidad,
-        price: Number(qp.precio_unitario_venta).toLocaleString('es-CL'),
-        subtotal: subtotal.toLocaleString('es-CL'),
-        discountType: 'percentage',
+        price: Number(qp.precio_unitario_venta), // Guardado puro como número
+        subtotal: subtotal,                     // Guardado puro como número
+        discountType: 'none',
         discountValue: 0
       };
     });
@@ -340,11 +405,9 @@ const discountType = ref<'percentage' | 'fixed'>('percentage');
 const discountInput = ref(0);
 const isAdvancedOpen = ref(false);
 
+// Ahora las operaciones aritméticas son limpias y directas
 const subtotalSum = computed(() => {
-  return products.value.reduce((acc, curr: any) => {
-    const val = parseFloat(curr.subtotal.replace(/\./g, ''));
-    return acc + val;
-  }, 0);
+  return products.value.reduce((acc, curr) => acc + curr.subtotal, 0);
 });
 
 const appliedGeneralDiscount = computed(() => {
@@ -356,7 +419,7 @@ const appliedGeneralDiscount = computed(() => {
 });
 
 const totalProductDiscounts = computed(() => {
-  return products.value.reduce((acc, prod: any) => acc + calculateProductDiscount(prod), 0);
+  return products.value.reduce((acc, prod) => acc + calculateProductDiscount(prod), 0);
 });
 
 const totalDiscountSum = computed(() => {
@@ -378,23 +441,21 @@ const validateGeneralDiscount = () => {
   }
 };
 
-const calculateProductDiscount = (product: any) => {
-  const prodSubtotal = parseFloat(product.subtotal.replace(/\./g, ''));
+const calculateProductDiscount = (product: ProductItem) => {
   const val = Number(product.discountValue) || 0;
   if (product.discountType === 'percentage') {
-    return (prodSubtotal * val) / 100;
+    return (product.subtotal * val) / 100;
   }
   return val;
 };
 
-const validateProductDiscount = (product: any) => {
-  const prodSubtotal = parseFloat(product.subtotal.replace(/\./g, ''));
+const validateProductDiscount = (product: ProductItem) => {
   let val = Number(product.discountValue);
   if (product.discountType === 'percentage') {
     if (val > 100) product.discountValue = 100;
     if (val < 0) product.discountValue = 0;
   } else {
-    if (val > prodSubtotal) product.discountValue = prodSubtotal;
+    if (val > product.subtotal) product.discountValue = product.subtotal;
     if (val < 0) product.discountValue = 0;
   }
 };
@@ -1035,4 +1096,5 @@ const formatNumber = (num: number) => {
   background-color: #d3f9d8;
   border-color: #51cf66;
 }
+
 </style>

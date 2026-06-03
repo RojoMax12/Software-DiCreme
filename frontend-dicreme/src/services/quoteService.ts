@@ -36,5 +36,19 @@ export default {
 
     getQuoteDetails(id: number) {
         return api.get(`/cotizaciones/${id}/details`);
+    },
+
+    takeQuote(id: number, idadmin: number) {
+        return api.put(`/cotizaciones/${id}/tomarcotizacion/${idadmin}`, { idadmin });
+
+     },
+
+    validateQuote(id: number, idadmin: number, discountData?: any) {
+    return api.put(`/cotizaciones/${id}/validarcotizacion/${idadmin}`, discountData);
+    },
+
+    cancelQuote(id: number, iduser: number) {
+        return api.put(`/cotizaciones/${id}/cancelarcotizacion/${iduser}`, { iduser });
     }
+
 }
