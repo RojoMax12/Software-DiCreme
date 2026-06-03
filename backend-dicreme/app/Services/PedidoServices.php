@@ -174,6 +174,7 @@ class PedidoServices
             'subtotal_cotizacion'  => $pedido->monto_estimado,
             'id_estado_pedido' => $pedido->id_estado_pedido,
             'fecha_creacion'       => $pedido->fecha_creacion,
+            'descuento_total'       => $cotizacion->descuento_general_aplicado + $cotizacion->descuento_productos_total,
 
             // Objeto con la información del distribuidor
             'distribuidor'         => $usuario_distribuidor, 
