@@ -6,6 +6,9 @@ use App\Repositories\PedidoRepository;
 use App\Repositories\Usuario_dicremeRepository;
 use App\Repositories\Usuario_distribuidoresRepository;
 use App\Repositories\DespachoRepository;
+use App\Repositories\Pedido_productoRepository;
+use App\Repositories\ProductoRepository;
+use App\Repositories\CotizacionRepository;
 
 class PedidoServices
 {
@@ -13,14 +16,22 @@ class PedidoServices
     protected $usuariodicremeRepository;
     protected $usuariodistribuidorRepository;
     protected $despachoRepository;
+    protected $pedidoproductoRepository;
+    protected $productoRepository;
+    protected $cotizacionRepository;
 
     public function __construct(PedidoRepository $pedidoRepository, Usuario_dicremeRepository $usuariodicremeRepository, 
-    Usuario_distribuidoresRepository $usuariodistribuidorRepository, DespachoRepository $despachoRepository)
+    Usuario_distribuidoresRepository $usuariodistribuidorRepository, 
+    DespachoRepository $despachoRepository, Pedido_productoRepository $pedidoproductoRepository,
+    ProductoRepository $productoRepository, CotizacionRepository $cotizacionRepository)
     {
         $this->pedidoRepository = $pedidoRepository;
         $this->usuariodicremeRepository = $usuariodicremeRepository;
         $this->usuariodistribuidorRepository = $usuariodistribuidorRepository;
         $this->despachoRepository = $despachoRepository;
+        $this->pedidoproductoRepository = $pedidoproductoRepository;
+        $this->productoRepository = $productoRepository;
+        $this->cotizacionRepository = $cotizacionRepository;
 
     }
 
@@ -119,5 +130,58 @@ class PedidoServices
             'id_estado_pedido' => $idNuevoEstado
         ]);
     }
+
+
+    public function getDetailPedido($id)
+    {
+        // 1. Buscamos la cotización base
+        $pedido = $this->pedidoRepository->getPedidoById($id);
+
+        if (!$pedido) {
+            return false; // No existe
+        }
+
+        // 2. Traemos las relaciones del distribuidor y los registros pivote
+        $usuario_distribuidor = $this->usuariodistribuidorRepository->getUsuarioDistribuidorById($pedido->id_usuario_distribuidor);
+        $cotizacion = $this->cotizacionRepository->getCotizacionById($pedido->id_cotizacion);
+        $pedido_productos= $this->pedidoproductoRepository->getPedidoProductosByPedidoId($pedido->id);
+
+        // 3. RECORREMOS LA LISTA: Combinamos el pivote con la info del catálogo del producto
+        $listaProductosData = [];
+
+        foreach ($pedido_productos as $itemPivote) {
+            // Buscamos el detalle del producto usando el id_producto de la fila intermedia
+            $infoProducto = $this->productoRepository->getProductoById($itemPivote->id_producto);
+
+            if ($infoProducto) {
+                $listaProductosData[] = [
+                    'id_producto'           => $infoProducto->id,
+                    'nombre_producto'       => $infoProducto->nombre_producto,
+                    'id_categoria'          => $infoProducto->id_categoria,
+                    'id_formato'            => $infoProducto->id_formato,
+                    'cantidad'              => $itemPivote->cantidad,
+                    'precio_unitario_venta' => $itemPivote->precio_unitario_venta,
+                    'subtotal'              => $itemPivote->cantidad * $itemPivote->precio_unitario_venta
+                ];
+            }
+        }
+
+        // 4. RETORNAMOS EL PAQUETE COMPLETO
+        return [
+            'id_pedido'        => $pedido->id,
+            'persona_recibe'       => $cotizacion->persona_recibe,
+            'total_cotizacion'     => $pedido->monto_final,
+            'subtotal_cotizacion'  => $pedido->monto_estimado,
+            'id_estado_pedido' => $pedido->id_estado_pedido,
+            'fecha_creacion'       => $pedido->fecha_creacion,
+
+            // Objeto con la información del distribuidor
+            'distribuidor'         => $usuario_distribuidor, 
+            
+            // Array estructurado con sus productos, cantidades y nombres reales
+            'productos'            => $listaProductosData
+        ];
+    }
+
 
 }

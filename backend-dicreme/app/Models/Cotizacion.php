@@ -20,7 +20,12 @@ class Cotizacion extends Model
         'persona_recibe',
         'fecha_creacion',
         'hora_creacion',
-        'total_cotizacion'
+        'total_cotizacion',
+        'subtotal_cotizacion',
+        'tipo_descuento_general',
+        'valor_descuento_general',
+        'descuento_general_aplicado',
+        'descuento_productos_total'
     ];
 
     public function usuarioDicreme(): BelongsTo
