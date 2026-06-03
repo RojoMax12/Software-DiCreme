@@ -23,5 +23,9 @@ export default {
 
     createOrder(data: unknown) {
         return api.post('/pedidos', data);
+    },
+
+    getOrderDetails(id: number) {
+        return api.get(`/pedidos/${id}/details`);
     }
 }
