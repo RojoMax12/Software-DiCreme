@@ -80,8 +80,8 @@
                 </div>
                 <div class="meta-text">
                   <span class="meta-label">Estado</span>
-                  <span class="status-badge" :class="getStatusClass(status, statusId)">
-                    {{ status }}
+                  <span class="status-badge" :class="getStatusClass(localStatus, localStatusId)">
+                    {{ localStatus }}
                   </span>
                 </div>
               </div>
@@ -110,6 +110,11 @@
           </div>
         </div>
       </div>
+      <div class = "modal-actions-footer">
+        <button class="btn-change-status" @click="changeStatus">
+          Cambiar estado
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -129,9 +134,6 @@ const backendDiscount = ref(0);
 const backendTotal = ref(0);
 
 
-
-
-
 const props = defineProps<{
   orderId: number | string;
   distributor?: string;
@@ -143,9 +145,45 @@ const props = defineProps<{
   discount?: number;
 }>();
 
-defineEmits(['close']);
+const emit = defineEmits(['close', 'statusChanged']);
+const localStatus = ref(props.status);
+const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
 
 const products = ref<any[]>([]);
+
+
+const nombresEstados: Record<number, string> = {
+  1: 'En validación',
+  2: 'En preparación',
+  3: 'En despacho',
+  4: 'Entregado',
+  5: 'Pendiente',
+  6: 'Por pagar',
+  7: 'Pagada',
+  8: 'Cancelado'
+};
+
+const changeStatus = async () => {
+  try {
+    // Viaja al backend, actualiza PostgreSQL y retorna con éxito
+    const result = await orderService.changeOrderStatus(Number(props.orderId));
+    notify(result.data.message, 'success');
+
+    // ✨ OPERACIÓN ELECTRÓNICA EN VUE:
+    // Si el estado actual es menor a 4 (no está entregado), lo avanzamos manualmente en la interfaz
+    if (localStatusId.value < 4) {
+      localStatusId.value = localStatusId.value + 1; // Avanza el ID (Ej: de 2 a 3)
+      localStatus.value = nombresEstados[localStatusId.value]; // Cambia el texto (Ej: "En despacho")
+    }
+
+    // 🚀 LE AVISAMOS AL PADRE: Ejecuta fetchOrders() en segundo plano para actualizar la tabla y contadores
+    emit('statusChanged');
+
+  } catch (error: any) {
+    console.error('Error al cambiar el estado del pedido:', error);
+    notify(error.response?.data?.message || 'Error', 'error');
+  }
+};
 
 const subtotalAmount = computed(() => {
   if (products.value.length > 0) {
@@ -197,7 +235,6 @@ const getproducts = async () => {
     console.log('Objeto interno de la cotización/pedido:', orderData);
 
     if (orderData) {
-      // 🎯 CAPTURA DEL DESCUENTO TOTAL GLOBAL: Aquí guardamos los datos del backend
       backendSubtotal.value = Number(orderData.subtotal_cotizacion || 0);
       backendDiscount.value = Number(orderData.descuento_total || 0);
       backendTotal.value = Number(orderData.total_cotizacion || 0);
@@ -216,7 +253,6 @@ const getproducts = async () => {
             price: precioItem,
             subtotal: cantidadItem * precioItem,
             
-            // Los productos individuales nacen sin descuento avanzado asignado en esta vista
             discountType: 'none',
             discountValue: 0,
           };
@@ -557,4 +593,28 @@ onMounted(() => {
   font-weight: 900;
   color: #322c44;
 }
+
+.modal-actions-footer {
+  display: flex;
+  justify-content: flex-end; 
+  padding: 0 32px 24px 32px; 
+}
+
+.btn-change-status {
+  padding: 12px 20px;
+  background-color: #e4869f;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-change-status:hover {
+  background-color: #928f8f;
+  border-color: #ccc;
+}
+
 </style>
