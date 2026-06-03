@@ -132,7 +132,7 @@ const formatCurrency = (value: any) => {
           <div class="card-footer">
             <span class="total-label">Total del Pedido:</span>
             <span class="total-price">
-              {{ formatCurrency(order.total_pedido ?? order.total ?? order.monto ?? order.total_cotizacion ?? 0) }}
+              {{ formatCurrency(order.monto_final ?? order.total ?? order.monto ?? order.total_cotizacion ?? 0) }}
             </span>
           </div>
         </div>

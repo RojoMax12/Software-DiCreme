@@ -1,37 +1,52 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ShieldCheck, PackageOpen, Truck, CheckCircle2, IceCream } from 'lucide-vue-next'
-import orderService from '@/services/orderService'
+import { ShieldCheck, IceCream } from 'lucide-vue-next'
+import orderService from '@/services/orderService' 
 import boxPlaceholderImage from '@/assets/caja_dicreme.jpg'
 
 const route = useRoute()
 const router = useRouter()
 
-// ESTADOS REACTIVOS
+// --- ESTADOS REACTIVOS ---
 const orderData = ref<any>(null)
+const distributorData = ref<any>(null)
+const productsData = ref<any[]>([]) 
 const isLoading = ref(true)
 const errorMessage = ref('')
 
-// Fallbacks locales basados en la sesión activa del localStorage
+// Fallbacks de seguridad
 const fallbackCompany = ref('Distribuidor Di Creme')
 const fallbackAddress = ref('Dirección registrada')
 const fallbackPhone = ref('No registrado')
 const fallbackEmail = ref('No registrado')
 const fallbackName = ref('Representante Di Creme')
+const fallbackComuna = ref('Comuna Registrada')
 
 // Captura el ID del pedido directo desde los parámetros de la URL
-const orderId = computed(() => Number(route.params.id))
+const pedidoId = computed(() => Number(route.params.id))
 
-// Carga de datos
+// CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1, 2, 3 o 4)
+const currentStep = computed(() => {
+  if (!orderData.value) return 1
+  
+  const rawStatus = orderData.value.id_estado_pedido || orderData.value.estado_id;
+  const statusId = Number(rawStatus);
+  
+  // Asumiendo que los estados en base de datos son 1, 2, 3 y 4
+  if (statusId >= 1 && statusId <= 4) return statusId
+  return 1
+})
+
+// --- CARGA DE DATOS OPTIMIZADA ---
 onMounted(async () => {
-  if (!orderId.value) {
+  if (!pedidoId.value) {
     errorMessage.value = 'ID de pedido no válido.'
     isLoading.value = false
     return
   }
 
-  // Cargamos los datos preventivos de sesión para los bloques vacíos
+  // Carga del fallback
   const userParsed = localStorage.getItem('user')
   if (userParsed) {
     try {
@@ -41,90 +56,133 @@ onMounted(async () => {
       fallbackPhone.value = userObj.telefono || 'No registrado'
       fallbackEmail.value = userObj.email || userObj.correo_electronico || 'No registrado'
       fallbackName.value = userObj.nombre ? `${userObj.nombre} ${userObj.apellido || ''}` : 'Representante Di Creme'
+      fallbackComuna.value = userObj.comuna || userObj.nombre_comuna || 'Comuna Registrada'
     } catch (e) {
-      console.error('Error parsing user session storage fallback:', e)
+      console.error('Error parsing fallback:', e)
     }
   }
 
   try {
     isLoading.value = true
-    // Llama al endpoint de Laravel: GET api/pedidos/{id}
-    const response = await orderService.getOrderById(orderId.value)
-    orderData.value = response.data
+
+    // Llamada a la API de pedidos
+    const response = await orderService.getOrderDetails(pedidoId.value)
+    
+    // Entrar al objeto 'data' que envía Laravel
+    const payload = response.data.data || response.data 
+
+    if (payload) {
+      // 1. Guardamos los datos base del pedido
+      orderData.value = {
+        id_pedido: payload.id_pedido,
+        persona_recibe: payload.persona_recibe,
+        monto_final: payload.total_cotizacion, // En tu endpoint lo pusiste como total_cotizacion
+        monto_estimado: payload.subtotal_cotizacion, // En tu endpoint lo pusiste como subtotal_cotizacion
+        id_estado_pedido: payload.id_estado_pedido,
+        fecha_creacion: payload.fecha_creacion
+      }
+
+      // 2. Guardamos el distribuidor
+      distributorData.value = payload.distribuidor || {}
+
+      // 3. Adaptamos la lista de productos
+      productsData.value = (payload.productos || []).map((prod: any) => {
+        const formatos: Record<number, string> = {
+          1: '10L',
+          2: '5L',
+          3: '2.5L',
+          4: '1L'
+        }
+
+        return {
+          cantidad: prod.cantidad,
+          precio_unitario_venta: prod.precio_unitario_venta,
+          subtotal: prod.subtotal,
+          producto: {
+            name: prod.nombre_producto,
+            id_categoria: prod.id_categoria,
+            formato: formatos[prod.id_formato] || '10L',
+            precio: prod.precio_unitario_venta
+          }
+        }
+      })
+    } else {
+      errorMessage.value = 'No se encontró información para este pedido.'
+    }
   } catch (error) {
-    console.error('Error fetching order details:', error)
+    console.error('Error fetching pedido details:', error)
     errorMessage.value = 'Hubo un problema al conectar con el servidor.'
   } finally {
     isLoading.value = false
   }
 })
 
-// Mapea el identificador relacional a un nombre legible en español
-const getOrderStatusLabel = (statusId: number): string => {
-  if (statusId === 1) return 'Validación'
-  if (statusId === 2) return 'En preparación'
-  if (statusId === 3) return 'En despacho'
-  if (statusId === 4) return 'Entregado'
+const getPedidoStatusLabel = (statusId: number): string => {
+  const safeId = Number(statusId)
+  if (safeId === 1) return 'Validación'
+  if (safeId === 2) return 'Preparación'
+  if (safeId === 3) return 'Despachado'
+  if (safeId === 4) return 'Entregado'
   return 'En proceso'
 }
 
-// Formatea los montos numéricos a pesos chilenos de forma segura
 const formatCurrency = (value: number) => {
   const safeValue = value ? Number(value) : 0
   return `$${safeValue.toLocaleString('es-CL')}`
 }
 
 const handleGoBack = () => {
-  router.push('/mis-pedidos')
+  // Según tu imagen, el botón dice "Volver a página principal"
+  router.push('/')
 }
 </script>
 
 <template>
-  <div class="order-detail-page">
-    
+  <div class="pedido-detail-page">
+
     <main class="detail-container">
       <div class="title-section">
-        <h2 class="main-title">Resumen Pedido N° {{ String(orderId).padStart(6, '0') }}</h2>
+        <h2 class="main-title">Resumen Pedido N° {{ String(pedidoId).padStart(6, '0') }}</h2>
         <div class="title-line"></div>
       </div>
 
-      <div v-if="isLoading" class="state-box">
+      <div class="state-box" v-if="isLoading">
         <IceCream class="spinner" :size="40" color="#e4869f" />
         <p>Cargando el estado de tu pedido...</p>
       </div>
       
-      <div v-else-if="errorMessage" class="state-box error">{{ errorMessage }}</div>
+      <div class="state-box error" v-else-if="errorMessage">{{ errorMessage }}</div>
       
-      <div v-else class="detail-grid">
+      <div class="detail-grid" v-else-if="orderData">
         
         <section class="info-column">
           <h3 class="section-subtitle">Datos de contacto:</h3>
           <div class="info-card-block">
-            <p class="info-text"><strong>Teléfono:</strong> {{ orderData.telefono || orderData.id_usuario_distribuidor?.telefono || fallbackPhone }}</p>
-            <p class="info-text"><strong>Correo:</strong> {{ orderData.email || orderData.id_usuario_distribuidor?.email || fallbackEmail }}</p>
+            <p class="info-text"><strong>Teléfono:</strong> {{ distributorData?.telefono || fallbackPhone }}</p>
+            <p class="info-text"><strong>Correo:</strong> {{ distributorData?.email || distributorData?.correo_electronico || fallbackEmail }}</p>
           </div>
 
           <h3 class="section-subtitle" style="margin-top: 25px;">Datos de Entrega:</h3>
           <div class="info-card-block">
-            <p class="info-text"><strong>Nombre y Apellido:</strong> {{ orderData.nombre_receptor || fallbackName }}</p>
-            <p class="info-text"><strong>Empresa:</strong> {{ orderData.empresa || fallbackCompany }}</p>
-            <p class="info-text"><strong>Rut empresa:</strong> {{ orderData.rut_empresa || 'N/A' }}</p>
-            <p class="info-text"><strong>Dirección:</strong> {{ orderData.direccion_despacho || fallbackAddress }}</p>
-            <p class="info-text"><strong>Comuna:</strong> {{ orderData.comuna || 'Comuna Registrada' }}</p>
+            <p class="info-text"><strong>Nombre y Apellido:</strong> {{ orderData?.persona_recibe || fallbackName }}</p>
+            <p class="info-text"><strong>Empresa:</strong> {{ distributorData?.nombre_empresa || fallbackCompany }}</p>
+            <p class="info-text"><strong>Rut empresa:</strong> {{ distributorData?.rut_empresa || distributorData?.rut || 'N/A' }}</p>
+            <p class="info-text"><strong>Dirección:</strong> {{ distributorData?.direccion || fallbackAddress }}</p>
+            <p class="info-text"><strong>Comuna:</strong> {{ distributorData?.comuna || fallbackComuna }}</p>
           </div>
 
           <div class="amount-group">
             <div class="amount-row">
               <span class="amount-label">Monto Estimado:</span>
-              <div class="amount-box-flat">
-                {{ formatCurrency(orderData.monto_estimado) }}
+              <div class="amount-box-white">
+                {{ formatCurrency(orderData?.monto_estimado) }}
               </div>
             </div>
-            
-            <div class="amount-row highlighted">
+
+            <div class="amount-row highlighted" style="margin-top: 10px;">
               <span class="amount-label">Monto Final:</span>
               <div class="amount-box-pink">
-                {{ formatCurrency(orderData.monto_final) }}
+                {{ formatCurrency(orderData?.monto_final) }}
               </div>
             </div>
           </div>
@@ -134,31 +192,31 @@ const handleGoBack = () => {
           <h3 class="section-subtitle">Detalle productos:</h3>
           
           <div class="products-box-container">
-            <div v-if="!orderData.pedido_productos && !orderData.pedido_producto" class="empty-products-state">
-              Cargando el detalle de los productos...
+            <div class="empty-products-state" v-if="productsData.length === 0">
+              No hay productos registrados en este pedido.
             </div>
 
             <div 
-              v-else
-              v-for="(item, index) in (orderData.pedido_productos ?? orderData.pedido_producto ?? [])" 
-              :key="index" 
               class="product-item-card"
+              v-else
+              v-for="(item, index) in productsData" 
+              :key="index" 
             >
               <img :src="item.producto?.image ?? item.producto?.imagen ?? boxPlaceholderImage" class="item-thumb" />
               
               <div class="item-info">
                 <span class="item-name">
-                  {{ item.producto?.name ?? item.producto?.nombre ?? 'Helado Artesanal' }}
+                  {{ item.producto?.name ?? item.producto?.nombre ?? item.producto?.nombre_producto ?? 'Helado Artesanal' }}
                 </span>
                 
                 <span class="item-tag">
-                  - {{ item.producto?.category ?? item.producto?.categoria ?? 'Di Creme' }}
+                  - {{ item.producto?.id_categoria === 1 ? 'Al agua' : item.producto?.id_categoria === 2 ? 'Crema' : 'Categoría' }}
                 </span>
                 
                 <div class="item-meta-row">
                   <span class="item-spec">
-                    {{ item.producto?.size ?? item.producto?.formato ?? 'Formato' }} - 
-                    {{ formatCurrency(item.precio_unitario_venta) }}
+                    {{ item.producto?.formato ?? '10L' }} - 
+                    {{ formatCurrency((item.precio_unitario_venta ?? item.precio) ?? (item.producto?.precio || 0)) }}
                   </span>
                   
                   <span class="item-qty">X{{ item.cantidad }}</span>
@@ -166,40 +224,33 @@ const handleGoBack = () => {
               </div>
             </div>
           </div> 
-        
 
           <div class="timeline-wrapper">
-            <div class="floating-icon-container" 
-                 :class="'step-active-' + (orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1)"
-            >
+            
+            <div class="floating-icon-container" :class="'step-active-' + currentStep">
               <div class="icon-bubble">
-                <ShieldCheck v-if="(orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) === 1" :size="24" color="white" />
-                <PackageOpen v-if="(orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) === 2" :size="24" color="white" />
-                <Truck v-if="(orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) === 3" :size="24" color="white" />
-                <CheckCircle2 v-if="(orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) === 4" :size="24" color="white" />
+                <ShieldCheck :size="24" color="white" />
               </div>
             </div>
 
             <div class="timeline-bar">
-              <div class="timeline-progress-bar" 
-                   :class="'progress-fill-' + (orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1)"
-              ></div>
+              <div class="timeline-progress-bar" :class="'progress-fill-' + currentStep"></div>
             </div>
 
             <div class="timeline-nodes-row">
-              <div class="timeline-node" :class="{ active: (orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) >= 1 }">
+              <div class="timeline-node" :class="{ active: currentStep >= 1 }">
                 <div class="node-dot"></div>
                 <span class="node-text">Validación</span>
               </div>
-              <div class="timeline-node" :class="{ active: (orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) >= 2 }">
+              <div class="timeline-node" :class="{ active: currentStep >= 2 }">
                 <div class="node-dot"></div>
                 <span class="node-text">Preparación</span>
               </div>
-              <div class="timeline-node" :class="{ active: (orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) >= 3 }">
+              <div class="timeline-node" :class="{ active: currentStep >= 3 }">
                 <div class="node-dot"></div>
                 <span class="node-text">Despachado</span>
               </div>
-              <div class="timeline-node" :class="{ active: (orderData.id_estado_pedido ?? orderData.estado_pedido ?? 1) >= 4 }">
+              <div class="timeline-node" :class="{ active: currentStep === 4 }">
                 <div class="node-dot"></div>
                 <span class="node-text">Entregado</span>
               </div>
@@ -207,7 +258,7 @@ const handleGoBack = () => {
           </div>
 
           <div class="status-display-box">
-            Estado del pedido: <span class="capitalize-text">{{ orderData.estado_nombre ?? getOrderStatusLabel(orderData.id_estado_pedido) }}</span>
+            Estado del pedido: <span class="capitalize-text">{{ getPedidoStatusLabel(orderData?.id_estado_pedido) }}</span>
           </div>
 
           <div class="action-row">
@@ -223,17 +274,11 @@ const handleGoBack = () => {
 </template>
 
 <style scoped>
-.order-detail-page {
-  background-color: #eeedee;
+.pedido-detail-page {
+  background-color: var(--DC-bg-light);
   min-height: 100vh;
   font-family: sans-serif;
   padding-bottom: 60px;
-}
-
-.decorative-banner {
-  height: 40px;
-  background-color: #322c44;
-  opacity: 0.85;
 }
 
 .detail-container {
@@ -244,7 +289,7 @@ const handleGoBack = () => {
 
 .title-section { margin-bottom: 30px; }
 .main-title { font-size: 1.25rem; font-weight: 800; color: #1a1624; margin: 0 0 6px 0; text-align: left; }
-.title-line { height: 2px; background-color: #e4869f; width: 100%; }
+.title-line { height: 2px; background-color: var(--DC-pink); width: 100%; }
 
 .detail-grid {
   display: grid;
@@ -268,7 +313,7 @@ const handleGoBack = () => {
 .info-text {
   margin: 0;
   font-size: 0.95rem;
-  color: #322c44;
+  color: var(--DC-gray);
   text-align: left;
   line-height: 1.4;
 }
@@ -276,7 +321,6 @@ const handleGoBack = () => {
 .amount-group {
   display: flex;
   flex-direction: column;
-  gap: 15px;
   margin-top: 25px;
 }
 
@@ -287,30 +331,28 @@ const handleGoBack = () => {
   text-align: left;
 }
 
-.amount-label {
-  font-size: 1.05rem;
-  font-weight: bold;
-  color: #1a1624;
-}
+.amount-label { font-size: 0.95rem; font-weight: bold; color: #1a1624; }
 
-.amount-box-flat {
+.amount-box-white {
   background-color: white;
   border: 1px solid #e0dde0;
   border-radius: 25px;
   padding: 12px 25px;
   font-size: 1.05rem;
-  font-weight: bold;
-  color: #322c44;
+  font-weight: 700;
+  color: #1a1624;
+  text-align: left;
 }
 
-.amount-row.highlighted .amount-box-pink {
+.amount-box-pink {
   background-color: white;
-  border: 2px solid #e4869f;
+  border: 2px solid var(--DC-pink);
   border-radius: 25px;
   padding: 12px 25px;
   font-size: 1.1rem;
   font-weight: 800;
   color: #1a1624;
+  text-align: left;
 }
 
 .products-box-container {
@@ -344,35 +386,35 @@ const handleGoBack = () => {
 .item-thumb { width: 75px; height: 55px; object-fit: cover; border-radius: 10px; }
 .item-info { flex: 1; display: flex; flex-direction: column; text-align: left; }
 .item-name { font-size: 0.95rem; font-weight: bold; color: #1a1624; }
-.item-tag { font-size: 0.75rem; font-weight: 700; margin-top: 1px; color: #e4869f; }
+.item-tag { font-size: 0.75rem; font-weight: 700; margin-top: 1px; color: var(--DC-pink); }
 .item-meta-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 .item-spec { font-size: 0.95rem; font-weight: 800; color: #1a1624; }
 .item-qty { font-size: 0.95rem; font-weight: 800; color: #444; }
 
+/* 🚨 NUEVA MATEMÁTICA PARA 4 NODOS */
 .timeline-wrapper {
-  margin: 50px auto 25px auto;
+  margin: 60px auto 30px auto;
   position: relative;
-  width: 90%;
+  width: 100%; /* Usamos el ancho completo de la columna */
 }
 
 .timeline-bar {
   position: absolute;
   top: 6px;
-  left: 0;
-  width: 100%;
+  left: 35px; /* Mitad de los 70px del nodo */
+  width: calc(100% - 70px);
   height: 4px;
   background-color: #e0dde0;
   z-index: 1;
-  border-radius: 2px;
 }
 
 .timeline-progress-bar {
   height: 100%;
-  background-color: #e4869f;
-  width: 0%;
+  background-color: var(--DC-pink);
   transition: width 0.4s ease;
 }
 
+/* Divisiones en tercios para 4 puntos (0%, 33.3%, 66.6%, 100%) */
 .progress-fill-1 { width: 0%; }
 .progress-fill-2 { width: 33.33%; }
 .progress-fill-3 { width: 66.66%; }
@@ -397,12 +439,12 @@ const handleGoBack = () => {
   height: 14px;
   background-color: #b5b2bc;
   border-radius: 50%;
-  border: 2px solid #eeedee;
+  border: 2px solid var(--DC-bg-light);
   transition: background-color 0.3s ease;
 }
 
 .timeline-node.active .node-dot {
-  background-color: #e4869f;
+  background-color: var(--DC-pink);
 }
 
 .node-text {
@@ -419,13 +461,20 @@ const handleGoBack = () => {
 
 .floating-icon-container {
   position: absolute;
-  top: -45px;
+  top: -46px;
   z-index: 3;
-  transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-50%); 
+  transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+/* Posiciones exactas sobre los centros de cada nodo */
+.step-active-1 { left: 35px; }
+.step-active-2 { left: calc(35px + ((100% - 70px) * 0.3333)); }
+.step-active-3 { left: calc(35px + ((100% - 70px) * 0.6666)); }
+.step-active-4 { left: calc(100% - 35px); }
+
 .icon-bubble {
-  background-color: #e4869f;
+  background-color: var(--DC-pink);
   padding: 8px;
   border-radius: 50%;
   box-shadow: 0 4px 10px rgba(228, 134, 159, 0.3);
@@ -435,11 +484,6 @@ const handleGoBack = () => {
   animation: bounce 2s infinite ease-in-out;
 }
 
-.step-active-1 { left: calc(0% - 18px); }
-.step-active-2 { left: calc(33.33% - 18px); }
-.step-active-3 { left: calc(66.66% - 18px); }
-.step-active-4 { left: calc(100% - 18px); }
-
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
@@ -447,7 +491,7 @@ const handleGoBack = () => {
 
 .status-display-box {
   background-color: white;
-  border: 1px solid #e4869f;
+  border: 1px solid var(--DC-pink);
   border-radius: 14px;
   padding: 14px 20px;
   font-size: 1.05rem;
