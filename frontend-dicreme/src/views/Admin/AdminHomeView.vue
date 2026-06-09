@@ -21,12 +21,20 @@
         <h2>Pedidos</h2>
         <p>Administrar los pedidos y estados de despacho</p>
       </router-link>
+
+      <router-link to="/admin/generate-quote" class="admin-option-card">
+        <div class="icon-container">
+          <FilePlus :size="48" />
+        </div>
+        <h2>Generar Cotización</h2>
+        <p>Crear una nueva cotización para un distribuidor (existente o nuevo)</p>
+      </router-link>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { FileText, ShoppingBag } from 'lucide-vue-next';
+import { FileText, ShoppingBag, FilePlus } from 'lucide-vue-next';
 </script>
 
 <style scoped>

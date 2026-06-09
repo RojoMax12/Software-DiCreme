@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, ShoppingBag, X } from 'lucide-vue-next'
+import { FileText, ShoppingBag, FilePlus, X } from 'lucide-vue-next'
 import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps<{
@@ -61,6 +61,15 @@ const isActive = (path: string) => {
             >
               <ShoppingBag :size="20" />
               <span>Pedidos</span>
+            </button>
+
+            <button 
+              class="nav-item" 
+              :class="{ active: isActive('/admin/generate-quote') }"
+              @click="navigateTo('/admin/generate-quote')"
+            >
+              <FilePlus :size="20" />
+              <span>Generar Cotización</span>
             </button>
           </div>
         </nav>
