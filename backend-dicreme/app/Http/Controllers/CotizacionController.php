@@ -237,4 +237,97 @@ class CotizacionController extends Controller
         ], 200); // 200 OK
     }
 
+    public function addproductocotizacion(Request $request, $id_cotizacion)
+    {
+        // Validación minimalista y optimizada
+        $data = $request->validate([
+            'id_producto' => 'required|integer|exists:productos,id',
+            'cantidad'    => 'required|integer|min:1',
+        ]);
+
+        try {
+            // Formateamos como lista para el servicio
+            $listaProductos = [
+                [
+                    'id_producto' => $data['id_producto'],
+                    'cantidad'    => $data['cantidad']
+                ]
+            ];
+
+            $cotizacionActualizada = $this->cotizacionServices
+                ->add_productos_to_cotizacion($id_cotizacion, $listaProductos);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Producto añadido correctamente.',
+                'data'    => $cotizacionActualizada
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function removeProductoCotizacion(Request $request, $id_cotizacion)
+{
+    // Solo validamos el ID del producto y la cantidad a quitar
+    $data = $request->validate([
+        'id_producto' => 'required|integer|exists:productos,id',
+        'cantidad'    => 'required|integer|min:1', // Cantidad que se quiere restar/quitar
+    ]);
+
+    try {
+        $listaProductos = [
+            [
+                'id_producto' => $data['id_producto'],
+                'cantidad'    => $data['cantidad']
+            ]
+        ];
+
+        // Llamamos al servicio para procesar la baja
+        $cotizacionActualizada = $this->cotizacionServices
+            ->remove_productos_to_cotizacion($id_cotizacion, $listaProductos);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Producto modificado/removido de la cotización con éxito.',
+            'data'    => $cotizacionActualizada
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Error al remover el producto: ' . $e->getMessage()
+        ], 400); // 400 Bad Request si la regla de negocio falla
+    }
+}
+
+public function destroyProductoCotizacion(Request $request, $id_cotizacion)
+{
+    $data = $request->validate([
+        'id_producto' => 'required|integer|exists:productos,id',
+    ]);
+
+    try {
+        // Llamamos al nuevo método del servicio
+        $cotizacionActualizada = $this->cotizacionServices
+            ->force_remove_producto($id_cotizacion, $data['id_producto']);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Producto eliminado por completo de la cotización.',
+            'data'    => $cotizacionActualizada
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Error al eliminar el producto: ' . $e->getMessage()
+        ], 400);
+    }
+}
+
 }
