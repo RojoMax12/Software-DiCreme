@@ -29,7 +29,7 @@ export default {
         return api.get(`/pedidos/${id}/details`);
     },
 
-    changeOrderStatus(id_pedido: number) {
-        return api.put(`/pedidos/${id_pedido}/cambiar-estado`);
+    changeOrderStatus(id_pedido: number, id_estado_pedido?: number) {
+        return api.put(`/pedidos/${id_pedido}/cambiar-estado`, { id_estado_pedido });
     }
 }
