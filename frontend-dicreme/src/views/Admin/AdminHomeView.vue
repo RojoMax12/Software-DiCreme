@@ -29,6 +29,14 @@
         <h2>Generar Cotización</h2>
         <p>Crear una nueva cotización para un distribuidor (existente o nuevo)</p>
       </router-link>
+
+      <router-link to="/admin/user-management" class="admin-option-card">
+        <div class="icon-container">
+          <FileText :size="48" />
+        </div>
+        <h2>Gestión de Usuarios</h2>
+        <p>Administrar cuentas de usuarios, roles y permisos</p>
+      </router-link>
     </div>
   </div>
 </template>

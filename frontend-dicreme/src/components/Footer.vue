@@ -9,15 +9,16 @@
           <span>Di Creme</span>
         </h3>
         <p class="brand-description">
-          Tu aliado confiable para el éxito en la distribución de helados artesanal.
+          Unirse a Dicreme este 18 no es sólo un negocio: es tradición convertida en rentabilidad. 
         </p>
       </div>
 
       <div class="footer-info-section">
         <h4 class="section-subtitle">Soporte y Contacto</h4>
         <ul class="info-list">
-          <li><strong>Email:</strong> info@dicreme.com</li>
-          <li><strong>Teléfono:</strong> +56 9 1234 5678</li>
+          <li><strong>Email:</strong> contacto@dicreme.cl o contacto.dicreme@gmail.com</li>
+          <li><strong>Teléfono:</strong> +56 9 9583 8926</li>
+          <li><strong>Dirección:</strong> Alhué 2643, Pedro Aguirre Cerda, Santiago, Chile</li>
         </ul>
       </div>
 

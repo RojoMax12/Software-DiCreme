@@ -215,6 +215,7 @@
       v-if="isModalOpen" 
       :order-id="selectedOrderId" 
       :distributor="selectedOrder?.distributor"
+      :distributor-phone="selectedOrder?.distributorPhone" 
       :managed-by="selectedOrder?.managedBy?.name"
       :date="selectedOrder?.date"
       :time="selectedOrder?.time"
@@ -323,13 +324,23 @@ const fetchQuotes = async () => {
       quotationStatusService.getStatuses()
     ]);
 
+    // MAPA 1 (Intacto): Sigue guardando solo el nombre para no romper nada en el resto del software
     const distMap = new Map(distsRes.data.map((d: any) => [d.id, d.nombre_empresa]));
+    
+    // 🚀 MAPA 2 (NUEVO): Guarda exclusivamente los teléfonos para esta implementación
+    // Reemplaza 'telefono' por el nombre real de tu columna en PostgreSQL (ej: celular, telefono_contacto)
+    const distPhoneMap = new Map(distsRes.data.map((d: any) => [d.id, d.telefono || '']));
+
     const userMap = new Map(usersRes.data.map((u: any) => [u.id, u.nombre_usuario]));
     const statMap = new Map(statsRes.data.map((s: any) => [s.id, s.nombre_estado]));
 
     orders.value = quotesRes.data.map((q: any) => ({
       id: q.id,
-      distributor: distMap.get(q.id_distribuidor) || 'Desconocido',
+      distributor: distMap.get(q.id_distribuidor) || 'Desconocido', // 👈 Sigue funcionando igual que antes
+      
+      // 🚀 Extraemos el teléfono usando el mapa nuevo sin interferir con el anterior
+      distributorPhone: distPhoneMap.get(q.id_distribuidor) || '', 
+      
       managedBy: q.id_usuario_dicreme ? { id: q.id_usuario_dicreme, name: userMap.get(q.id_usuario_dicreme) } : null,
       status: statMap.get(q.id_estado_cotizacion) || 'Por Tomar',
       total: Number(q.total_cotizacion).toLocaleString('es-CL'),
@@ -337,6 +348,7 @@ const fetchQuotes = async () => {
       time: q.hora_creacion ? q.hora_creacion.substring(0, 5) : '',
       rawStatus: q.id_estado_cotizacion
     }));
+
   } catch (error) {
     console.error('Error fetching data:', error);
   } finally {

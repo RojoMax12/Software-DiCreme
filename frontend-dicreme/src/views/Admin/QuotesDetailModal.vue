@@ -258,6 +258,13 @@
             <CheckCircle2 :size="18" />
             <span>Completar Cotización</span>
           </button>
+          <button class="btn-modal btn-whatsapp" @click="abrirWhatsappCotizacion(orderId, distributor)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
+            </svg>
+            <span>Contactar por WhatsApp</span>
+          </button>
         </div>
       </div>
     </div>
@@ -284,7 +291,8 @@ import productFormatService from '@/services/productFormatService';
 import { 
   X, Upload, Building2, User, Calendar, 
   ClipboardList, Settings2, ChevronDown, Eraser,
-  XCircle, CheckCircle2, Trash2
+  XCircle, CheckCircle2, Trash2,
+  Wheat
 } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification';
 
@@ -313,6 +321,7 @@ interface CatalogProduct {
 const props = defineProps<{
   orderId: number | string;
   distributor?: string;
+  distributorPhone?: string;
   managedBy?: string;
   date?: string;
   time?: string;
@@ -343,6 +352,27 @@ const obtenerUsuarioInicial = () => {
     };
   }
   return { id: 0, name: '' };
+};
+
+const abrirWhatsappCotizacion = (pedido, nombreDistribuidor) => {
+  console.log('Datos para WhatsApp:', { pedido, nombreDistribuidor, telefono: props.distributorPhone });
+
+  // 1. Rescatamos la prop del teléfono y removemos espacios en blanco
+  // Si viene vacío, dejamos el número por defecto de DiCreme como salvavidas
+  const telefonoDestino = props.distributorPhone 
+    ? props.distributorPhone.replace(/\s+/g, '') 
+    : '56977579783';
+
+  // 2. Estructuramos el mensaje agregando negritas (*text*) para mejor legibilidad en el celular
+  const mensaje = `¡Hola *${nombreDistribuidor}*! ✨
+Te contactamos de DiCreme respecto a tu Cotización *#${pedido}*.
+
+¿Tienes alguna duda sobre los productos que solicitaste o necesitas coordinar el flujo de tu pedido?`;
+
+  // 3. Codificamos de forma segura la URL
+  const url = `https://wa.me/${telefonoDestino}?text=${encodeURIComponent(mensaje)}`;
+  
+  window.open(url, '_blank');
 };
 
 const currentUser = ref(obtenerUsuarioInicial());
@@ -442,12 +472,9 @@ const handleComplete = async () => {
   isSubmitting.value = true;
 
   try {
-    console.log('🚀 [INICIO] Comenzando proceso de sincronización y guardado de cambios...');
-
+    
     // FASE 1: Procesar eliminaciones completas de filas
-    console.log('🗑️ [FASE 1] Evaluando productos eliminados de la lista...', removedProductsLog.value);
     for (const itemToRemove of removedProductsLog.value) {
-      console.log(`   -> Solicitando eliminación física del producto ID: ${itemToRemove.id_producto}`);
       
       // 🚀 CORRECCIÓN: Mandamos el objeto plano { id_producto: ... } que pide tu controlador
       await quoteService.force_remove_producto(Number(props.orderId), { 
@@ -456,10 +483,8 @@ const handleComplete = async () => {
     }
 
     // FASE 2: Procesar adiciones o incrementos/reducciones de cantidades
-    console.log('🔄 [FASE 2] Sincronizando cantidades con el controlador de Laravel...');
     for (const p of products.value) {
       if (p.id === null) {
-        console.log(`   -> [NUEVO] Añadiendo producto ID: ${p.id_producto}`);
         
         // 🚀 CORRECCIÓN: Objeto plano directo
         await quoteService.add_productos_to_cotizacion(Number(props.orderId), { 
@@ -469,7 +494,6 @@ const handleComplete = async () => {
         
       } else if (p.quantity > p.initialQuantity) {
         const diff = p.quantity - p.initialQuantity;
-        console.log(`   -> [INCREMENTO] Producto ID: ${p.id_producto} (+${diff})`);
         
         await quoteService.add_productos_to_cotizacion(Number(props.orderId), { 
           id_producto: p.id_producto, 
@@ -478,7 +502,6 @@ const handleComplete = async () => {
         
       } else if (p.quantity < p.initialQuantity) {
         const diff = p.initialQuantity - p.quantity;
-        console.log(`   -> [REDUCCIÓN] Producto ID: ${p.id_producto} (-${diff})`);
         
         await quoteService.remove_productos_to_cotizacion(Number(props.orderId), { 
           id_producto: p.id_producto, 
@@ -486,17 +509,13 @@ const handleComplete = async () => {
         });
       }
     }
-    console.log('✅ [FASE 2] Cantidades y adiciones actualizadas en la DB.');
 
     // FASE 3: Refrescar registros del servidor para capturar nuevos IDs intermedios
-    console.log('📡 [FASE 3] Consultando los nuevos IDs generados por el servidor...');
     const freshQuoteRes = await quoteService.getQuoteProducts(props.orderId);
-    console.log('📡 [DATA COMPLETA DB] Estructura intermedia actualizada:', freshQuoteRes.data);
     
     const freshMap = new Map(freshQuoteRes.data.map((qp: any) => [qp.id_producto, qp.id]));
 
     // FASE 4: Construir el payload final de validación y descuentos
-    console.log('💰 [FASE 4] Estructurando payload de descuentos...');
     const discountPayload = {
       discountType: discountType.value,
       discountInput: Number(discountInput.value) || 0,
@@ -504,7 +523,6 @@ const handleComplete = async () => {
         // Buscamos el ID asignado por la base de datos (sea el original o el recién generado)
         const dbIntermediateId = p.id || freshMap.get(p.id_producto);
         
-        console.log(`   * Item: ${p.name} | id_producto catálogo: ${p.id_producto} -> mapeado a ID intermedio DB: ${dbIntermediateId}`);
         
         return {
           id_cotizacion_producto: dbIntermediateId,
@@ -514,24 +532,18 @@ const handleComplete = async () => {
       })
     };
 
-    console.log('➡️ [PAYLOAD FINAL] Objeto listo para enviarse a validarCotizacion:', JSON.stringify(discountPayload, null, 2));
 
     // FASE 5: Enviar validaciones y transiciones de estado
-    console.log('⏳ Enviando descuentos a validarCotizacion...');
     const responseValidacion = await quoteService.validateQuote(
       Number(props.orderId), 
       currentUser.value.id, 
       discountPayload 
     );
-    console.log('✅ [RESPUESTA VALIDACIÓN]:', responseValidacion.data);
     notify(responseValidacion.data.message, 'success');
 
-    console.log('⏳ Transformando cotización aprobada en pedido firme...');
     const responseTransformacion = await quoteService.transformQuoteToOrder(Number(props.orderId));
-    console.log('✅ [RESPUESTA PEDIDO CREATIVO]:', responseTransformacion.data);
     notify(responseTransformacion.data.message, 'success');
 
-    console.log('🎉 [ÉXITO] Todo el flujo se completó correctamente.');
     emit('complete');
 
   } catch (error: any) {
@@ -1259,5 +1271,30 @@ const formatNumber = (num: number) => new Intl.NumberFormat('es-CL').format(Math
   border-color: #dee2e6;
   cursor: not-allowed;
   transform: none;
+}
+
+.icon-whatsapp {
+  margin-left: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.btn-whatsapp {
+  background-color: #e8fbf1;  /* Fondo verde pastel muy sutil */
+  color: #1ea952;             /* Texto e ícono en verde WhatsApp corporativo */
+  border: 1px solid #a3ebd0;  /* Borde suave de contención */
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp:hover {
+  background-color: #d2f7e4;  /* Oscurece un poco el fondo al pasar el mouse */
+  border-color: #61cf9f;      /* Resalta el borde */
+}
+
+/* Forzamos que el SVG herede el color dinámico del botón (color: #1ea952) */
+.btn-whatsapp svg {
+  fill: currentColor;
+  display: inline-block;
+  flex-shrink: 0;
 }
 </style>

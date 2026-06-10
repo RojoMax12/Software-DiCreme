@@ -114,6 +114,14 @@
         <button class="btn-change-status" @click="changeStatus">
           Cambiar estado
         </button>
+
+        <button class="btn-modal btn-whatsapp" @click="abrirWhatsapPedido(orderId, distributor, distributorPhone)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
+              </svg>
+              <span>Contactar por WhatsApp</span>
+        </button>
       </div>
     </div>
   </div>
@@ -137,6 +145,7 @@ const backendTotal = ref(0);
 const props = defineProps<{
   orderId: number | string;
   distributor?: string;
+  distributorPhone?: string;
   status?: string;
   statusId?: number;
   date?: string;
@@ -183,6 +192,22 @@ const changeStatus = async () => {
     console.error('Error al cambiar el estado del pedido:', error);
     notify(error.response?.data?.message || 'Error', 'error');
   }
+};
+
+const abrirWhatsapPedido = (pedido, nombreDistribuidor, telefonoDistribuidor) => {
+
+  console.log('Datos para WhatsApp:', { pedido, nombreDistribuidor, telefonoDistribuidor });
+  // 1. Estructuramos un mensaje claro y profesional con salto de línea (\n)
+  const mensaje = `¡Hola ${nombreDistribuidor}!
+Te contactamos de DiCreme respecto a tu Pedido #${pedido}
+
+¿Tienes alguna duda sobre lo que solicitaste?`;
+
+  // 2. Codificamos el mensaje para que sea seguro viajar en la URL de WhatsApp
+  const url = `https://wa.me/${telefonoDistribuidor}?text=${encodeURIComponent(mensaje)}`;
+  
+  // 3. Abrimos la pestaña independiente
+  window.open(url, '_blank');
 };
 
 const subtotalAmount = computed(() => {
@@ -478,6 +503,8 @@ onMounted(() => {
 .status-preparation { background-color: #e7f5ff; color: #1c7ed6; border: 1px solid #1c7ed6; }
 .status-shipping { background-color: #dcd5ff; color: #6741d9; border: 1px solid #6741d9; }
 .status-completed { background-color: #e6fffa; color: #087f5b; border: 1px solid #087f5b; }
+.status-validation { background-color: #fff4e6; color: #f76707; border: 1px solid #f76707; }
+
 
 .table-wrapper {
   background-color: white;
@@ -617,4 +644,39 @@ onMounted(() => {
   border-color: #ccc;
 }
 
+.btn-whatsapp {
+  background-color: #e8fbf1;  /* Fondo verde pastel muy sutil */
+  color: #1ea952;             /* Texto e ícono en verde WhatsApp corporativo */
+  border: 1px solid #a3ebd0;  /* Borde suave de contención */
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp:hover {
+  background-color: #d2f7e4;  /* Oscurece un poco el fondo al pasar el mouse */
+  border-color: #61cf9f;      /* Resalta el borde */
+}
+
+/* Forzamos que el SVG herede el color dinámico del botón (color: #1ea952) */
+.btn-whatsapp svg {
+  fill: currentColor;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.btn-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  margin-left: 16px;
+}
 </style>
