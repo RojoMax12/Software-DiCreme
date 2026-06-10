@@ -76,8 +76,6 @@ const formatCurrency = (value: any) => {
 
 <template>
   <div class="my-orders-page">
-    <div class="decorative-banner"></div>
-
     <main class="history-container">
       <div class="header-section">
         <h2 class="page-title">Mis Pedidos Históricos</h2>

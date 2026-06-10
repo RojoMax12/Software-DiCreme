@@ -65,9 +65,11 @@ Route::middleware('jwt.auth')->group(function () {
         // Mover aquí las escrituras de Cotizaciones para que tengan JWT previo
         Route::post('/cotizaciones', [CotizacionController::class, 'store'])->middleware('role:1,2,3');
         Route::put('/cotizaciones/{id_cotizacion}/tomarcotizacion/{id_admin}', [CotizacionController::class, 'tomarCotizacion'])->middleware('role:1');
-        Route::post('/cotizaciones/{id_cotizacion}/añadir-productos', [CotizacionController::class, 'addproductocotizacion'])->middleware('role:1,2,3');
-        Route::post('/cotizaciones/{id_cotizacion}/eliminar-productos', [CotizacionController::class, 'removeproductocotizacion'])->middleware('role:1,2,3');
-        Route::post('/cotizaciones/{id_cotizacion}/eliminar-producto', [CotizacionController::class, 'destroyProductoCotizacion'])->middleware('role:1,3');
+       
+        Route::post('/cotizaciones/{id_cotizacion}/agregarproductos', [CotizacionController::class, 'addproductocotizacion'])->middleware('role:1,2,3');
+        Route::post('/cotizaciones/{id_cotizacion}/eliminarproductos', [CotizacionController::class, 'removeproductocotizacion'])->middleware('role:1,2,3');
+        Route::post('/cotizaciones/{id_cotizacion}/eliminarproducto', [CotizacionController::class, 'destroyProductoCotizacion'])->middleware('role:1,3');
+        
         Route::put('/cotizaciones/{id_cotizacion}/dejarcotizacion/{id_admin}', [CotizacionController::class, 'DejarCotizacion'])->middleware('role:1');
         Route::put('/cotizaciones/{id_cotizacion}/cancelarcotizacion/{id_usuario}', [CotizacionController::class, 'cancelarCotizacion'])->middleware('role:1,3');
         Route::put('/cotizaciones/{id_cotizacion}/validarcotizacion/{id_admin}', [CotizacionController::class, 'validarCotizacion'])->middleware('role:1');

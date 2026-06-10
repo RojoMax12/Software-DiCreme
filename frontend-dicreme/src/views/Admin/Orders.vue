@@ -238,6 +238,7 @@
       :time="selectedOrder?.time"
       :total="selectedOrder?.total"
       @close="closeModal" 
+      @status-changed="fetchOrders"
     />
   </div>
 </template>
@@ -275,70 +276,47 @@ const fetchOrders = async () => {
   console.log('--- [DEBUG] INICIANDO CARGA COMPLETA ---');
   
   try {
-    // Ejecutamos las promesas una por una o con manejo individual para debug
     let ordersRes, distsRes, statsRes;
     
-    try {
-      ordersRes = await orderService.getOrders();
-      console.log('1. Pedidos recibidos:', ordersRes.data);
-    } catch (e) {
-      console.error('ERROR cargando pedidos:', e);
-    }
+    try { ordersRes = await orderService.getOrders(); } catch (e) { console.error(e); }
+    try { distsRes = await distributorService.getDistributors(); } catch (e) { console.error(e); }
+    try { statsRes = await orderStatusService.getOrderStatuses(); } catch (e) { console.error(e); }
 
-    try {
-      distsRes = await distributorService.getDistributors();
-      console.log('2. Distribuidores recibidos:', distsRes.data);
-    } catch (e) {
-      console.error('ERROR cargando distribuidores:', e);
-    }
-
-    try {
-      statsRes = await orderStatusService.getOrderStatuses();
-      console.log('3. Estados recibidos:', statsRes.data);
-    } catch (e) {
-      console.error('ERROR cargando estados:', e);
-    }
-
-    // Normalización de datos (extraer array del objeto .data si es necesario)
     const rawOrders = Array.isArray(ordersRes?.data) ? ordersRes.data : (ordersRes?.data?.data || []);
     const rawDists = Array.isArray(distsRes?.data) ? distsRes.data : (distsRes?.data?.data || []);
     const rawStats = Array.isArray(statsRes?.data) ? statsRes.data : (statsRes?.data?.data || []);
 
-    // 1. Mapear Estados
     statusMap.value = new Map(rawStats.map((s: any) => [Number(s.id), s.nombre_estado || s.nombre_estado_pedido]));
-    console.log('4. Mapa de estados procesado:', Object.fromEntries(statusMap.value));
-
-    // 2. Mapear Distribuidores
     const distMap = new Map(rawDists.map((d: any) => [Number(d.id), d.nombre_empresa]));
 
-    // 3. Transformar Pedidos
     const DEFAULT_NAMES: Record<number, string> = {
       1: 'En validación', 2: 'En preparación', 3: 'En despacho', 
       4: 'Entregado', 5: 'Pendiente', 6: 'Por pagar', 7: 'Pagada', 8: 'Cancelado'
     };
 
     orders.value = rawOrders.map((o: any) => {
-      const statusId = Number(o.id_estado_pedido);
-      const distId = Number(o.id_usuario_distribuidor || o.id_distribuidor);
+      // 🛡️ Buscamos el ID tolerando si viene en formato string o número desde Laravel
+      const statusId = Number(o.id_estado_pedido || o.id_estado || 1);
+      const distId = Number(o.id_usuario_distribuidor || o.id_distribuidor || 0);
       
       return {
         id: o.id,
         distributor: distMap.get(distId) || `Distribuidor #${distId}`,
+        // Sincronización perfecta de strings:
         status: statusMap.value.get(statusId) || DEFAULT_NAMES[statusId] || `Estado #${statusId}`,
-        total: Number(o.monto_final || o.total_pedido || 0),
+        total: Number(o.monto_final || o.total_pedido || o.total_cotizacion || 0),
         date: formatDate(o.fecha_creacion || o.fecha_pedido || o.created_at),
-        time: (o.hora_creacion || '').substring(0, 5),
+        time: (o.hora_creacion || o.created_at || '').substring(0, 5),
         rawStatusId: statusId
       };
     });
 
-    console.log('5. Mapeo final exitoso. Filas:', orders.value.length);
+    console.log('Mapeo de grilla general refrescado con éxito:', orders.value.length);
 
   } catch (error) {
-    console.error('--- [DEBUG] ERROR GLOBAL EN FETCH ---', error);
+    console.error('Error crítico al refrescar la grilla:', error);
   } finally {
     isLoading.value = false;
-    console.log('--- [DEBUG] CARGA FINALIZADA ---');
   }
 };
 
@@ -373,7 +351,22 @@ const formatPrice = (price: number) => {
   return price.toLocaleString('es-CL');
 };
 
-const getStatusClass = (status: string) => {
+const getStatusClass = (status: string, statusId?: number) => {
+  // Si viene el ID numérico directo de PostgreSQL, es mucho más rápido y seguro validar por número:
+  if (statusId) {
+    switch (Number(statusId)) {
+      case 1: return 'status-validation';  // En validación
+      case 2: return 'status-preparation'; // En preparación
+      case 3: return 'status-shipping';    // En despacho
+      case 4: return 'status-completed';   // Entregado
+      case 5: return 'status-pending';     // Pendiente
+      case 6: return 'status-unpaid';      // Por pagar
+      case 7: return 'status-paid';        // Pagada
+      case 8: return 'status-cancelled';   // Cancelado
+    }
+  }
+
+  // Respaldo por si evalúa mediante el string de texto:
   switch (status) {
     case 'Por pagar': return 'status-unpaid';
     case 'Pagada': return 'status-paid';

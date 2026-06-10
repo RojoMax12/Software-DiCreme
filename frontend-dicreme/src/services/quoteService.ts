@@ -48,7 +48,19 @@ export default {
     },
 
     cancelQuote(id: number, iduser: number) {
-        return api.put(`/cotizaciones/${id}/cancelarcotizacion/${iduser}`, { iduser });
+        return api.put(`/cotizacion/${id}/cancelarcotizacion/${iduser}`, { iduser });
+    },
+
+    add_productos_to_cotizacion(idCotizacion: number, payload: { id_producto: number, cantidad: number }) {
+    return api.post(`/cotizaciones/${idCotizacion}/agregarproductos`, payload);
+    },
+
+    remove_productos_to_cotizacion(idCotizacion: number, payload: { id_producto: number, cantidad: number }) {
+    return api.post(`/cotizaciones/${idCotizacion}/eliminarproductos`, payload);
+    },
+
+    force_remove_producto(idCotizacion: number, payload: { id_producto: number }) {
+    return api.post(`/cotizaciones/${idCotizacion}/eliminarproducto`, payload);
     }
 
 }
