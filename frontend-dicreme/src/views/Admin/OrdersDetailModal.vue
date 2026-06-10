@@ -235,14 +235,23 @@ const currentStepIndex = computed(() => {
 // El estado que el usuario está SELECCIONANDO en la línea de tiempo (por defecto el actual)
 const selectedTimelineId = ref(localStatusId.value);
 
+const currentUser = ref({ id: 0, name: '', role: 0 });
+
 const canGoBack = computed(() => {
-  const currentIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
-  return currentIndex > 0;
+  const selectedIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  // Los administradores (rol 1) pueden retroceder a cualquier estado anterior.
+  if (currentUser.value.role === 1) {
+    return selectedIndex > 0;
+  }
+  // Los no administradores solo pueden retroceder si avanzaron visualmente más allá de su estado real actual.
+  return selectedIndex > currentStepIndex.value;
 });
 
 const canGoForward = computed(() => {
-  const currentIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
-  return currentIndex < timelineSteps.length - 1;
+  const selectedIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  // Nadie puede saltarse un estado. El máximo estado seleccionable es el inmediatamente siguiente al estado actual (currentStepIndex + 1).
+  const maxAllowedIndex = currentStepIndex.value + 1;
+  return selectedIndex < maxAllowedIndex && selectedIndex < timelineSteps.length - 1;
 });
 
 const moveTimeline = (direction: 'next' | 'prev') => {
@@ -406,6 +415,15 @@ const getStatusClass = (status: string | undefined) => {
 };
 
 onMounted(() => {
+  const userStored = localStorage.getItem('user');
+  if (userStored) {
+    const userObj = JSON.parse(userStored);
+    currentUser.value = {
+      id: userObj.id,
+      name: userObj.nombre_usuario || userObj.name,
+      role: userObj.id_rol || 0
+    };
+  }
   getproducts();
 });
 </script>
