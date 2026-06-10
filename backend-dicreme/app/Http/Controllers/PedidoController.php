@@ -68,15 +68,17 @@ class PedidoController extends Controller
         return response() ->json($this->pedidoService->getPedidoByUsuario_distribuidores($id_usuario_distribuidor));
     }
 
-    public function cambiarEstado($id_pedido)
+    public function cambiarEstado(Request $request, $id_pedido)
     {
         try {
+            $id_estado = $request->input('id_estado_pedido');
+            
             // Ejecutamos la función secuencial interna
-            $pedidoActualizado = $this->pedidoService->actualizarEstadoPedido($id_pedido);
+            $pedidoActualizado = $this->pedidoService->actualizarEstadoPedido($id_pedido, $id_estado);
 
             return response()->json([
                 'status'  => 'success',
-                'message' => "El pedido avanzó a la siguiente etapa correctamente.",
+                'message' => "El estado del pedido se actualizó correctamente.",
                 'data'    => $pedidoActualizado
             ], 200);
 

@@ -4,6 +4,13 @@
       <header class="modal-header">
         <h2 class="modal-title">Detalle de cotización #{{ orderId }}</h2>
         <div class="header-actions">
+          <button class="btn-whatsapp-header" @click="abrirWhatsappCotizacion(orderId, distributor)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
+            </svg>
+            <span>Contactar por WhatsApp</span>
+          </button>
           <button class="btn-export">
             <Upload :size="18" />
             <span>Exportar</span>
@@ -45,16 +52,17 @@
                       <span class="category-badge">{{ product.category }}</span>
                     </td>
                     <td>
-                      <div class="qty-control">
+                      <div class="qty-control" v-if="!isReadOnly">
                         <button class="btn-qty" @click="changeQty(product, -1)">-</button>
                         <span class="qty-number">{{ product.quantity }}</span>
                         <button class="btn-qty" @click="changeQty(product, 1)">+</button>
                       </div>
+                      <span v-else class="qty-number">{{ product.quantity }}</span>
                     </td>
                     <td>${{ formatNumber(product.price) }}</td>
                     <td class="text-right bold-text">${{ formatNumber(product.subtotal) }}</td>
                     <td class="text-right">
-                      <button class="btn-icon-delete" @click="removeProduct(index, product)" title="Eliminar producto">
+                      <button v-if="!isReadOnly" class="btn-icon-delete" @click="removeProduct(index, product)" title="Eliminar producto">
                         <Trash2 :size="18" />
                       </button>
                     </td>
@@ -63,7 +71,7 @@
               </table>
             </div>
 
-            <div class="add-product-container">
+            <div class="add-product-container" v-if="!isReadOnly">
               <select v-model="selectedProductToAdd" class="add-product-select">
                 <option :value="null" disabled>-- Seleccionar producto para agregar --</option>
                 <option v-for="prod in availableCatalog" :key="prod.id" :value="prod">
@@ -112,7 +120,7 @@
         </div>
 
         <div class="modal-footer-layout">
-          <div class="discount-card">
+          <div class="discount-card" v-if="!isReadOnly">
             <div class="card-header">
               <h4 class="card-title">Descuento general</h4>
               <p class="card-description">Aplica un descuento sobre el total de la cotización</p>
@@ -127,7 +135,8 @@
                   <button 
                     class="type-option" 
                     :class="{ active: discountType === 'percentage' }"
-                    @click="discountType = 'percentage'"
+                    @click="!isReadOnly && (discountType = 'percentage')"
+                    :disabled="isReadOnly"
                   >
                     <div class="radio-circle"></div>
                     <span>Porcentaje (%)</span>
@@ -135,7 +144,8 @@
                   <button 
                     class="type-option" 
                     :class="{ active: discountType === 'fixed' }"
-                    @click="discountType = 'fixed'"
+                    @click="!isReadOnly && (discountType = 'fixed')"
+                    :disabled="isReadOnly"
                   >
                     <div class="radio-circle"></div>
                     <span>Monto fijo ($)</span>
@@ -145,13 +155,14 @@
 
               <div class="discount-col">
                 <span class="col-label">Valor del descuento</span>
-                <div class="input-container">
+                <div class="input-container" :class="{ 'read-only': isReadOnly }">
                   <span class="input-prefix">{{ discountType === 'percentage' ? '%' : '$' }}</span>
                   <input 
                     type="number" 
                     v-model="discountInput"
                     @input="validateGeneralDiscount"
                     class="discount-input"
+                    :disabled="isReadOnly"
                   />
                 </div>
               </div>
@@ -184,19 +195,20 @@
                   <span class="adv-subtotal-val">${{ formatNumber(product.subtotal) }}</span>
                 </div>
                 <div class="adv-col">
-                  <select v-model="product.discountType" class="adv-select">
+                  <select v-model="product.discountType" class="adv-select" :disabled="isReadOnly">
                     <option value="percentage">Porcentaje (%)</option>
                     <option value="fixed">Monto fijo ($)</option>
                   </select>
                 </div>
                 <div class="adv-col">
-                  <div class="adv-input-box">
+                  <div class="adv-input-box" :class="{ 'read-only': isReadOnly }">
                     <input 
                       type="number" 
                       v-model="product.discountValue"
                       @input="validateProductDiscount(product)"
                       class="adv-input"
                       placeholder="0"
+                      :disabled="isReadOnly"
                     />
                   </div>
                 </div>
@@ -205,7 +217,7 @@
                     - ${{ formatNumber(calculateProductDiscount(product)) }}
                   </span>
                 </div>
-                <div class="adv-col-action">
+                <div class="adv-col-action" v-if="!isReadOnly">
                   <button class="btn-erase" @click="product.discountValue = 0">
                     <Eraser :size="18" />
                   </button>
@@ -214,7 +226,7 @@
             </div>
           </div>
 
-          <div class="totals-card">
+          <div class="totals-card" :class="{ 'full-width': isReadOnly }">
             <div class="card-header">
               <h4 class="card-title">Resumen de montos</h4>
             </div>
@@ -250,20 +262,13 @@
         </div>
 
         <div class="modal-final-actions">
-          <button class="btn-modal btn-cancel" @click="showCancelConfirm = true">
+          <button v-if="!isReadOnly" class="btn-modal btn-cancel" @click="showCancelConfirm = true">
             <XCircle :size="18" />
             <span>Cancelar Cotización</span>
           </button>
-          <button class="btn-modal btn-complete" @click="handleComplete" :disabled="isSubmitting">
+          <button v-if="!isReadOnly" class="btn-modal btn-complete" @click="handleComplete" :disabled="isSubmitting">
             <CheckCircle2 :size="18" />
             <span>Completar Cotización</span>
-          </button>
-          <button class="btn-modal btn-whatsapp" @click="abrirWhatsappCotizacion(orderId, distributor)">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
-            </svg>
-            <span>Contactar por WhatsApp</span>
           </button>
         </div>
       </div>
@@ -320,12 +325,18 @@ interface CatalogProduct {
 
 const props = defineProps<{
   orderId: number | string;
+  status?: string;
   distributor?: string;
   distributorPhone?: string;
   managedBy?: string;
+  managedById?: number;
   date?: string;
   time?: string;
 }>();
+
+const isReadOnly = computed(() => {
+  return ['Completado', 'Cancelado'].includes(props.status || '') || props.managedById !== currentUser.value.id;
+});
 
 const emit = defineEmits(['close', 'cancel', 'complete', 'notificar']);
 
@@ -782,6 +793,24 @@ const formatNumber = (num: number) => new Intl.NumberFormat('es-CL').format(Math
   background-color: #eee;
   border-color: #ccc;
 }
+.btn-whatsapp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #e8fbf1;
+  border: 1px solid #a3ebd0;
+  border-radius: 12px;
+  color: #1ea952;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-whatsapp-header:hover {
+  background-color: #d2f7e4;
+  border-color: #61cf9f;
+}
 .btn-close {
   background: none;
   border: none;
@@ -937,6 +966,9 @@ const formatNumber = (num: number) => new Intl.NumberFormat('es-CL').format(Math
   display: flex;
   flex-direction: column;
 }
+.totals-card.full-width {
+  flex: 3;
+}
 .card-title {
   margin: 0;
   font-size: 1rem;
@@ -1013,13 +1045,14 @@ const formatNumber = (num: number) => new Intl.NumberFormat('es-CL').format(Math
   background-color: #e4869f;
   border-radius: 50%;
 }
-.input-container {
-  display: flex;
-  align-items: center;
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 0 12px;
+.input-container.read-only {
+  background-color: #f1f3f4;
+  cursor: not-allowed;
+}
+
+.adv-input-box.read-only {
+  background-color: #f1f3f4;
+  cursor: not-allowed;
 }
 .input-prefix {
   font-weight: 700;

@@ -40,8 +40,11 @@ export default {
 
     takeQuote(id: number, idadmin: number) {
         return api.put(`/cotizaciones/${id}/tomarcotizacion/${idadmin}`, { idadmin });
-
      },
+
+    leaveQuote(id: number, idadmin: number) {
+        return api.put(`/cotizaciones/${id}/dejarcotizacion/${idadmin}`, { idadmin });
+    },
 
     validateQuote(id: number, idadmin: number, discountData?: any) {
     return api.put(`/cotizaciones/${id}/validarcotizacion/${idadmin}`, discountData);
