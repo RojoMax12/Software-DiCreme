@@ -47,9 +47,13 @@ const currentStep = computed(() => {
   return statusId === 3 ? 2 : 1
 })
 
-const abrirWhatsapp = () => {
-  // Aquí sí puedes usar window con total libertad porque estamos en JavaScript puro
-  window.open('https://wa.me/56977579783', '_blank');
+const abrirWhatsappConDatos = (quotationId) => {
+  
+  const mensaje = `¡Hola DiCreme! Me gustaría conocer más sobre la cotización #${quotationId}. Tengo algunas preguntas y me gustaría discutir los detalles. ¿Podrían contactarme por favor? ¡Gracias!`;
+  
+  const url = `https://wa.me/56995838926?text=${encodeURIComponent(mensaje)}`;
+  
+  window.open(url, '_blank');
 };
 
 // --- CARGA DE DATOS EN CADENA Y PARALELO ---
@@ -250,7 +254,7 @@ const handleGoBack = () => {
 
           <div class="action-row">
             
-            <button class="btn-contact" style="margin-left: 15px;" @click="abrirWhatsapp">
+            <button class="btn-contact" style="margin-left: 15px;" @click="abrirWhatsappConDatos(quotationId)">
               <span>Contáctanos</span>
               <div class="icon-whatsapp"> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#25D366"> <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
                   <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
@@ -519,7 +523,7 @@ const handleGoBack = () => {
 @keyframes rotate { 100% { transform: rotate(360deg); } }
 
 .btn-contact {
-  background-color: rgba(146, 146, 146, 0.849);
+  background-color: #322c44;
   color: white;
   border: none;
   padding: 14px 30px;
@@ -530,6 +534,7 @@ const handleGoBack = () => {
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
+  margin-right: 15px;
 }
 
 .icon-whatsapp {

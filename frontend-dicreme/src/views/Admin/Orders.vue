@@ -232,6 +232,7 @@
       v-if="isModalOpen" 
       :order-id="selectedOrderId" 
       :distributor="selectedOrder?.distributor"
+      :distributor-phone="selectedOrder?.distributorPhone"
       :status="selectedOrder?.status"
       :status-id="selectedOrder?.rawStatusId"
       :date="selectedOrder?.date"
@@ -288,6 +289,8 @@ const fetchOrders = async () => {
 
     statusMap.value = new Map(rawStats.map((s: any) => [Number(s.id), s.nombre_estado || s.nombre_estado_pedido]));
     const distMap = new Map(rawDists.map((d: any) => [Number(d.id), d.nombre_empresa]));
+    const distPhoneMap = new Map(rawDists.map((d: any) => [Number(d.id), d.telefono || '']));
+
 
     const DEFAULT_NAMES: Record<number, string> = {
       1: 'En validación', 2: 'En preparación', 3: 'En despacho', 
@@ -299,9 +302,11 @@ const fetchOrders = async () => {
       const statusId = Number(o.id_estado_pedido || o.id_estado || 1);
       const distId = Number(o.id_usuario_distribuidor || o.id_distribuidor || 0);
       
+      
       return {
         id: o.id,
         distributor: distMap.get(distId) || `Distribuidor #${distId}`,
+        distributorPhone: distPhoneMap.get(distId) || o.telefono || o.distributorPhone || '',
         // Sincronización perfecta de strings:
         status: statusMap.value.get(statusId) || DEFAULT_NAMES[statusId] || `Estado #${statusId}`,
         total: Number(o.monto_final || o.total_pedido || o.total_cotizacion || 0),
