@@ -213,8 +213,7 @@ class CotizacionServices
         return $this->cotizacionRepository->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor);
     }
 
-    public function getDetailCotizacion($id)
-    {
+    public function getDetailCotizacion($id){
         // 1. Buscamos la cotización base
         $cotizacion = $this->cotizacionRepository->getCotizacionById($id);
 
@@ -253,6 +252,10 @@ class CotizacionServices
             'total_cotizacion'     => (float) $cotizacion->total_cotizacion,
             'id_estado_cotizacion' => $cotizacion->id_estado_cotizacion,
             'fecha_creacion'       => $cotizacion->created_at,
+            'tipo_descuento_general' => $cotizacion->tipo_descuento_general,
+            'valor_descuento_general' => $cotizacion->valor_descuento_general,
+            'descuento_general_aplicado' => $cotizacion->descuento_general_aplicado,
+            'descuento_productos_total' => $cotizacion->descuento_productos_total,
 
             // Objeto con la información del distribuidor
             'distribuidor'         => $usuario_distribuidor, 
@@ -264,8 +267,7 @@ class CotizacionServices
 
 
     public function validarCotizacion($id_cotizacion, $id_usuario_dicreme, array $payload = [])
-    {
-    // 🛡️ Usamos una transacción para que el cambio de estado y los descuentos se guarden juntos o no se guarde nada
+{
     return DB::transaction(function () use ($id_cotizacion, $id_usuario_dicreme, $payload) {
         
         // 1. Cargamos la cotización con su relación intermedia exacta
@@ -345,4 +347,177 @@ class CotizacionServices
         return $cotizacion;
     });
     }
+
+    public function add_productos_to_cotizacion($id_cotizacion, array $productos_data)
+    {
+        $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+
+        if (!$cotizacion) {
+            throw new \Exception("La cotización no existe.");
+        }
+
+        if ($cotizacion->estado_cotizacion === 'Aceptada' || $cotizacion->estado_cotizacion === 'Transformada') {
+            throw new \Exception("Esta cotización ya fue cerrada.");
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $acumulador_subtotal = 0;
+
+            foreach ($productos_data as $data) {
+                // Buscamos el producto en la DB usando el ID seguro enviado
+                $producto = \App\Models\Producto::find($data['id_producto']);
+                
+                if (!$producto) {
+                    throw new \Exception("El producto con ID {$data['id_producto']} no existe.");
+                }
+
+                // Rescatamos el precio real directo de la columna de tu catálogo
+                $precioVenta = $producto->precio_producto;
+
+                // Verificamos si ya existe la relación en la cotización
+                $item_existente = $cotizacion->cotizacionProductos()
+                    ->where('id_producto', $data['id_producto'])
+                    ->first();
+
+                if ($item_existente) {
+                    // Si ya existe, sumamos la cantidad nueva
+                    $item_existente->cantidad += $data['cantidad'];
+                    $item_existente->precio_unitario_venta = $precioVenta; 
+                    $item_existente->save();
+                } else {
+                    // Si es nuevo, creamos la fila con el precio extraído de la DB
+                    $cotizacion->cotizacionProductos()->create([
+                        'id_producto'           => $data['id_producto'],
+                        'cantidad'              => $data['cantidad'],
+                        'precio_unitario_venta' => $precioVenta,
+                    ]);
+                }
+
+                $acumulador_subtotal += $data['cantidad'] * $precioVenta;
+            }
+
+            // Actualizamos los totales de la cabecera
+            $cotizacion->subtotal_cotizacion += $acumulador_subtotal;
+            $cotizacion->total_cotizacion    += $acumulador_subtotal;
+            $cotizacion->save();
+
+            DB::commit();
+
+            return $cotizacion->load('cotizacionProductos');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function remove_productos_to_cotizacion($id_cotizacion, array $productos_data)
+{
+    // 1. Obtener la cotización
+    $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+
+    if (!$cotizacion) {
+        throw new \Exception("La cotización no existe.");
+    }
+
+    // Seguridad: Bloquear si ya pasó a pedido
+    if ($cotizacion->estado_cotizacion === 'Aceptada' || $cotizacion->estado_cotizacion === 'Transformada') {
+        throw new \Exception("No se pueden alterar los datos. Esta cotización ya está cerrada.");
+    }
+
+    DB::beginTransaction();
+
+    try {
+        $descuento_subtotal = 0;
+
+        foreach ($productos_data as $data) {
+            // Buscar el producto en el detalle de la cotización
+            $item_existente = $cotizacion->cotizacionProductos()
+                ->where('id_producto', $data['id_producto'])
+                ->first();
+
+            if (!$item_existente) {
+                throw new \Exception("El producto no se encuentra en esta cotización.");
+            }
+
+            $precioVenta = $item_existente->precio_unitario_venta;
+
+            // Determinar si se resta cantidad o se elimina la fila completa
+            if ($data['cantidad'] >= $item_existente->cantidad) {
+                // CASO A: Quieren quitar más o lo mismo de lo que hay -> Se elimina el registro completo
+                // El dinero a descontar es el total de lo que valía esa fila entera
+                $descuento_subtotal += $item_existente->cantidad * $precioVenta;
+                
+                $item_existente->delete();
+            } else {
+                // CASO B: Solo quieren reducir la cantidad (ej. de 5 tortas bajar a 3)
+                $item_existente->cantidad -= $data['cantidad'];
+                $item_existente->save();
+
+                // El dinero a descontar es solo por las unidades retiradas
+                $descuento_subtotal += $data['cantidad'] * $precioVenta;
+            }
+        }
+
+        // 3. Restar los montos de la cabecera cuidando que no queden valores negativos
+        $cotizacion->subtotal_cotizacion = max(0, $cotizacion->subtotal_cotizacion - $descuento_subtotal);
+        $cotizacion->total_cotizacion    = max(0, $cotizacion->total_cotizacion - $descuento_subtotal);
+        $cotizacion->save();
+
+        DB::commit();
+
+        return $cotizacion->load('cotizacionProductos');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        throw $e;
+    }
+}
+
+public function force_remove_producto($id_cotizacion, $id_producto)
+{
+    $cotizacion = $this->cotizacionRepository->getCotizacionById($id_cotizacion);
+
+    if (!$cotizacion) {
+        throw new \Exception("La cotización no existe.");
+    }
+
+    if ($cotizacion->estado_cotizacion === 'Aceptada' || $cotizacion->estado_cotizacion === 'Transformada') {
+        throw new \Exception("No se pueden alterar los datos. Esta cotización ya está cerrada.");
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // Buscamos la fila específica del producto en el detalle
+        $item_existente = $cotizacion->cotizacionProductos()
+            ->where('id_producto', $id_producto)
+            ->first();
+
+        if (!$item_existente) {
+            throw new \Exception("El producto no está en esta cotización.");
+        }
+
+        // Calculamos el valor TOTAL que costaba este producto (cantidad * precio)
+        $monto_a_descontar = $item_existente->cantidad * $item_existente->precio_unitario_venta;
+
+        // Borramos la fila directamente de PostgreSQL
+        $item_existente->delete();
+
+        // Restamos el monto total de la cabecera
+        $cotizacion->subtotal_cotizacion = max(0, $cotizacion->subtotal_cotizacion - $monto_a_descontar);
+        $cotizacion->total_cotizacion    = max(0, $cotizacion->total_cotizacion - $monto_a_descontar);
+        $cotizacion->save();
+
+        DB::commit();
+
+        return $cotizacion->load('cotizacionProductos');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        throw $e;
+    }
+}
 }
