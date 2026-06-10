@@ -23,5 +23,13 @@ export default {
 
     createOrder(data: unknown) {
         return api.post('/pedidos', data);
+    },
+
+    getOrderDetails(id: number) {
+        return api.get(`/pedidos/${id}/details`);
+    },
+
+    changeOrderStatus(id_pedido: number) {
+        return api.put(`/pedidos/${id_pedido}/cambiar-estado`);
     }
 }

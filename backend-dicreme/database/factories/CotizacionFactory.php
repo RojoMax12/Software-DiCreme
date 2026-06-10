@@ -27,6 +27,12 @@ class CotizacionFactory extends Factory
                 'fecha_creacion' => now(),
                 'hora_creacion' => now()->format('H:i'),
                 'total_cotizacion' => $this->faker->numberBetween(1000, 10000),  
+                'persona_recibe' => $this->faker->name(),
+                'subtotal_cotizacion' => 0,
+                'tipo_descuento_general' => 'none',
+                'valor_descuento_general' => 0,
+                'descuento_general_aplicado' => 0,
+                'descuento_productos_total' => 0
 
             //
         ];

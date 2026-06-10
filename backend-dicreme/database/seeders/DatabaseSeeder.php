@@ -15,8 +15,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $roles = ['Admin', 'Dicreme', 'Distribuidor'];
-        $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado','Pendiente','Por pagar','Pagado'];
-        $estadosCotizacion = ['Por Tomar','En Revision', 'Completado'];
+        $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado','Pendiente','Por pagar','Pagado', 'Cancelado'];
+        $estadosCotizacion = ['Por Tomar','En Revision', 'Completado', 'Cancelado'];
         $categorias = ['Al agua', 'Leche de avena', 'Tradicional', 'Sin azúcar'];
         $formatos = ['10L', '5L', '2.5L', '1L'];
         

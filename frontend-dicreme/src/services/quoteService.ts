@@ -24,5 +24,43 @@ export default {
 
     createQuote(data: unknown){
         return api.post('/cotizaciones', data);
+    },
+
+    getQuoteProducts(idCotizacion: number | string){
+        return api.get(`/cotizacion_producto/cotizacion/${idCotizacion}`);
+    },
+
+    transformQuoteToOrder(idCotizacion: number | string){
+        return api.post(`/cotizacion/${idCotizacion}/transformar`);
+    },
+
+    getQuoteDetails(id: number) {
+        return api.get(`/cotizaciones/${id}/details`);
+    },
+
+    takeQuote(id: number, idadmin: number) {
+        return api.put(`/cotizaciones/${id}/tomarcotizacion/${idadmin}`, { idadmin });
+
+     },
+
+    validateQuote(id: number, idadmin: number, discountData?: any) {
+    return api.put(`/cotizaciones/${id}/validarcotizacion/${idadmin}`, discountData);
+    },
+
+    cancelQuote(id: number, iduser: number) {
+        return api.put(`/cotizaciones/${id}/cancelarcotizacion/${iduser}`, { iduser });
+    },
+
+    add_productos_to_cotizacion(idCotizacion: number, payload: { id_producto: number, cantidad: number }) {
+    return api.post(`/cotizaciones/${idCotizacion}/agregarproductos`, payload);
+    },
+
+    remove_productos_to_cotizacion(idCotizacion: number, payload: { id_producto: number, cantidad: number }) {
+    return api.post(`/cotizaciones/${idCotizacion}/eliminarproductos`, payload);
+    },
+
+    force_remove_producto(idCotizacion: number, payload: { id_producto: number }) {
+    return api.post(`/cotizaciones/${idCotizacion}/eliminarproducto`, payload);
     }
+
 }

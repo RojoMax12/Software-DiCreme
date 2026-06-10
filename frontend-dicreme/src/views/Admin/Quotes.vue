@@ -42,9 +42,9 @@
             <div class="dropdown-menu" v-if="isStatusDropdownOpen">
               <div class="dropdown-item" @click="selectStatus('all')">Todos los estados</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="selectStatus('Pendiente')">Pendiente</div>
-              <div class="dropdown-item" @click="selectStatus('En revisión')">En revisión</div>
-              <div class="dropdown-item" @click="selectStatus('Completada')">Completada</div>
+              <div class="dropdown-item" @click="selectStatus('Por Tomar')">Por Tomar</div>
+              <div class="dropdown-item" @click="selectStatus('En Revision')">En Revision</div>
+              <div class="dropdown-item" @click="selectStatus('Completado')">Completado</div>
             </div>
           </div>
         </div>
@@ -163,7 +163,11 @@
             </td>
             <td>
               <div class="actions-content">
-                <button class="btn-action btn-take">
+                <button 
+                  class="btn-action btn-take" 
+                  :disabled="order.status !== 'Por Tomar'"
+                  @click="takeQuote(order.id)"
+                >
                   <UserPlus :size="18" />
                   <span>Tomar</span>
                 </button>
@@ -175,6 +179,7 @@
             </td>
           </tr>
         </tbody>
+
         <tfoot>
           <tr>
             <td colspan="7">
@@ -210,10 +215,13 @@
       v-if="isModalOpen" 
       :order-id="selectedOrderId" 
       :distributor="selectedOrder?.distributor"
+      :distributor-phone="selectedOrder?.distributorPhone" 
       :managed-by="selectedOrder?.managedBy?.name"
       :date="selectedOrder?.date"
       :time="selectedOrder?.time"
       @close="closeModal" 
+      @cancel="handleModalCancel"
+      @complete="handleModalComplete"
     />
   </div>
 </template>
@@ -221,6 +229,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import QuotesDetailModal from './QuotesDetailModal.vue';
+import quoteService from '@/services/quoteService';
+import distributorService from '@/services/distributorService';
+import userService from '@/services/userService';
+import quotationStatusService from '@/services/quotationStatusService';
 import { 
   ChevronsUpDown, 
   UserPlus, 
@@ -236,9 +248,10 @@ import {
   FileSearch,
   LayoutGrid
 } from 'lucide-vue-next';
+import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
+
 
 // Pagination logic
-const totalResults = computed(() => filteredOrders.value.length);
 const itemsPerPage = 10;
 const currentPage = ref(1);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalResults.value / itemsPerPage)));
@@ -249,9 +262,13 @@ const searchQuery = ref('');
 const statusFilter = ref('all');
 const isStatusDropdownOpen = ref(false);
 
+
 // Modal state
 const isModalOpen = ref(false);
 const selectedOrderId = ref<number | string>('');
+
+const { notify } = useNotification(); // Extraemos la función de notificación del composable
+
 
 const selectedOrder = computed(() => {
   return orders.value.find((o: any) => o.id === selectedOrderId.value);
@@ -264,6 +281,16 @@ const openModal = (id: number | string) => {
 
 const closeModal = () => {
   isModalOpen.value = false;
+};
+
+const handleModalCancel = async () => {
+  closeModal();
+  await fetchQuotes();
+};
+
+const handleModalComplete = async () => {
+  closeModal();
+  await fetchQuotes();
 };
 
 const toggleStatusDropdown = () => {
@@ -283,28 +310,99 @@ const closeDropdown = (e: MouseEvent) => {
   }
 };
 
-onMounted(() => {
+const currentUser = ref({ id: 0, name: '' });
+const orders = ref<any[]>([]);
+const isLoading = ref(true);
+
+const fetchQuotes = async () => {
+  isLoading.value = true;
+  try {
+    const [quotesRes, distsRes, usersRes, statsRes] = await Promise.all([
+      quoteService.getQuotes(),
+      distributorService.getDistributors(),
+      userService.getUsers(),
+      quotationStatusService.getStatuses()
+    ]);
+
+    // MAPA 1 (Intacto): Sigue guardando solo el nombre para no romper nada en el resto del software
+    const distMap = new Map(distsRes.data.map((d: any) => [d.id, d.nombre_empresa]));
+    
+    // 🚀 MAPA 2 (NUEVO): Guarda exclusivamente los teléfonos para esta implementación
+    // Reemplaza 'telefono' por el nombre real de tu columna en PostgreSQL (ej: celular, telefono_contacto)
+    const distPhoneMap = new Map(distsRes.data.map((d: any) => [d.id, d.telefono || '']));
+
+    const userMap = new Map(usersRes.data.map((u: any) => [u.id, u.nombre_usuario]));
+    const statMap = new Map(statsRes.data.map((s: any) => [s.id, s.nombre_estado]));
+
+    orders.value = quotesRes.data.map((q: any) => ({
+      id: q.id,
+      distributor: distMap.get(q.id_distribuidor) || 'Desconocido', // 👈 Sigue funcionando igual que antes
+      
+      // 🚀 Extraemos el teléfono usando el mapa nuevo sin interferir con el anterior
+      distributorPhone: distPhoneMap.get(q.id_distribuidor) || '', 
+      
+      managedBy: q.id_usuario_dicreme ? { id: q.id_usuario_dicreme, name: userMap.get(q.id_usuario_dicreme) } : null,
+      status: statMap.get(q.id_estado_cotizacion) || 'Por Tomar',
+      total: Number(q.total_cotizacion).toLocaleString('es-CL'),
+      date: formatDate(q.fecha_creacion),
+      time: q.hora_creacion ? q.hora_creacion.substring(0, 5) : '',
+      rawStatus: q.id_estado_cotizacion
+    }));
+
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+const takeQuote = async (quoteId: number) => {
+  try {
+    const responseValidacion = await quoteService.takeQuote(quoteId, currentUser.value.id);
+    notify(responseValidacion.data.message, 'success');
+
+
+    await fetchQuotes();
+  } catch (error) {
+    
+    notify(error.response?.data?.message || 'Error', 'error');
+  } 
+};
+
+onMounted(async () => {
   window.addEventListener('click', closeDropdown);
+  
+  const userStored = localStorage.getItem('user');
+  if (userStored) {
+    const userObj = JSON.parse(userStored);
+    currentUser.value = {
+      id: userObj.id,
+      name: userObj.nombre_usuario || userObj.name
+    };
+  }
+  
+  await fetchQuotes();
 });
 
 onUnmounted(() => {
   window.removeEventListener('click', closeDropdown);
 });
 
-// Mock orders data
-const currentUser = ref({ id: 0, name: '' });
-
-const orders = ref<any[]>([]);
-
 const counts = computed(() => {
-  const actual = orders.value.filter((o: any) => ['Pendiente', 'En revisión'].includes(o.status)).length;
-  const completed = orders.value.filter((o: any) => o.status === 'Completada').length;
+  const actual = orders.value.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status)).length;
+  const completed = orders.value.filter((o: any) => o.status === 'Completado').length;
   return { actual, completed };
 });
 
 const stats = computed(() => {
-  const pending = orders.value.filter((o: any) => o.status === 'Pendiente').length;
-  const inReview = orders.value.filter((o: any) => o.status === 'En revisión').length;
+  const pending = orders.value.filter((o: any) => o.status === 'Por Tomar').length;
+  const inReview = orders.value.filter((o: any) => o.status === 'En Revision').length;
   const totalActual = pending + inReview;
   return { pending, inReview, totalActual };
 });
@@ -314,9 +412,9 @@ const filteredOrders = computed(() => {
 
   // 1. Category Filter (Actual vs Completed)
   if (activeFilter.value === 'actual') {
-    result = result.filter((o: any) => ['Pendiente', 'En revisión'].includes(o.status));
+    result = result.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status));
   } else {
-    result = result.filter((o: any) => o.status === 'Completada');
+    result = result.filter((o: any) => o.status === 'Completado');
   }
 
   // 2. Search Query (ID or Distributor)
@@ -336,10 +434,13 @@ const filteredOrders = computed(() => {
   return result;
 });
 
+const totalResults = computed(() => filteredOrders.value.length);
+
+
 // Sorting logic
 const sortConfig = ref({
-  key: '',
-  direction: 'asc'
+  key: 'id',
+  direction: 'desc'
 });
 
 const sortBy = (key: string) => {
@@ -387,9 +488,9 @@ const sortedOrders = computed(() => {
 
 const getStatusClass = (status: string) => {
   switch (status) {
-    case 'Pendiente': return 'status-pending';
-    case 'En revisión': return 'status-review';
-    case 'Completada': return 'status-completed';
+    case 'Por Tomar': return 'status-pending';
+    case 'En Revision': return 'status-review';
+    case 'Completado': return 'status-completed';
     default: return '';
   }
 };
@@ -817,8 +918,15 @@ const getStatusClass = (status: string) => {
   color: white;
 }
 
-.btn-take:hover {
+.btn-take:hover:not(:disabled) {
   background-color: #d1758e;
+}
+
+.btn-take:disabled {
+  background-color: #e5e5e5;
+  color: #777777;
+  cursor: not-allowed;
+  border: 1px solid #ddd;
 }
 
 .btn-detail {

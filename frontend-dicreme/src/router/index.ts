@@ -33,6 +33,11 @@ const router = createRouter({
       meta: { hideNavbar: true }
     },
     {
+      path: '/admin',
+      name: 'admin-home',
+      component: () => import('../views/Admin/AdminHomeView.vue')
+    },
+    {
       path: '/admin/quotes',
       name: 'admin-quotes',
       component: () => import('../views/Admin/Quotes.vue')
@@ -41,6 +46,11 @@ const router = createRouter({
       path: '/admin/orders',
       name: 'admin-orders',
       component: () => import('../views/Admin/Orders.vue')
+    },
+    {
+      path: '/admin/generate-quote',
+      name: 'admin-generate-quote',
+      component: () => import('../views/Admin/AdminGenerateQuoteView.vue')
     },
     {
       path: '/cotizacion',
@@ -71,7 +81,14 @@ const router = createRouter({
       path: '/pedido/:id', 
       name: 'order-detail',
       component: () => import('@/views/Distributor/OrderDetailView.vue'),
+    },
+
+    {
+      path: '/admin/user-management',
+      name: 'admin-users',
+      component: () => import('../views/Admin/UserManagementView.vue')
     }
+
   ],
 })
 

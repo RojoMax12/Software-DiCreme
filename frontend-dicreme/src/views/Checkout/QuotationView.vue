@@ -96,7 +96,7 @@ const totalEstimated = computed(() => {
 })
 
 // Envía el payload plano y corregido rumbo al endpoint del backend
-const handleConfirmQuotation = async () => {
+const   handleConfirmQuotation = async () => {
   
   // --- VALIDACIONES DE ENTRADA VISUAL ---
   if (!email.value.trim()) { triggerAlert('Por favor, ingresa el correo electrónico.'); return; }
@@ -125,12 +125,15 @@ const handleConfirmQuotation = async () => {
 
   // Fallback indexing database mapping layer to prevent NaN values from reaching the server
   const resolveProductId = (item: any): number => {
+    console.log("🔍 INSPECCIONANDO PRODUCTO DEL CARRITO:", item)
+    
     // If the cart item already contains an ID, use it directly
     if (item.id_producto) return Number(item.id_producto)
+    if (item.producto_id) return Number(item.producto_id)
     if (item.id) return Number(item.id)
 
-    // Fallback: Resolve ID dynamically using format volume size context
-    return getFormatIdBySize(item.size)
+    console.error('No se pudo resolver el ID del producto para el item:', item)
+    return 0;
   }
 
   // --- CÁLCULO ARITMÉTICO DEL TOTAL ENTERO ---
@@ -144,14 +147,19 @@ const handleConfirmQuotation = async () => {
   // --- MAPEADO DE PAYLOAD ---
   const quotationPayload = {
     id_distribuidor: Number(userId.value),
-    id_usuario_dicreme: 1,
+    id_usuario_dicreme: null,
     id_estado_cotizacion: 1,
+    persona_recibe: `${firstName.value.trim()} ${lastName.value.trim()}`,
     fecha_creacion: dateString,
     hora_creacion: timeString,
     total_cotizacion: calculatedTotal,
 
     cotizacion_productos: quotationItems.value.map(item => {
-      console.log('Resolving transaction properties for:', item.name, 'Size:', item.size)
+      console.log('Enviando helado:', item.name, '| Claves de ID detectadas:', { 
+        id_producto: item.id_producto, 
+        id: item.id, 
+        producto_id: item.producto_id 
+      })
       
       const resolvedId = resolveProductId(item)
       const resolvedPrice = typeof item.price === 'string' 
@@ -168,6 +176,8 @@ const handleConfirmQuotation = async () => {
 
   // --- DISPARO DE PETICIÓN ÚNICA MEDIANTE REST API ---
   try {
+
+    console.log("Payload que se va a Laravel:", JSON.stringify(quotationPayload, null, 2))
     const response = await quoteService.createQuote(quotationPayload)
     const result = response.data
 

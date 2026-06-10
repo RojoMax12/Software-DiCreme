@@ -41,4 +41,9 @@ class Usuario_dicremeRepository
         $usuarioDicreme->delete();
         return $usuarioDicreme;
     }
+
+    public function getUsuarioDicremeByCorreo($correo){
+
+        return Usuario_dicreme::where("correo_electronico", $correo)->first();
+    }
 }

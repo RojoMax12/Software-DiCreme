@@ -17,9 +17,15 @@ class Cotizacion extends Model
         'id_usuario_dicreme',
         'id_distribuidor',
         'id_estado_cotizacion',
+        'persona_recibe',
         'fecha_creacion',
         'hora_creacion',
-        'total_cotizacion'
+        'total_cotizacion',
+        'subtotal_cotizacion',
+        'tipo_descuento_general',
+        'valor_descuento_general',
+        'descuento_general_aplicado',
+        'descuento_productos_total'
     ];
 
     public function usuarioDicreme(): BelongsTo
@@ -46,7 +52,4 @@ class Cotizacion extends Model
     {
         return $this->hasOne(Estado_cotizacion::class, 'id_estado_cotizacion');
     }
-
-    
-
 }

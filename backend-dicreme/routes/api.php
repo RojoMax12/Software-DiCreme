@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BodegaController;
 use App\Http\Controllers\CategoriaController;
@@ -39,6 +38,8 @@ Route::prefix('auth')->middleware('throttle:auth_limits')->group(function () {
 Route::middleware('throttle:api_escritura')->group(function () {
     // Permitimos que cualquiera se cree una cuenta de distribuidor sin estar logueado aún
     Route::post('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'store']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 Route::middleware('throttle:api_lectura')->group(function() {
@@ -63,7 +64,17 @@ Route::middleware('jwt.auth')->group(function () {
         
         // Mover aquí las escrituras de Cotizaciones para que tengan JWT previo
         Route::post('/cotizaciones', [CotizacionController::class, 'store'])->middleware('role:1,2,3');
+        Route::put('/cotizaciones/{id_cotizacion}/tomarcotizacion/{id_admin}', [CotizacionController::class, 'tomarCotizacion'])->middleware('role:1');
+       
+        Route::post('/cotizaciones/{id_cotizacion}/agregarproductos', [CotizacionController::class, 'addproductocotizacion'])->middleware('role:1,2,3');
+        Route::post('/cotizaciones/{id_cotizacion}/eliminarproductos', [CotizacionController::class, 'removeproductocotizacion'])->middleware('role:1,2,3');
+        Route::post('/cotizaciones/{id_cotizacion}/eliminarproducto', [CotizacionController::class, 'destroyProductoCotizacion'])->middleware('role:1,3');
+        
+        Route::put('/cotizaciones/{id_cotizacion}/dejarcotizacion/{id_admin}', [CotizacionController::class, 'DejarCotizacion'])->middleware('role:1');
+        Route::put('/cotizaciones/{id_cotizacion}/cancelarcotizacion/{id_usuario}', [CotizacionController::class, 'cancelarCotizacion'])->middleware('role:1,3');
+        Route::put('/cotizaciones/{id_cotizacion}/validarcotizacion/{id_admin}', [CotizacionController::class, 'validarCotizacion'])->middleware('role:1');
         Route::put('/cotizaciones/{id}', [CotizacionController::class, 'update'])->middleware('role:1,2,3');
+        Route::put('/cotizaciones/{id}/total', [CotizacionController::class, 'updateTotal'])->middleware('role:1,2,3');
         Route::delete('/cotizaciones/{id}', [CotizacionController::class, 'destroy'])->middleware('role:1');
         Route::delete('/cotizacion_producto/{id}', [Cotizacion_productoController::class, 'destroy'])->middleware('role:1');
         Route::post('/usuarios_dicreme', [Usuario_dicremeController::class, 'store'])->middleware('role:1');
@@ -85,7 +96,9 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'destroy'])->middleware('role:1');
         Route::put('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'update'])->middleware('role:1');
         Route::delete('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'destroy'])->middleware('role:1');
+        
         Route::post('/pedidos', [PedidoController::class, 'store']);
+        Route::put('/pedidos/{id_pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])->middleware('role:1,2');
         Route::put('/pedidos/{id}', [PedidoController::class, 'update'])->middleware('role:1,2');
         Route::delete('/pedidos/{id}', [PedidoController::class, 'destroy'])->middleware('role:1');
         Route::post('/estado_pedido', [Estado_pedidoController::class, 'store'])->middleware('role:1');
@@ -122,6 +135,7 @@ Route::middleware('jwt.auth')->group(function () {
         
         // Mover aquí las lecturas de Cotizaciones para que tengan JWT previo
         Route::get('/cotizaciones', [CotizacionController::class, 'index'])->middleware('role:1,2,3');
+        Route::get('/cotizaciones/{id}/details', [CotizacionController::class, 'getdetailcotizacion'])->middleware('role:1,2,3');
         Route::get('/cotizaciones/{id}', [CotizacionController::class, 'show'])->middleware('role:1,2,3');
         Route::get('/cotizaciones/{id}/usuario_distribuidor', [CotizacionController::class, 'getallCotizacionesByUsuariodistribuidor'])->middleware('role:1,3');
         Route::get('/cotizacion_producto', [Cotizacion_productoController::class, 'index']);
@@ -140,11 +154,13 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
         Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
         Route::get('/pedidos', [PedidoController::class, 'index']);
+        Route::get('/pedidos/{id}/details', [PedidoController::class, 'getdetailpedido'])->middleware('role:1,2,3');
         Route::get('/pedidos/{id}', [PedidoController::class, 'show']);
         Route::get('/pedidos/{id}/usuario_distribuidor',[PedidoController::class, 'getallPedidosByUsuariodistribuidor'])->middleware('role:1,3');
         Route::get('/estado_pedido', [Estado_pedidoController::class, 'index']);
         Route::get('/estado_pedido/{id}', [Estado_pedidoController::class, 'show']);
         Route::get('/despachos', [DespachoController::class, 'index']);
+        Route::get('/despachos/{id}/pedidos', [DespachoController::class, 'getdespachobyidpedido']);
         Route::get('/despachos/{id}', [DespachoController::class, 'show']);
         Route::get('/bodegas', [BodegaController::class, 'index']);
         Route::get('/bodegas/{id}', [BodegaController::class, 'show']);

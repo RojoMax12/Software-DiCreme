@@ -42,25 +42,6 @@ const fetchDistributorOrders = async () => {
   } catch (error) {
     console.error('Error fetching orders logs:', error)
     
-    // MOCKUP DE RESPALDO: Datos de contingencia adaptados con las propiedades correctas
-    ordersList.value = [
-      { 
-        id: 28, 
-        fecha_creacion: '2026-05-27 14:10:00', 
-        id_estado_pedido: 1, 
-        nombre_receptor: 'Carlos Mendoza', 
-        direccion_despacho: 'Av. Providencia 1245, Local 3',
-        total_pedido: 125900 
-      },
-      { 
-        id: 29, 
-        fecha_creacion: '2026-05-27 16:30:00', 
-        id_estado_pedido: 2, 
-        nombre_receptor: 'María José Ruiz', 
-        direccion_despacho: 'Calle Los Militares 5620, Depto 402',
-        total_pedido: 84500 
-      }
-    ]
   } finally {
     isLoading.value = false
   }
@@ -95,8 +76,6 @@ const formatCurrency = (value: any) => {
 
 <template>
   <div class="my-orders-page">
-    <div class="decorative-banner"></div>
-
     <main class="history-container">
       <div class="header-section">
         <h2 class="page-title">Mis Pedidos Históricos</h2>
@@ -151,7 +130,7 @@ const formatCurrency = (value: any) => {
           <div class="card-footer">
             <span class="total-label">Total del Pedido:</span>
             <span class="total-price">
-              {{ formatCurrency(order.total_pedido ?? order.total ?? order.monto ?? order.total_cotizacion ?? 0) }}
+              {{ formatCurrency(order.monto_final ?? order.total ?? order.monto ?? order.total_cotizacion ?? 0) }}
             </span>
           </div>
         </div>

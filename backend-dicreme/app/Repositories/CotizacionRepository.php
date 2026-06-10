@@ -25,6 +25,59 @@ class CotizacionRepository
         return null;
     }
 
+    public function TomarCotizacionUsuarioDicreme($id, $id_usuario_dicreme)
+    {
+        $cotizacion = Cotizacion::find($id);
+        if ($cotizacion) {
+            $cotizacion->id_usuario_dicreme = $id_usuario_dicreme;
+            $cotizacion->id_estado_cotizacion = 2;
+            $cotizacion->save();
+            return $cotizacion;
+        }
+        return null;
+
+    }
+
+    public function DejarCotizacionUsuarioDicreme($id)
+    {
+        $cotizacion = Cotizacion::find($id);
+
+        if ($cotizacion) {
+            $cotizacion->id_usuario_dicreme = null;
+            $cotizacion->id_estado_cotizacion = 1; 
+            $cotizacion->save();
+            return $cotizacion;
+        }
+
+        return null; 
+    }
+
+    public function cotizacioncompletada($id){
+
+    $cotizacion = Cotizacion::find($id);
+
+    if($cotizacion) {
+        $cotizacion->id_estado_cotizacion = 3; 
+        $cotizacion->save();
+        return $cotizacion;
+        }
+
+        return null;
+    }
+
+    public function CancelarCotizacion($id)
+    {
+        $cotizacion = Cotizacion::find($id);
+
+        if ($cotizacion) {
+            $cotizacion->id_estado_cotizacion = 4; 
+            $cotizacion->save();
+            return $cotizacion;
+        }
+
+        return null; 
+    }
+
     public function deleteCotizacion($id)
     {
         $cotizacion = Cotizacion::find($id);

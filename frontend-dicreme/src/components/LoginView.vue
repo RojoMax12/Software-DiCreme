@@ -32,7 +32,7 @@ const handleLogin = async () => {
     localStorage.setItem('user', JSON.stringify(data.user))
 
     if(data.user.id_rol == 1){
-      router.push('/admin/quotes')
+      router.push('/admin')
     }
     else if(data.user.id_rol == 2){
 

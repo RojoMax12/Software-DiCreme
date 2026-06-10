@@ -39,9 +39,9 @@
                 <tbody>
                   <tr v-for="product in products" :key="product.id">
                     <td class="bold-text">{{ product.name }}</td>
-                    <td>{{ product.format }}</td>
+                    <td>{{ formato(product.format) }}</td>
                     <td>
-                      <span class="category-badge">{{ product.category }}</span>
+                      <span class="category-badge">{{ category(product.category) }}</span>
                     </td>
                     <td>{{ product.quantity }}</td>
                     <td>${{ formatNumber(product.price) }}</td>
@@ -80,8 +80,8 @@
                 </div>
                 <div class="meta-text">
                   <span class="meta-label">Estado</span>
-                  <span class="status-badge" :class="getStatusClass(status)">
-                    {{ status }}
+                  <span class="status-badge" :class="getStatusClass(localStatus, localStatusId)">
+                    {{ localStatus }}
                   </span>
                 </div>
               </div>
@@ -99,7 +99,7 @@
                 </div>
                 <div class="summary-line">
                   <span class="summary-label">Descuento total aplicado</span>
-                  <span class="summary-value text-pink">- ${{ formatNumber(discount || 0) }}</span>
+                  <span class="summary-value text-pink">- ${{ formatNumber(currentDiscount || 0) }}</span>
                 </div>
                 <div class="summary-line highlight">
                   <span class="summary-label">Total Final</span>
@@ -110,53 +110,208 @@
           </div>
         </div>
       </div>
+      <div class = "modal-actions-footer">
+        <button class="btn-change-status" @click="changeStatus">
+          Cambiar estado
+        </button>
+
+        <button class="btn-modal btn-whatsapp" @click="abrirWhatsapPedido(orderId, distributor, distributorPhone)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
+              </svg>
+              <span>Contactar por WhatsApp</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { 
   X, Upload, Building2, Calendar, 
   ClipboardList, LayoutGrid
 } from 'lucide-vue-next';
+import orderService from '@/services/orderService';
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
+const backendSubtotal = ref(0);
+const backendDiscount = ref(0);
+const backendTotal = ref(0);
+
 
 const props = defineProps<{
   orderId: number | string;
   distributor?: string;
+  distributorPhone?: string;
   status?: string;
+  statusId?: number;
   date?: string;
   time?: string;
   total?: number;
   discount?: number;
 }>();
 
-defineEmits(['close']);
+const emit = defineEmits(['close', 'statusChanged']);
+const localStatus = ref(props.status);
+const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
 
 const products = ref<any[]>([]);
 
+
+const nombresEstados: Record<number, string> = {
+  1: 'En validación',
+  2: 'En preparación',
+  3: 'En despacho',
+  4: 'Entregado',
+  5: 'Pendiente',
+  6: 'Por pagar',
+  7: 'Pagada',
+  8: 'Cancelado'
+};
+
+const changeStatus = async () => {
+  try {
+    // Viaja al backend, actualiza PostgreSQL y retorna con éxito
+    const result = await orderService.changeOrderStatus(Number(props.orderId));
+    notify(result.data.message, 'success');
+
+    // ✨ OPERACIÓN ELECTRÓNICA EN VUE:
+    // Si el estado actual es menor a 4 (no está entregado), lo avanzamos manualmente en la interfaz
+    if (localStatusId.value < 4) {
+      localStatusId.value = localStatusId.value + 1; // Avanza el ID (Ej: de 2 a 3)
+      localStatus.value = nombresEstados[localStatusId.value]; // Cambia el texto (Ej: "En despacho")
+    }
+
+    // 🚀 LE AVISAMOS AL PADRE: Ejecuta fetchOrders() en segundo plano para actualizar la tabla y contadores
+    emit('statusChanged');
+
+  } catch (error: any) {
+    console.error('Error al cambiar el estado del pedido:', error);
+    notify(error.response?.data?.message || 'Error', 'error');
+  }
+};
+
+const abrirWhatsapPedido = (pedido, nombreDistribuidor, telefonoDistribuidor) => {
+
+  console.log('Datos para WhatsApp:', { pedido, nombreDistribuidor, telefonoDistribuidor });
+  // 1. Estructuramos un mensaje claro y profesional con salto de línea (\n)
+  const mensaje = `¡Hola ${nombreDistribuidor}!
+Te contactamos de DiCreme respecto a tu Pedido #${pedido}
+
+¿Tienes alguna duda sobre lo que solicitaste?`;
+
+  // 2. Codificamos el mensaje para que sea seguro viajar en la URL de WhatsApp
+  const url = `https://wa.me/${telefonoDistribuidor}?text=${encodeURIComponent(mensaje)}`;
+  
+  // 3. Abrimos la pestaña independiente
+  window.open(url, '_blank');
+};
+
 const subtotalAmount = computed(() => {
-  return products.value.reduce((acc, curr) => acc + curr.subtotal, 0);
+  if (products.value.length > 0) {
+    return products.value.reduce((acc, curr) => acc + curr.subtotal, 0);
+  }
+  return backendSubtotal.value; // Fallback al valor crudo del backend
 });
 
+// Capturamos el descuento global que necesitas pintar
+const currentDiscount = computed(() => {
+  return props.discount || backendDiscount.value || 0;
+});
+
+// El total final neto de la operación
 const totalAmount = computed(() => {
   if (props.total) return props.total;
-  return subtotalAmount.value - (props.discount || 0);
+  if (backendTotal.value) return backendTotal.value;
+  return subtotalAmount.value - currentDiscount.value;
 });
 
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('es-CL').format(Math.round(num));
 };
 
+const formato = (CategoryId: number) => {
+  switch (CategoryId) {
+    case 1: return '10L';
+    case 2: return '5L';
+    case 3: return '2.5L';
+    case 4: return '1L';
+  }
+};
+
+const category = (CategoryId: number) =>
+{
+  switch (CategoryId) {
+    case 1: return 'Al agua';
+    case 2: return 'Leche de avena';
+    case 3: return 'Tradicional ';
+    case 4: return 'Sin azúcar';
+  }
+};
+
+const getproducts = async () => {
+  try {
+    const response = await orderService.getOrderDetails(Number(props.orderId));
+    const orderData = response.data?.data; 
+
+    console.log('Objeto interno de la cotización/pedido:', orderData);
+
+    if (orderData) {
+      backendSubtotal.value = Number(orderData.subtotal_cotizacion || 0);
+      backendDiscount.value = Number(orderData.descuento_total || 0);
+      backendTotal.value = Number(orderData.total_cotizacion || 0);
+
+      if (orderData.productos) {
+        products.value = orderData.productos.map((p: any) => {
+          const cantidadItem = Number(p.cantidad || p.pivot?.cantidad || p.quantity || 0);
+          const precioItem = Number(p.precio_unitario_venta || p.pivot?.precio_unitario_venta || p.price || 0);
+          
+          return {
+            id: p.id_producto || p.id,
+            name: p.nombre_producto || 'Producto desconocido',
+            format: p.nombre_formato || p.format || p.id_formato || '-',
+            category: p.nombre_categoria || p.category || p.id_categoria || '-',
+            quantity: cantidadItem,
+            price: precioItem,
+            subtotal: cantidadItem * precioItem,
+            
+            discountType: 'none',
+            discountValue: 0,
+          };
+        });
+      }
+    } else {
+      console.warn('No se encontraron datos dentro de response.data.data:', orderData);
+    }
+
+    console.log('Resultado final del Proxy de Vue ya mapeado:', products.value);
+
+  } catch (error) {
+    console.error('Error al obtener los productos del pedido/cotización:', error);
+    notify('No se pudieron cargar los productos del detalle.', 'error');
+  }
+};
+
 const getStatusClass = (status: string | undefined) => {
   switch (status) {
-    case 'En validación': return 'status-validation';
+    case 'Por pagar': return 'status-unpaid';
+    case 'Pagada': return 'status-paid';
     case 'En preparación': return 'status-preparation';
     case 'En despacho': return 'status-shipping';
     case 'Entregado': return 'status-completed';
-    default: return '';
+    case 'En validación': return 'status-validation';
+    case 'Pendiente': return 'status-pending';
+    case 'Cancelado': return 'status-cancelled';
+    default: return 'status-generic';
   }
 };
+
+onMounted(() => {
+  getproducts();
+});
 </script>
 
 <style scoped>
@@ -343,10 +498,13 @@ const getStatusClass = (status: string | undefined) => {
   margin-top: 4px;
 }
 
-.status-validation { background-color: #fff4e6; color: #fd7e14; border: 1px solid #fd7e14; }
+.status-unpaid { background-color: #fff0f3; color: #e4869f; border: 1px solid #e4869f; }
+.status-paid { background-color: #ebfbee; color: #37b24d; border: 1px solid #37b24d; }
 .status-preparation { background-color: #e7f5ff; color: #1c7ed6; border: 1px solid #1c7ed6; }
 .status-shipping { background-color: #dcd5ff; color: #6741d9; border: 1px solid #6741d9; }
-.status-completed { background-color: #ebfbee; color: #37b24d; border: 1px solid #37b24d; }
+.status-completed { background-color: #e6fffa; color: #087f5b; border: 1px solid #087f5b; }
+.status-validation { background-color: #fff4e6; color: #f76707; border: 1px solid #f76707; }
+
 
 .table-wrapper {
   background-color: white;
@@ -461,5 +619,64 @@ const getStatusClass = (status: string | undefined) => {
   font-size: 1.5rem;
   font-weight: 900;
   color: #322c44;
+}
+
+.modal-actions-footer {
+  display: flex;
+  justify-content: flex-end; 
+  padding: 0 32px 24px 32px; 
+}
+
+.btn-change-status {
+  padding: 12px 20px;
+  background-color: #e4869f;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-change-status:hover {
+  background-color: #928f8f;
+  border-color: #ccc;
+}
+
+.btn-whatsapp {
+  background-color: #e8fbf1;  /* Fondo verde pastel muy sutil */
+  color: #1ea952;             /* Texto e ícono en verde WhatsApp corporativo */
+  border: 1px solid #a3ebd0;  /* Borde suave de contención */
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp:hover {
+  background-color: #d2f7e4;  /* Oscurece un poco el fondo al pasar el mouse */
+  border-color: #61cf9f;      /* Resalta el borde */
+}
+
+/* Forzamos que el SVG herede el color dinámico del botón (color: #1ea952) */
+.btn-whatsapp svg {
+  fill: currentColor;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.btn-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  margin-left: 16px;
 }
 </style>
