@@ -48,6 +48,11 @@ const router = createRouter({
       component: () => import('../views/Admin/Orders.vue')
     },
     {
+      path: '/admin/generate-quote',
+      name: 'admin-generate-quote',
+      component: () => import('../views/Admin/AdminGenerateQuoteView.vue')
+    },
+    {
       path: '/cotizacion',
       name: 'quotation',
       component: () => import('../views/Checkout/QuotationView.vue')
