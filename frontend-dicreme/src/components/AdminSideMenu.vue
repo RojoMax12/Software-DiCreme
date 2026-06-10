@@ -71,6 +71,16 @@ const isActive = (path: string) => {
               <FilePlus :size="20" />
               <span>Generar Cotización</span>
             </button>
+
+            <button 
+              class="nav-item" 
+              :class="{ active: isActive('/admin/user-management') }"
+              @click="navigateTo('/admin/user-management')"
+            >
+              <FileText :size="20" />
+              <span>Gestión de Usuarios</span>
+            </button>
+            
           </div>
         </nav>
 
