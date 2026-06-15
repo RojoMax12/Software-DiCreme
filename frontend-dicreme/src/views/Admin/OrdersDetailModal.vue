@@ -4,6 +4,13 @@
       <header class="modal-header">
         <h2 class="modal-title">Detalle de pedido #{{ orderId }}</h2>
         <div class="header-actions">
+          <button class="btn-whatsapp-header" @click="abrirWhatsapPedido(orderId, distributor, distributorPhone)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
+            </svg>
+            <span>WhatsApp</span>
+          </button>
           <button class="btn-export">
             <Upload :size="18" />
             <span>Exportar</span>
@@ -109,19 +116,71 @@
             </div>
           </div>
         </div>
-      </div>
-      <div class = "modal-actions-footer">
-        <button class="btn-change-status" @click="changeStatus">
-          Cambiar estado
-        </button>
 
-        <button class="btn-modal btn-whatsapp" @click="abrirWhatsapPedido(orderId, distributor, distributorPhone)">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.477-1.761-1.65-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.346.446-.52.149-.174.199-.298.298-.497.1-.198.05-.372-.025-.521-.075-.148-.675-1.628-.925-2.228-.243-.588-.495-.508-.675-.515-.174-.007-.374-.008-.573-.008-.199 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.174-1.413-.074-.124-.273-.198-.57-.347z"/>
-                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.548 4.16 1.574 5.96L0 24l6.198-1.576A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.119c-1.805 0-3.57-.484-5.116-1.405l-.367-.217-3.8.968.995-3.674-.24-.38a9.92 9.92 0 0 1-1.52-5.323c0-5.518 4.485-10.003 10.003-10.003 5.518 0 10.002 4.485 10.002 10.003 0 5.517-4.484 10.002-10.002 10.002z"/>
-              </svg>
-              <span>Contactar por WhatsApp</span>
-        </button>
+        <div class="status-timeline-section" v-if="localStatusId !== 8">
+          <div class="section-title-box">
+            <LayoutGrid :size="22" class="text-pink" />
+            <h3 class="section-title">Estado del pedido</h3>
+          </div>
+
+          <div class="timeline-container">
+            <div class="timeline-track">
+              <div 
+                v-for="(step, index) in timelineSteps" 
+                :key="step.id" 
+                class="timeline-step"
+                :class="{ 
+                  'completed': index < currentStepIndex, 
+                  'current': step.id === localStatusId,
+                  'selected': step.id === selectedTimelineId,
+                  'pending': index > currentStepIndex && step.id !== selectedTimelineId
+                }"
+              >
+                <div class="step-dot">
+                  <Check v-if="index < currentStepIndex" :size="18" :stroke-width="3" />
+                  <template v-else>
+                    <Banknote v-if="step.id === 6" :size="18" :stroke-width="2" />
+                    <Receipt v-else-if="step.id === 7" :size="18" :stroke-width="2" />
+                    <Package v-else-if="step.id === 2" :size="18" :stroke-width="2" />
+                    <Truck v-else-if="step.id === 3" :size="18" :stroke-width="2" />
+                    <Home v-else-if="step.id === 4" :size="18" :stroke-width="2" />
+                  </template>
+                </div>
+                <span class="step-label">{{ step.label }}</span>
+                <div v-if="index < timelineSteps.length - 1" class="step-connector" :class="{'connected': index < currentStepIndex}"></div>
+              </div>
+            </div>
+
+            <div class="timeline-controls">
+              <button 
+                class="btn-timeline-nav" 
+                @click="moveTimeline('prev')" 
+                :disabled="!canGoBack"
+              >
+                <ChevronLeft :size="20" />
+                <span>Anterior</span>
+              </button>
+              
+              <button 
+                class="btn-update-status" 
+                @click="updateStatus"
+                :disabled="selectedTimelineId === localStatusId || isUpdatingStatus"
+              >
+                {{ isUpdatingStatus ? 'Actualizando...' : 'Actualizar estado' }}
+              </button>
+
+              <button 
+                class="btn-timeline-nav" 
+                @click="moveTimeline('next')" 
+                :disabled="!canGoForward"
+              >
+                <span>Siguiente</span>
+                <ChevronRight :size="20" />
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -131,7 +190,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { 
   X, Upload, Building2, Calendar, 
-  ClipboardList, LayoutGrid
+  ClipboardList, LayoutGrid,
+  ChevronLeft, ChevronRight, Check,
+  Banknote, Receipt, Package, Truck, Home
 } from 'lucide-vue-next';
 import orderService from '@/services/orderService';
 import { useNotification } from '@/composables/useNotification';
@@ -158,6 +219,72 @@ const emit = defineEmits(['close', 'statusChanged']);
 const localStatus = ref(props.status);
 const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
 
+// Lógica de la línea de tiempo
+const timelineSteps = [
+  { id: 6, label: 'Por pagar' },
+  { id: 7, label: 'Pagado' },
+  { id: 2, label: 'Preparación' },
+  { id: 3, label: 'En despacho' },
+  { id: 4, label: 'Entregado' }
+];
+
+const currentStepIndex = computed(() => {
+  return timelineSteps.findIndex(s => s.id === localStatusId.value);
+});
+
+// El estado que el usuario está SELECCIONANDO en la línea de tiempo (por defecto el actual)
+const selectedTimelineId = ref(localStatusId.value);
+
+const currentUser = ref({ id: 0, name: '', role: 0 });
+
+const canGoBack = computed(() => {
+  const selectedIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  // Los administradores (rol 1) pueden retroceder a cualquier estado anterior.
+  if (currentUser.value.role === 1) {
+    return selectedIndex > 0;
+  }
+  // Los no administradores solo pueden retroceder si avanzaron visualmente más allá de su estado real actual.
+  return selectedIndex > currentStepIndex.value;
+});
+
+const canGoForward = computed(() => {
+  const selectedIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  // Nadie puede saltarse un estado. El máximo estado seleccionable es el inmediatamente siguiente al estado actual (currentStepIndex + 1).
+  const maxAllowedIndex = currentStepIndex.value + 1;
+  return selectedIndex < maxAllowedIndex && selectedIndex < timelineSteps.length - 1;
+});
+
+const moveTimeline = (direction: 'next' | 'prev') => {
+  const currentIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  if (direction === 'next' && canGoForward.value) {
+    selectedTimelineId.value = timelineSteps[currentIndex + 1].id;
+  } else if (direction === 'prev' && canGoBack.value) {
+    selectedTimelineId.value = timelineSteps[currentIndex - 1].id;
+  }
+};
+
+const isUpdatingStatus = ref(false);
+
+const updateStatus = async () => {
+  if (selectedTimelineId.value === localStatusId.value) return;
+  
+  isUpdatingStatus.value = true;
+  try {
+    const result = await orderService.changeOrderStatus(Number(props.orderId), selectedTimelineId.value);
+    notify(result.data.message, 'success');
+
+    localStatusId.value = selectedTimelineId.value;
+    localStatus.value = nombresEstados[localStatusId.value];
+    
+    emit('statusChanged');
+  } catch (error: any) {
+    console.error('Error al actualizar el estado:', error);
+    notify(error.response?.data?.message || 'Error al actualizar el estado', 'error');
+  } finally {
+    isUpdatingStatus.value = false;
+  }
+};
+
 const products = ref<any[]>([]);
 
 
@@ -170,28 +297,6 @@ const nombresEstados: Record<number, string> = {
   6: 'Por pagar',
   7: 'Pagada',
   8: 'Cancelado'
-};
-
-const changeStatus = async () => {
-  try {
-    // Viaja al backend, actualiza PostgreSQL y retorna con éxito
-    const result = await orderService.changeOrderStatus(Number(props.orderId));
-    notify(result.data.message, 'success');
-
-    // ✨ OPERACIÓN ELECTRÓNICA EN VUE:
-    // Si el estado actual es menor a 4 (no está entregado), lo avanzamos manualmente en la interfaz
-    if (localStatusId.value < 4) {
-      localStatusId.value = localStatusId.value + 1; // Avanza el ID (Ej: de 2 a 3)
-      localStatus.value = nombresEstados[localStatusId.value]; // Cambia el texto (Ej: "En despacho")
-    }
-
-    // 🚀 LE AVISAMOS AL PADRE: Ejecuta fetchOrders() en segundo plano para actualizar la tabla y contadores
-    emit('statusChanged');
-
-  } catch (error: any) {
-    console.error('Error al cambiar el estado del pedido:', error);
-    notify(error.response?.data?.message || 'Error', 'error');
-  }
 };
 
 const abrirWhatsapPedido = (pedido, nombreDistribuidor, telefonoDistribuidor) => {
@@ -310,6 +415,15 @@ const getStatusClass = (status: string | undefined) => {
 };
 
 onMounted(() => {
+  const userStored = localStorage.getItem('user');
+  if (userStored) {
+    const userObj = JSON.parse(userStored);
+    currentUser.value = {
+      id: userObj.id,
+      name: userObj.nombre_usuario || userObj.name,
+      role: userObj.id_rol || 0
+    };
+  }
   getproducts();
 });
 </script>
@@ -381,6 +495,26 @@ onMounted(() => {
 .btn-export:hover {
   background-color: #eee;
   border-color: #ccc;
+}
+
+.btn-whatsapp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #e8fbf1;
+  border: 1px solid #a3ebd0;
+  border-radius: 12px;
+  color: #1ea952;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp-header:hover {
+  background-color: #d2f7e4;
+  border-color: #61cf9f;
 }
 
 .btn-close {
@@ -645,18 +779,18 @@ onMounted(() => {
 }
 
 .btn-whatsapp {
-  background-color: #e8fbf1;  /* Fondo verde pastel muy sutil */
-  color: #1ea952;             /* Texto e ícono en verde WhatsApp corporativo */
-  border: 1px solid #a3ebd0;  /* Borde suave de contención */
+  background-color: #e8fbf1;
+  color: #1ea952; 
+  border: 1px solid #a3ebd0;
   transition: all 0.2s ease;
 }
 
 .btn-whatsapp:hover {
-  background-color: #d2f7e4;  /* Oscurece un poco el fondo al pasar el mouse */
-  border-color: #61cf9f;      /* Resalta el borde */
+  background-color: #d2f7e4;
+  border-color: #61cf9f;
 }
 
-/* Forzamos que el SVG herede el color dinámico del botón (color: #1ea952) */
+
 .btn-whatsapp svg {
   fill: currentColor;
   display: inline-block;
@@ -678,5 +812,164 @@ onMounted(() => {
   transition: all 0.2s ease;
   min-width: 200px;
   margin-left: 16px;
+}
+
+
+.status-timeline-section {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-top: 32px;
+}
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.timeline-track {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  gap: 8px;
+  flex: 1;
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: white;
+  border: 2px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #adb5bd;
+  transition: all 0.3s ease;
+}
+
+.step-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #adb5bd;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.step-connector {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background-color: #ddd;
+  z-index: -1;
+  transition: background-color 0.3s ease;
+}
+
+
+.timeline-step.completed .step-dot {
+  background-color: #e4869f;
+  border-color: #e4869f;
+  color: white;
+}
+.timeline-step.completed .step-label {
+  color: #322c44;
+}
+.step-connector.connected {
+  background-color: #e4869f;
+}
+
+.timeline-step.current .step-dot {
+  border-color: #e4869f;
+  color: #e4869f;
+  box-shadow: 0 0 0 4px rgba(228, 134, 159, 0.15);
+}
+.timeline-step.current .step-label {
+  color: #e4869f;
+  font-weight: 700;
+}
+
+.timeline-step.selected .step-dot {
+  transform: scale(1.2);
+  border-color: #322c44;
+  color: #322c44;
+}
+.timeline-step.selected .step-label {
+  color: #322c44;
+  font-weight: 800;
+}
+
+
+.timeline-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.btn-timeline-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-timeline-nav:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: #ced4da;
+}
+
+.btn-timeline-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-update-status {
+  background-color: #e4869f;
+  color: white;
+  border: none;
+  padding: 10px 32px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.btn-update-status:hover:not(:disabled) {
+  background-color: #d6758e;
+  transform: translateY(-1px);
+}
+
+.btn-update-status:disabled {
+  background-color: #e9ecef;
+  color: #adb5bd;
+  cursor: not-allowed;
 }
 </style>
