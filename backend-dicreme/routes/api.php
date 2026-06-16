@@ -145,8 +145,8 @@ Route::middleware('jwt.auth')->group(function () {
 
         // Mantenemos tus lecturas maestras
         
-        Route::get('/estado_cotizacion', [Estado_cotizacionController::class, 'index'])->middleware('role:1');
-        Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1');
+        Route::get('/estado_cotizacion', [Estado_cotizacionController::class, 'index'])->middleware('role:1,2');
+        Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1,2');
         Route::get('/roles', [RolController::class, 'index']);           
         Route::get('/roles/{id}', [RolController::class, 'show']);      
         Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index']);      
