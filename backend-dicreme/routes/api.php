@@ -106,6 +106,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/estado_pedido/{id}', [Estado_pedidoController::class, 'destroy'])->middleware('role:1');
         Route::post('/despachos', [DespachoController::class, 'store']);
         Route::put('/despachos/{id}', [DespachoController::class, 'update'])->middleware('role:1');
+        Route::put('/despachos/{id_despacho}/despacho/{id_despachador}/despachador', [DespachoController::class, 'asignardespachoadespachador'])->middleware('role:1,4');
         Route::delete('/despachos/{id}', [DespachoController::class, 'destroy'])->middleware('role:1');
         Route::post('/bodegas', [BodegaController::class, 'store'])->middleware('role:1');
         Route::put('/bodegas/{id}', [BodegaController::class, 'update'])->middleware('role:1');
@@ -152,6 +153,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index']);      
         Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show']);             
         Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
+        Route::get('/usuarios_dicreme/despachadores', [Usuario_dicremeController::class, 'getusuariodicremedespachadores'])->middleware('role:1');
         Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
         Route::get('/pedidos', [PedidoController::class, 'index']);
         Route::get('/pedidos/{id}/details', [PedidoController::class, 'getdetailpedido'])->middleware('role:1,2,3');
@@ -162,6 +164,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/despachos', [DespachoController::class, 'index']);
         Route::get('/despachos/{id}/pedidos', [DespachoController::class, 'getdespachobyidpedido']);
         Route::get('/despachos/{id}', [DespachoController::class, 'show']);
+        Route::get('/despachos/{id}/despachador', [DespachoController::class, 'getdespachobyidusuariodicreme'])->middleware('role:1,4');
         Route::get('/bodegas', [BodegaController::class, 'index']);
         Route::get('/bodegas/{id}', [BodegaController::class, 'show']);
         Route::get('/lotes', [LoteController::class, 'index']);

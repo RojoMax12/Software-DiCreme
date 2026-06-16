@@ -37,5 +37,9 @@ class Usuario_dicremeServices
     {
         return $this->usuarioDicremeRepository->deleteUsuarioDicreme($id);
     }
+
+    public function getUsuariosDicremeDespachador(){
+        return $this->usuarioDicremeRepository->getUsuariosdespachadores();
+    }
 }
 
