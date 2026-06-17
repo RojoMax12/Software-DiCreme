@@ -19,6 +19,8 @@ return new class extends Migration
             $table->date('fecha_vencimiento')->nullable();
             $table->date('fecha_emision')->nullable();
             $table->timestamps();
+
+            $table->index(['id_producto', 'cantidad_producto']);
         });
     }
 

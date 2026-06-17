@@ -28,7 +28,6 @@ class LoteController extends Controller
     {
         $data = $request->validate([
             'id_producto' => 'required|integer|exists:productos,id',
-            'id_stock' => 'required|integer|exists:stocks,id',
             'id_bodega' => 'required|integer|exists:bodegas,id',
             'cantidad_producto' => 'required|integer|min:0',
             'fecha_vencimiento' => 'required|date',
@@ -42,7 +41,6 @@ class LoteController extends Controller
     {
         $data = $request->validate([
             'id_producto' => 'sometimes|required|integer|exists:productos,id',
-            'id_stock' => 'sometimes|required|integer|exists:stocks,id',
             'id_bodega' => 'sometimes|required|integer|exists:bodegas,id',
             'cantidad_producto' => 'sometimes|required|integer|min:0',
             'fecha_vencimiento' => 'sometimes|required|date',
