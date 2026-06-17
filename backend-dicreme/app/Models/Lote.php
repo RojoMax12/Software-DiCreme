@@ -13,7 +13,6 @@ class Lote extends Model
 
     protected $fillable = [
         'id_producto',
-        'id_stock',
         'id_bodega',
         'cantidad_producto',
         'fecha_vencimiento',
@@ -29,11 +28,6 @@ class Lote extends Model
     public function producto(): BelongsTo
     {
         return $this->belongsTo(Producto::class, 'id_producto');
-    }
-
-    public function stock(): BelongsTo
-    {
-        return $this->belongsTo(Stock::class, 'id_stock');
     }
 
     public function bodega(): BelongsTo

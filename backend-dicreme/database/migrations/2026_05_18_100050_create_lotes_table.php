@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('lotes', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_producto');
-            $table->unsignedBigInteger('id_stock');
             $table->unsignedBigInteger('id_bodega');
             $table->integer('cantidad_producto')->default(0);
             $table->date('fecha_vencimiento')->nullable();
