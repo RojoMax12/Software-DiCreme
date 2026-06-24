@@ -45,13 +45,14 @@ Route::middleware('throttle:api_escritura')->group(function () {
 Route::middleware('throttle:api_lectura')->group(function() {
 
 	Route::get('/productos', [ProductoController::class, 'index']);
+    Route::get('/productos/resumen_totales', [ProductoController::class, 'getResumenTodosLosProductos']);
+    Route::get('/productos/{id}/cantidadTotal', [ProductoController::class, 'getCantidadTotal']);
 	Route::get('/productos/{id}', [ProductoController::class, 'show']);
 
 	Route::get('/categorias', [CategoriaController::class, 'index']);
 	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
 	Route::get('/formatos', [FormatoController::class, 'index']);
 	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
-    Route::get('/productos/{id}/cantidadTotal', [ProductoController::class, 'getCantidadTotal']);
 });
 
 
@@ -166,6 +167,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/despachos/{id}/despachador', [DespachoController::class, 'getdespachobyidusuariodicreme'])->middleware('role:1,4');
         Route::get('/bodegas', [BodegaController::class, 'index']);
         Route::get('/bodegas/{id}', [BodegaController::class, 'show']);
+        Route::get('/lotes/reciente', [LoteController::class, 'getLoteMasReciente']);
         Route::get('/lotes', [LoteController::class, 'index']);
         Route::get('/lotes/{id}', [LoteController::class, 'show']);
         Route::get('/pedido_producto', [Pedido_productoController::class, 'index']);

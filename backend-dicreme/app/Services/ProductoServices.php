@@ -30,6 +30,11 @@ class ProductoServices
         return $this->productoRepository->getCantidadTotalProductoFromAllLotes($id);
     }
 
+    public function getResumenTodosLosProductos()
+    {
+        return $this->productoRepository->getResumenTodosLosProductos();
+    }
+
     public function getProductoById($id)
     {
         return $this->productoRepository->getProductoById($id);
