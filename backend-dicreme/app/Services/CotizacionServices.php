@@ -10,6 +10,7 @@ use App\Repositories\DespachoRepository;
 use App\Repositories\Cotizacion_productoRepository;
 use App\Repositories\ProductoRepository;
 use App\Models\Cotizacion;
+use App\Repositories\LoteRepository;
 use Illuminate\Support\Facades\DB;
 
 class CotizacionServices
@@ -22,12 +23,13 @@ class CotizacionServices
     protected $despachorepository;
     protected $cotizacionproductoRepository;
     protected $productoRepository;
+    protected $loteRepository;
 
     public function __construct(CotizacionRepository $cotizacionRepository , PedidoRepository $pedidoRepository, 
     Pedido_productoRepository $pedidoProductoRepository, Usuario_dicremeRepository $usuariodicremeRepository,
     Usuario_distribuidoresRepository $usuario_distribuidoresRepository, DespachoRepository $despachorepository
     ,Cotizacion_productoRepository $cotizacionproductoRepository,
-    ProductoRepository $productoRepository)
+    ProductoRepository $productoRepository, LoteRepository $loteRepository)
     {
         $this->cotizacionRepository = $cotizacionRepository;
         $this->pedidoRepository = $pedidoRepository;
@@ -37,6 +39,7 @@ class CotizacionServices
         $this->despachorepository = $despachorepository;
         $this->cotizacionproductoRepository = $cotizacionproductoRepository;
         $this->productoRepository = $productoRepository;
+        $this->loteRepository = $loteRepository;
     }
 
     public function createCotizacion(array $data)
@@ -86,52 +89,90 @@ class CotizacionServices
         return $this->cotizacionRepository->getAllCotizaciones();
     }
 
-    public function transformarCotizacionEnPedido($idCotizacion)
-    {
-        $cotizacion = $this->cotizacionRepository->getCotizacionConProductos($idCotizacion);
-        $usuario = $this->usuario_distribuidoresRepository->getUsuarioDistribuidorById($cotizacion->id_distribuidor);
+public function transformarCotizacionEnPedido($idCotizacion)
+{
+    $cotizacion = $this->cotizacionRepository->getCotizacionConProductos($idCotizacion);
+    $usuario = $this->usuario_distribuidoresRepository->getUsuarioDistribuidorById($cotizacion->id_distribuidor);
 
-        if (!$cotizacion) {
-            throw new \Exception("La cotización no existe.");
-        }
-        
-        if($cotizacion->id_estado_cotizacion !== 3){
-            return false;
-        }
-
-        // Creamos el pedido
-        $pedido = $this->pedidoRepository->createPedido([
-            'id_cotizacion'      => $cotizacion->id,
-            'id_usuario_dicreme' => null,
-            'id_usuario_distribuidor' => $cotizacion->id_distribuidor,
-            'id_estado_pedido'   => 1, // Estado inicial
-            'fecha_creacion'       => now()->toDateString(),
-            'hora_creacion'      => now()->toTimeString(),
-            'monto_estimado'     => $cotizacion->subtotal_cotizacion,
-            'monto_final'        => $cotizacion->total_cotizacion,
-        ]);
-
-        // Clonamos los productos
-        foreach ($cotizacion->cotizacionProductos as $item) {
-            $this->pedidoProductoRepository->createPedidoProducto([
-                'id_pedido'    => $pedido->id,
-                'id_producto'  => $item->id_producto, // CORRECCIÓN: Usar ID del producto, no el de la cotización
-                'cantidad'     => $item->cantidad,
-                'precio_unitario_venta' => $item->precio_unitario_venta, 
-            ]);
-        }
-
-        $this->despachorepository->createDespacho([
-            'id_pedido' => $pedido->id,
-            'direccion_entrega' => $usuario->direccion,
-            'comuna' => $usuario->comuna,
-            'fecha_entrega' => null,
-            'persona_recibe' => $cotizacion->persona_recibe,
-            'estado_despacho' => null,
-        ]);
-
-        return $pedido;
+    if (!$cotizacion) {
+        throw new \Exception("La cotización no existe.");
     }
+    
+    if ($cotizacion->id_estado_cotizacion !== 3) {
+        return false;
+    }
+
+    // --- OPTIMIZACIÓN MASIVA ---
+    // Extraemos todos los id_producto de la cotización de una sola vez
+    $idProductos = $cotizacion->cotizacionProductos->pluck('id_producto')->toArray();
+
+    // Traemos todos los lotes agrupados en una Sola Consulta SQL masiva
+    $lotesAgrupados = $this->loteRepository->getLotesDeProductos($idProductos);
+    // ----------------------------
+
+    // Creamos el pedido (Cabecera)
+    $pedido = $this->pedidoRepository->createPedido([
+        'id_cotizacion'           => $cotizacion->id,
+        'id_usuario_dicreme'      => null,
+        'id_usuario_distribuidor' => $cotizacion->id_distribuidor,
+        'id_estado_pedido'        => 1,
+        'fecha_creacion'          => now()->toDateString(),
+        'hora_creacion'           => now()->toTimeString(),
+        'monto_estimado'          => $cotizacion->subtotal_cotizacion,
+        'monto_final'             => $cotizacion->total_cotizacion,
+    ]);
+
+    // Procesamos en memoria de forma ultra rápida
+    foreach ($cotizacion->cotizacionProductos as $item) {
+        // Clonamos el producto al detalle del pedido
+        $this->pedidoProductoRepository->createPedidoProducto([
+            'id_pedido'    => $pedido->id,
+            'id_producto'  => $item->id_producto, 
+            'cantidad'     => $item->cantidad,
+            'precio_unitario_venta' => $item->precio_unitario_venta, 
+        ]);
+
+        $cantidadPorDescontar = $item->cantidad;
+        
+        // Buscamos en nuestra colección en memoria los lotes específicos de este producto
+        $lotesDelProducto = $lotesAgrupados->get($item->id_producto) ?? collect();
+
+        foreach ($lotesDelProducto as $lote) {
+            if ($cantidadPorDescontar <= 0) {
+                break;
+            }
+
+            if ($lote->cantidad_producto >= $cantidadPorDescontar) {
+                $lote->cantidad_producto -= $cantidadPorDescontar;
+                $lote->save(); // Persiste en BD solo el lote modificado
+                $cantidadPorDescontar = 0;
+            } else {
+                $cantidadPorDescontar -= $lote->cantidad_producto;
+                $lote->cantidad_producto = 0;
+                $lote->save();
+            }
+        }
+
+        // Si después de revisar los lotes en memoria falta stock, cancelamos
+        if ($cantidadPorDescontar > 0) {
+            throw new \Exception("Stock insuficiente en lotes para el producto ID: " . $item->id_producto);
+        }
+    }
+
+    // Registramos el despacho final
+    $this->despachorepository->createDespacho([
+        'id_pedido' => $pedido->id,
+        'direccion_entrega' => $usuario->direccion,
+        'comuna' => $usuario->comuna,
+        'fecha_entrega' => null,
+        'persona_recibe' => $cotizacion->persona_recibe,
+        'estado_despacho' => null,
+        'id_usuario_dicreme' => null
+    ]);
+
+
+    return $pedido;
+}
 
     public function tomarcotizacionadmin($id_cotizacion, $id_usuario_dicreme){
 

@@ -58,7 +58,6 @@ class DatabaseSeeder extends Seeder
         }
 
         \App\Models\Bodega::factory(5)->create();
-        \App\Models\Stock::factory(10)->create();
         \App\Models\Producto::factory(132)->create();
         \App\Models\Lote::factory(25)->create();
 
