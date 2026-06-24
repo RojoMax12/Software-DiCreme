@@ -3,6 +3,7 @@
 namespace App\Repositories;
 use App\Models\Producto;
 use App\Models\Lote;
+use App\Models\Formato;
 use Illuminate\Support\Facades\Cache;
 
 # Repositorio Producto
@@ -37,8 +38,41 @@ class ProductoRepository
 
     public function getCantidadTotalProductoFromAllLotes($id)
     {
-        $producto = Producto::find($id);
-        return $producto ? $producto->lotes()->sum('cantidad_producto') : 0;
+        $producto = Producto::with('formato')->find($id);
+        
+        if (!$producto) {
+            return null;
+        }
+
+        $nombre_producto = $producto->nombre_producto;
+        $cantidad_total = $producto->lotes()->sum('cantidad_producto');
+        $ultimo_lote = $producto->lotes()->orderBy('updated_at', 'desc')->first();
+
+        return [
+            'nombre_producto' => $nombre_producto,
+            'cantidad_total' => $cantidad_total,
+            'formato' => $producto->formato,
+            'ultima_actualizacion_lote' => $ultimo_lote ? $ultimo_lote->updated_at->format('Y-m-d H:i:s') : null
+        ];
+    }
+
+    public function getResumenTodosLosProductos()
+    {
+        // Usamos Eager Loading para evitar el problema de N+1 consultas
+        $productos = Producto::with(['formato', 'lotes'])->get();
+        
+        return $productos->map(function ($producto) {
+            $cantidad_total = $producto->lotes->sum('cantidad_producto');
+            $ultimo_lote = $producto->lotes->sortByDesc('updated_at')->first();
+
+            return [
+                'id' => $producto->id,
+                'nombre_producto' => $producto->nombre_producto,
+                'cantidad_total' => $cantidad_total,
+                'formato' => $producto->formato,
+                'ultima_actualizacion_lote' => $ultimo_lote ? $ultimo_lote->updated_at->format('Y-m-d H:i:s') : null
+            ];
+        });
     }
 
     public function getProductoById($id)
