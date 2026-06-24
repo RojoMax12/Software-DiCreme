@@ -51,6 +51,7 @@ Route::middleware('throttle:api_lectura')->group(function() {
 	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
 	Route::get('/formatos', [FormatoController::class, 'index']);
 	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
+    Route::get('/productos/{id}/cantidadTotal', [ProductoController::class, 'getCantidadTotal']);
 });
 
 
@@ -114,6 +115,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::post('/lotes', [LoteController::class, 'store'])->middleware('role:1');
         Route::put('/lotes/{id}', [LoteController::class, 'update'])->middleware('role:1');
         Route::delete('/lotes/{id}', [LoteController::class, 'destroy'])->middleware('role:1');
+        Route::get('/lotes/producto/{id}', [LoteController::class, 'getLotesByProductoId'])->middleware('role:1');
         Route::post('/pedido_producto', [Pedido_productoController::class, 'store']);
         Route::put('/pedido_producto/{id}', [Pedido_productoController::class, 'update'])->middleware('role:1');
         Route::delete('/pedido_producto/{id}', [Pedido_productoController::class, 'destroy'])->middleware('role:1');
