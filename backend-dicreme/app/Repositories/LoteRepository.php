@@ -23,6 +23,11 @@ class LoteRepository
         return Lote::find($id);
     }
 
+    public function getLoteMasReciente()
+    {
+        return Lote::orderBy('updated_at', 'desc')->first();
+    }
+
     public function getLotesByProductoId($idProducto)
     {
         return Lote::where('id_producto', $idProducto)->get();

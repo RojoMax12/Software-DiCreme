@@ -24,6 +24,11 @@ class LoteController extends Controller
         return response()->json($this->loteServices->getLoteById($id));
     }
 
+    public function getLoteMasReciente()
+    {
+        return response()->json($this->loteServices->getLoteMasReciente());
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
