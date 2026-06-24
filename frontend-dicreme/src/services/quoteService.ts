@@ -40,15 +40,18 @@ export default {
 
     takeQuote(id: number, idadmin: number) {
         return api.put(`/cotizaciones/${id}/tomarcotizacion/${idadmin}`, { idadmin });
-
      },
+
+    leaveQuote(id: number, idadmin: number) {
+        return api.put(`/cotizaciones/${id}/dejarcotizacion/${idadmin}`, { idadmin });
+    },
 
     validateQuote(id: number, idadmin: number, discountData?: any) {
     return api.put(`/cotizaciones/${id}/validarcotizacion/${idadmin}`, discountData);
     },
 
     cancelQuote(id: number, iduser: number) {
-        return api.put(`/cotizacion/${id}/cancelarcotizacion/${iduser}`, { iduser });
+        return api.put(`/cotizaciones/${id}/cancelarcotizacion/${iduser}`, { iduser });
     },
 
     add_productos_to_cotizacion(idCotizacion: number, payload: { id_producto: number, cantidad: number }) {

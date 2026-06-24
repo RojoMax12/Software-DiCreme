@@ -72,26 +72,23 @@
       </div>
     </div>
 
-    <div class="tabs-outer-container">
-      <div class="switch-container">
-        <div class="switch-slider" :class="{ 'slide-right': activeTab === 'pedidos' }"></div>
-        <button 
-          class="switch-btn" 
-          :class="{ active: activeTab === 'pagos' }"
-          @click="activeTab = 'pagos'"
-        >
-          <span>Pagos</span>
-          <span class="count-badge">{{ counts.pagos }}</span>
-        </button>
-        <button 
-          class="switch-btn" 
-          :class="{ active: activeTab === 'pedidos' }"
-          @click="activeTab = 'pedidos'"
-        >
-          <span>Pedidos</span>
-          <span class="count-badge">{{ counts.pedidos }}</span>
-        </button>
-      </div>
+    <div class="browser-tabs">
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'pagos' }"
+        @click="activeTab = 'pagos'"
+      >
+        <span>Pagos</span>
+        <span class="tab-count">{{ counts.pagos }}</span>
+      </button>
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'pedidos' }"
+        @click="activeTab = 'pedidos'"
+      >
+        <span>Pedidos</span>
+        <span class="tab-count">{{ counts.pedidos }}</span>
+      </button>
     </div>
 
     <div class="main-table-card">
@@ -232,6 +229,7 @@
       v-if="isModalOpen" 
       :order-id="selectedOrderId" 
       :distributor="selectedOrder?.distributor"
+      :distributor-phone="selectedOrder?.distributorPhone"
       :status="selectedOrder?.status"
       :status-id="selectedOrder?.rawStatusId"
       :date="selectedOrder?.date"
@@ -288,6 +286,8 @@ const fetchOrders = async () => {
 
     statusMap.value = new Map(rawStats.map((s: any) => [Number(s.id), s.nombre_estado || s.nombre_estado_pedido]));
     const distMap = new Map(rawDists.map((d: any) => [Number(d.id), d.nombre_empresa]));
+    const distPhoneMap = new Map(rawDists.map((d: any) => [Number(d.id), d.telefono || '']));
+
 
     const DEFAULT_NAMES: Record<number, string> = {
       1: 'En validación', 2: 'En preparación', 3: 'En despacho', 
@@ -299,9 +299,11 @@ const fetchOrders = async () => {
       const statusId = Number(o.id_estado_pedido || o.id_estado || 1);
       const distId = Number(o.id_usuario_distribuidor || o.id_distribuidor || 0);
       
+      
       return {
         id: o.id,
         distributor: distMap.get(distId) || `Distribuidor #${distId}`,
+        distributorPhone: distPhoneMap.get(distId) || o.telefono || o.distributorPhone || '',
         // Sincronización perfecta de strings:
         status: statusMap.value.get(statusId) || DEFAULT_NAMES[statusId] || `Estado #${statusId}`,
         total: Number(o.monto_final || o.total_pedido || o.total_cotizacion || 0),
@@ -603,81 +605,75 @@ onUnmounted(() => {
   margin-top: 2px;
 }
 
+.browser-tabs {
+  display: flex;
+  gap: 4px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background-color: #ddd;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #777;
+  transition: all 0.2s ease;
+  position: relative;
+  top: 1px;
+  z-index: 1;
+}
+
+.tab-btn:hover:not(.active) {
+  background-color: #e8e8e8;
+  color: #555;
+}
+
+.tab-btn.active {
+  background-color: white;
+  color: #e4869f;
+  border-color: #ddd;
+  padding-bottom: 13px;
+  top: 2px;
+}
+
+.tab-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background-color: #000;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.tab-btn.active .tab-count {
+  background-color: #e4869f;
+}
+
 .main-table-card {
   background-color: white;
-  border-radius: 16px;
+  border-radius: 0 16px 16px 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
   overflow: hidden;
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.tabs-outer-container {
-  max-width: 1200px;
-  margin: 0 auto 10px auto;
-  display: flex;
-  justify-content: flex-start;
-}
-
-.switch-container {
-  display: flex;
-  background-color: #f1f3f5;
-  padding: 4px;
-  border-radius: 12px;
-  width: fit-content;
-  position: relative;
-}
-
-.switch-slider {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
-  height: calc(100% - 8px);
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1;
-}
-
-.switch-slider.slide-right {
-  transform: translateX(100%);
-}
-
-.switch-btn {
-  background: none;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #868e96;
-  cursor: pointer;
   position: relative;
   z-index: 2;
-  transition: color 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.switch-btn.active {
-  color: #e4869f;
-}
-
-.count-badge {
-  background-color: #e9ecef;
-  color: #495057;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-}
-
-.switch-btn.active .count-badge {
-  background-color: #fff0f3;
-  color: #e4869f;
 }
 
 .table-actions {

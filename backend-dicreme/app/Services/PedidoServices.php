@@ -82,7 +82,7 @@ class PedidoServices
     }
 
 
-    public function actualizarEstadoPedido($id_pedido)
+    public function actualizarEstadoPedido($id_pedido, $idNuevoEstado = null)
     {   
         // 1. Buscamos el pedido para saber en qué estado se encuentra hoy
         $pedido = $this->pedidoRepository->getPedidoById($id_pedido);
@@ -92,16 +92,15 @@ class PedidoServices
 
         $estadoActual = (int)$pedido->id_estado_pedido;
         
-        // 2. FRENO DE SEGURIDAD MÁXIMO: Si ya está entregado (estado 4), no puede avanzar a 5
-        if ($estadoActual >= 4) {
-            // Retornamos el pedido tal cual está para que el controlador sepa que no se alteró
-            return $pedido; 
+        if ($idNuevoEstado === null) {
+            $idNuevoEstado = $estadoActual + 1;
         }
+        
+        $idNuevoEstado = (int)$idNuevoEstado;
 
         // Buscamos el despacho asociado
         $despacho = $this->despachoRepository->getDespachoByIdpedido($id_pedido);
 
-        $idNuevoEstado = $estadoActual + 1;
         // 3. EFECTOS SECUNDARIOS: Si está en 3 (Preparación) y va a avanzar a 4 (Despachado)
         if ($idNuevoEstado === 3) {
             if ($despacho) {
@@ -114,7 +113,6 @@ class PedidoServices
         // 4. EFECTOS SECUNDARIOS: Si el nuevo estado que va a asumir va a ser el de Entrega
         // Nota: Si el flujo avanza de 3 a 4, tu condición original de la fecha de entrega
         // debería ejecutarse cuando efectivamente pasa a estar en manos del cliente.
-
 
         if ($idNuevoEstado === 4) {
             if ($despacho) {

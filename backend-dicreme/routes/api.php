@@ -51,6 +51,7 @@ Route::middleware('throttle:api_lectura')->group(function() {
 	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
 	Route::get('/formatos', [FormatoController::class, 'index']);
 	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
+    Route::get('/productos/{id}/cantidadTotal', [ProductoController::class, 'getCantidadTotal']);
 });
 
 
@@ -106,19 +107,18 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/estado_pedido/{id}', [Estado_pedidoController::class, 'destroy'])->middleware('role:1');
         Route::post('/despachos', [DespachoController::class, 'store']);
         Route::put('/despachos/{id}', [DespachoController::class, 'update'])->middleware('role:1');
+        Route::put('/despachos/{id_despacho}/despacho/{id_despachador}/despachador', [DespachoController::class, 'asignardespachoadespachador'])->middleware('role:1,4');
         Route::delete('/despachos/{id}', [DespachoController::class, 'destroy'])->middleware('role:1');
         Route::post('/bodegas', [BodegaController::class, 'store'])->middleware('role:1');
         Route::put('/bodegas/{id}', [BodegaController::class, 'update'])->middleware('role:1');
         Route::delete('/bodegas/{id}', [BodegaController::class, 'destroy'])->middleware('role:1');
-        Route::post('/lotes', [LoteController::class, 'store']);
+        Route::post('/lotes', [LoteController::class, 'store'])->middleware('role:1');
         Route::put('/lotes/{id}', [LoteController::class, 'update'])->middleware('role:1');
         Route::delete('/lotes/{id}', [LoteController::class, 'destroy'])->middleware('role:1');
+        Route::get('/lotes/producto/{id}', [LoteController::class, 'getLotesByProductoId'])->middleware('role:1');
         Route::post('/pedido_producto', [Pedido_productoController::class, 'store']);
         Route::put('/pedido_producto/{id}', [Pedido_productoController::class, 'update'])->middleware('role:1');
         Route::delete('/pedido_producto/{id}', [Pedido_productoController::class, 'destroy'])->middleware('role:1');
-        Route::post('/stocks', [StockController::class, 'store']);
-        Route::put('/stocks/{id}', [StockController::class, 'update'])->middleware('role:1');
-        Route::delete('/stocks/{id}', [StockController::class, 'destroy'])->middleware('role:1');
         Route::post('/ventas', [VentaController::class, 'store']);
         Route::put('/ventas/{id}', [VentaController::class, 'update'])->middleware('role:1');
         Route::delete('/ventas/{id}', [VentaController::class, 'destroy'])->middleware('role:1');
@@ -145,13 +145,14 @@ Route::middleware('jwt.auth')->group(function () {
 
         // Mantenemos tus lecturas maestras
         
-        Route::get('/estado_cotizacion', [Estado_cotizacionController::class, 'index'])->middleware('role:1');
-        Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1');
+        Route::get('/estado_cotizacion', [Estado_cotizacionController::class, 'index'])->middleware('role:1,2');
+        Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1,2');
         Route::get('/roles', [RolController::class, 'index']);           
         Route::get('/roles/{id}', [RolController::class, 'show']);      
         Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index']);      
         Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show']);             
         Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
+        Route::get('/usuarios_dicreme/despachadores', [Usuario_dicremeController::class, 'getusuariodicremedespachadores'])->middleware('role:1');
         Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
         Route::get('/pedidos', [PedidoController::class, 'index']);
         Route::get('/pedidos/{id}/details', [PedidoController::class, 'getdetailpedido'])->middleware('role:1,2,3');
@@ -162,14 +163,13 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/despachos', [DespachoController::class, 'index']);
         Route::get('/despachos/{id}/pedidos', [DespachoController::class, 'getdespachobyidpedido']);
         Route::get('/despachos/{id}', [DespachoController::class, 'show']);
+        Route::get('/despachos/{id}/despachador', [DespachoController::class, 'getdespachobyidusuariodicreme'])->middleware('role:1,4');
         Route::get('/bodegas', [BodegaController::class, 'index']);
         Route::get('/bodegas/{id}', [BodegaController::class, 'show']);
         Route::get('/lotes', [LoteController::class, 'index']);
         Route::get('/lotes/{id}', [LoteController::class, 'show']);
         Route::get('/pedido_producto', [Pedido_productoController::class, 'index']);
         Route::get('/pedido_producto/{id}', [Pedido_productoController::class, 'show']);
-        Route::get('/stocks', [StockController::class, 'index']);
-        Route::get('/stocks/{id}', [StockController::class, 'show']);
         Route::get('/ventas', [VentaController::class, 'index']);
         Route::get('/ventas/{id}', [VentaController::class, 'show']);
     });

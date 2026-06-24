@@ -4,6 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Observers\LoteObserver;
 
 class Lote extends Model
 {
@@ -13,7 +14,6 @@ class Lote extends Model
 
     protected $fillable = [
         'id_producto',
-        'id_stock',
         'id_bodega',
         'cantidad_producto',
         'fecha_vencimiento',
@@ -31,14 +31,14 @@ class Lote extends Model
         return $this->belongsTo(Producto::class, 'id_producto');
     }
 
-    public function stock(): BelongsTo
-    {
-        return $this->belongsTo(Stock::class, 'id_stock');
-    }
-
     public function bodega(): BelongsTo
     {
         return $this->belongsTo(Bodega::class, 'id_bodega');
+    }
+
+    protected static function booted(): void
+    {
+        static::observe(LoteObserver::class);
     }
 
 }

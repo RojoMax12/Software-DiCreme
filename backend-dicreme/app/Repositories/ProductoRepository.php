@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 use App\Models\Producto;
+use App\Models\Lote;
 use Illuminate\Support\Facades\Cache;
 
 # Repositorio Producto
@@ -32,6 +33,12 @@ class ProductoRepository
                 ->values()
                 ->toArray();
         });
+    }
+
+    public function getCantidadTotalProductoFromAllLotes($id)
+    {
+        $producto = Producto::find($id);
+        return $producto ? $producto->lotes()->sum('cantidad_producto') : 0;
     }
 
     public function getProductoById($id)

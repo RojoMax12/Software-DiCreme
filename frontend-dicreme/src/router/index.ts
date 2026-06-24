@@ -81,7 +81,14 @@ const router = createRouter({
       path: '/pedido/:id', 
       name: 'order-detail',
       component: () => import('@/views/Distributor/OrderDetailView.vue'),
+    },
+
+    {
+      path: '/admin/user-management',
+      name: 'admin-users',
+      component: () => import('../views/Admin/UserManagementView.vue')
     }
+
   ],
 })
 

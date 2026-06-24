@@ -1,27 +1,7 @@
 <template>
   <div class="orders-container">
     <div class="filter-card">
-      <div class="filter-top">
-        <div class="switch-container">
-          <div class="switch-slider" :class="{ 'slide-right': activeFilter === 'completed' }"></div>
-          <button 
-            class="switch-btn" 
-            :class="{ active: activeFilter === 'actual' }"
-            @click="activeFilter = 'actual'"
-          >
-            <span>Cotizaciones actuales</span>
-            <span class="count-badge">{{ counts.actual }}</span>
-          </button>
-          <button 
-            class="switch-btn" 
-            :class="{ active: activeFilter === 'completed' }"
-            @click="activeFilter = 'completed'"
-          >
-            <span>Cotizaciones completadas</span>
-            <span class="count-badge">{{ counts.completed }}</span>
-          </button>
-        </div>
-
+      <div class="filter-row filter-row-actions">
         <div class="filter-actions">
           <div class="search-box">
             <Search :size="18" class="search-icon" />
@@ -31,7 +11,7 @@
               placeholder="Buscar por Distribuidor o ID..."
             />
           </div>
-          
+
           <div class="dropdown-container">
             <button class="btn-filter" @click.stop="toggleStatusDropdown">
               <Filter :size="18" />
@@ -45,6 +25,7 @@
               <div class="dropdown-item" @click="selectStatus('Por Tomar')">Por Tomar</div>
               <div class="dropdown-item" @click="selectStatus('En Revision')">En Revision</div>
               <div class="dropdown-item" @click="selectStatus('Completado')">Completado</div>
+              <div class="dropdown-item" @click="selectStatus('Cancelado')">Cancelado</div>
             </div>
           </div>
         </div>
@@ -88,6 +69,33 @@
           <span class="summary-value">{{ stats.totalActual }}</span>
         </div>
       </div>
+    </div>
+
+    <div class="browser-tabs">
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeFilter === 'actual' }"
+        @click="activeFilter = 'actual'"
+      >
+        <span>Cotizaciones actuales</span>
+        <span class="tab-count">{{ counts.actual }}</span>
+      </button>
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeFilter === 'completed' }"
+        @click="activeFilter = 'completed'"
+      >
+        <span>Cotizaciones completadas</span>
+        <span class="tab-count">{{ counts.completed }}</span>
+      </button>
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeFilter === 'cancelled' }"
+        @click="activeFilter = 'cancelled'"
+      >
+        <span>Cotizaciones canceladas</span>
+        <span class="tab-count">{{ counts.cancelled }}</span>
+      </button>
     </div>
     
     <div class="table-card">
@@ -164,6 +172,15 @@
             <td>
               <div class="actions-content">
                 <button 
+                  v-if="order.managedBy?.id === currentUser.id"
+                  class="btn-action btn-leave" 
+                  @click="leaveQuote(order.id)"
+                >
+                  <UserMinus :size="18" />
+                  <span>Dejar</span>
+                </button>
+                <button 
+                  v-else
                   class="btn-action btn-take" 
                   :disabled="order.status !== 'Por Tomar'"
                   @click="takeQuote(order.id)"
@@ -171,8 +188,12 @@
                   <UserPlus :size="18" />
                   <span>Tomar</span>
                 </button>
-                <button class="btn-action btn-detail" @click="openModal(order.id)">
-                  <Eye :size="18" />
+                <button 
+                  class="btn-action btn-detail" 
+                  :class="{ 'btn-detail-managed': order.managedBy }"
+                  @click="openModal(order.id)"
+                >
+                  <component :is="order.managedBy?.id === currentUser.id ? Pencil : Eye" :size="18" />
                   <span>Detalle</span>
                 </button>
               </div>
@@ -185,7 +206,11 @@
             <td colspan="7">
               <div class="footer-content">
                 <div class="results-info">
-                  Mostrando {{ sortedOrders.length }} de {{ activeFilter === 'actual' ? counts.actual : counts.completed }} resultados
+                  Mostrando {{ sortedOrders.length }} de {{ 
+                    activeFilter === 'actual' ? counts.actual : 
+                    activeFilter === 'completed' ? counts.completed : 
+                    counts.cancelled 
+                  }} resultados
                 </div>
                 <div class="pagination">
                   <button 
@@ -214,8 +239,11 @@
     <QuotesDetailModal 
       v-if="isModalOpen" 
       :order-id="selectedOrderId" 
+      :status="selectedOrder?.status"
       :distributor="selectedOrder?.distributor"
+      :distributor-phone="selectedOrder?.distributorPhone" 
       :managed-by="selectedOrder?.managedBy?.name"
+      :managed-by-id="selectedOrder?.managedBy?.id"
       :date="selectedOrder?.date"
       :time="selectedOrder?.time"
       @close="closeModal" 
@@ -235,7 +263,9 @@ import quotationStatusService from '@/services/quotationStatusService';
 import { 
   ChevronsUpDown, 
   UserPlus, 
+  UserMinus,
   Eye, 
+  Pencil,
   User, 
   Calendar, 
   ChevronLeft, 
@@ -323,13 +353,23 @@ const fetchQuotes = async () => {
       quotationStatusService.getStatuses()
     ]);
 
+    // MAPA 1 (Intacto): Sigue guardando solo el nombre para no romper nada en el resto del software
     const distMap = new Map(distsRes.data.map((d: any) => [d.id, d.nombre_empresa]));
+    
+    // 🚀 MAPA 2 (NUEVO): Guarda exclusivamente los teléfonos para esta implementación
+    // Reemplaza 'telefono' por el nombre real de tu columna en PostgreSQL (ej: celular, telefono_contacto)
+    const distPhoneMap = new Map(distsRes.data.map((d: any) => [d.id, d.telefono || '']));
+
     const userMap = new Map(usersRes.data.map((u: any) => [u.id, u.nombre_usuario]));
     const statMap = new Map(statsRes.data.map((s: any) => [s.id, s.nombre_estado]));
 
     orders.value = quotesRes.data.map((q: any) => ({
       id: q.id,
-      distributor: distMap.get(q.id_distribuidor) || 'Desconocido',
+      distributor: distMap.get(q.id_distribuidor) || 'Desconocido', // 👈 Sigue funcionando igual que antes
+      
+      // 🚀 Extraemos el teléfono usando el mapa nuevo sin interferir con el anterior
+      distributorPhone: distPhoneMap.get(q.id_distribuidor) || '', 
+      
       managedBy: q.id_usuario_dicreme ? { id: q.id_usuario_dicreme, name: userMap.get(q.id_usuario_dicreme) } : null,
       status: statMap.get(q.id_estado_cotizacion) || 'Por Tomar',
       total: Number(q.total_cotizacion).toLocaleString('es-CL'),
@@ -337,6 +377,7 @@ const fetchQuotes = async () => {
       time: q.hora_creacion ? q.hora_creacion.substring(0, 5) : '',
       rawStatus: q.id_estado_cotizacion
     }));
+
   } catch (error) {
     console.error('Error fetching data:', error);
   } finally {
@@ -363,6 +404,16 @@ const takeQuote = async (quoteId: number) => {
   } 
 };
 
+const leaveQuote = async (quoteId: number) => {
+  try {
+    const response = await quoteService.leaveQuote(quoteId, currentUser.value.id);
+    notify(response.data.message, 'success');
+    await fetchQuotes();
+  } catch (error) {
+    notify(error.response?.data?.message || 'Error al dejar la cotización', 'error');
+  }
+};
+
 onMounted(async () => {
   window.addEventListener('click', closeDropdown);
   
@@ -385,7 +436,8 @@ onUnmounted(() => {
 const counts = computed(() => {
   const actual = orders.value.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status)).length;
   const completed = orders.value.filter((o: any) => o.status === 'Completado').length;
-  return { actual, completed };
+  const cancelled = orders.value.filter((o: any) => o.status === 'Cancelado').length;
+  return { actual, completed, cancelled };
 });
 
 const stats = computed(() => {
@@ -398,11 +450,13 @@ const stats = computed(() => {
 const filteredOrders = computed(() => {
   let result = orders.value;
 
-  // 1. Category Filter (Actual vs Completed)
+  // 1. Category Filter (Actual vs Completed vs Cancelled)
   if (activeFilter.value === 'actual') {
     result = result.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status));
-  } else {
+  } else if (activeFilter.value === 'completed') {
     result = result.filter((o: any) => o.status === 'Completado');
+  } else if (activeFilter.value === 'cancelled') {
+    result = result.filter((o: any) => o.status === 'Cancelado');
   }
 
   // 2. Search Query (ID or Distributor)
@@ -479,6 +533,7 @@ const getStatusClass = (status: string) => {
     case 'Por Tomar': return 'status-pending';
     case 'En Revision': return 'status-review';
     case 'Completado': return 'status-completed';
+    case 'Cancelado': return 'status-cancelled';
     default: return '';
   }
 };
@@ -502,20 +557,25 @@ const getStatusClass = (status: string) => {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.filter-top {
+.filter-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   width: 100%;
+  align-items: center;
+}
+
+.filter-row-actions {
+  justify-content: space-between;
 }
 
 .filter-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .search-box {
@@ -526,7 +586,7 @@ const getStatusClass = (status: string) => {
   border-radius: 10px;
   padding: 0 12px;
   border: 1px solid #ddd;
-  width: 300px;
+  width: 450px;
 }
 
 .search-icon {
@@ -604,79 +664,63 @@ const getStatusClass = (status: string) => {
   margin: 6px 0;
 }
 
-.switch-container {
+.browser-tabs {
   display: flex;
-  background-color: #ddd;
-  padding: 4px;
-  border-radius: 12px;
-  gap: 0;
-  position: relative;
-  min-width: 500px;
+  gap: 4px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
 }
 
-.switch-slider {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  bottom: 4px;
-  width: calc(50% - 4px);
-  background-color: #fce4ec;
-  border: 1px solid #e4869f;
-  border-radius: 8px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 0;
-}
-
-.switch-slider.slide-right {
-  transform: translateX(100%);
-}
-
-.switch-btn {
-  flex: 1;
+.tab-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  background: transparent !important;
+  gap: 10px;
+  padding: 12px 24px;
+  background-color: #ddd;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: #322c44;
+  color: #777;
+  transition: all 0.2s ease;
   position: relative;
+  top: 1px;
   z-index: 1;
-  transition: color 0.3s ease;
-  white-space: nowrap;
 }
 
-.switch-btn.active {
+.tab-btn:hover:not(.active) {
+  background-color: #e8e8e8;
+  color: #555;
+}
+
+.tab-btn.active {
+  background-color: white;
   color: #e4869f;
+  border-color: #ddd;
+  padding-bottom: 13px;
+  top: 2px;
 }
 
-.count-badge {
+.tab-count {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  transition: all 0.3s ease;
-}
-
-.count-badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
   background-color: #000;
-  color: #fff;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.75rem;
 }
 
-.switch-btn.active .count-badge {
+.tab-btn.active .tab-count {
   background-color: #e4869f;
-  color: #fff;
 }
 
 .summary-cards {
@@ -750,12 +794,14 @@ const getStatusClass = (status: string) => {
 
 .table-card {
   background-color: white;
-  border-radius: 16px;
+  border-radius: 0 16px 16px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   border: 1px solid #ddd;
   max-width: 1200px;
   margin: 0 auto;
+  position: relative;
+  z-index: 2;
 }
 
 .orders-table {
@@ -871,6 +917,12 @@ const getStatusClass = (status: string) => {
   border-color: #37b24d;
 }
 
+.status-cancelled {
+  background-color: #fff5f5;
+  color: #fa5252;
+  border-color: #fa5252;
+}
+
 .header-content {
   display: flex;
   align-items: center;
@@ -891,6 +943,7 @@ const getStatusClass = (status: string) => {
 .btn-action {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 12px;
   border-radius: 8px;
@@ -899,6 +952,7 @@ const getStatusClass = (status: string) => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 105px;
 }
 
 .btn-take {
@@ -917,6 +971,15 @@ const getStatusClass = (status: string) => {
   border: 1px solid #ddd;
 }
 
+.btn-leave {
+  background-color: #fa5252;
+  color: white;
+}
+
+.btn-leave:hover {
+  background-color: #e03131;
+}
+
 .btn-detail {
   background-color: #e5e5e5;
   color: #777777;
@@ -925,6 +988,16 @@ const getStatusClass = (status: string) => {
 
 .btn-detail:hover {
   background-color: #d8d8d8;
+}
+
+.btn-detail-managed {
+  background-color: #fce4ec;
+  color: #e4869f;
+  border-color: #e4869f;
+}
+
+.btn-detail-managed:hover {
+  background-color: #f8bbd0;
 }
 
 .orders-table tr:last-child td {

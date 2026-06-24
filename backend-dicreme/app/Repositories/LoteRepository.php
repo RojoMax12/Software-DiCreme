@@ -28,6 +28,23 @@ class LoteRepository
         return Lote::where('id_producto', $idProducto)->get();
     }
 
+        public function getLotesDisponiblesByProductoId($idProducto)
+    {
+        return Lote::where('id_producto', $idProducto)
+                ->where('cantidad_producto', '>', 0)
+                ->orderBy('fecha_vencimiento', 'asc') // O 'created_at' para gastar el más viejo primero
+                ->get();
+    }
+
+    public function getLotesDeProductos(array $idProductos)
+    {
+        return Lote::whereIn('id_producto', $idProductos)
+                ->where('cantidad_producto', '>', 0)
+                ->orderBy('fecha_vencimiento', 'asc') // O created_at
+                ->get()
+                ->groupBy('id_producto'); // Agrupa automáticamente por producto en PHP
+    }
+
     public function getLotesByStockId($idStock)
     {
         return Lote::where('id_stock', $idStock)->get();
