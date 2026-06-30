@@ -91,6 +91,7 @@ const handleGoBack = () => {
     <main class="history-container">
       <div class="title-section">
         <h2 class="main-title">Mis Cotizaciones</h2>
+        <p class="page-subtitle">Revisa el estado y el detalle de tus cotizaciones.</p>
         <div class="title-line"></div>
       </div>
 
@@ -159,7 +160,7 @@ const handleGoBack = () => {
 
 .title-section { margin-bottom: 30px; }
 .main-title { font-size: 1.25rem; font-weight: 800; color: #1a1624; margin: 0 0 6px 0; text-align: left; }
-.title-line { height: 2px; background-color: #e4869f; width: 100%; }
+.title-line { height: 2px; background-color: #e4869f; width: 100%; margin-top: 10px; }
 
 .quotations-list {
   display: flex;
@@ -284,6 +285,12 @@ const handleGoBack = () => {
 
 .spinner {
   animation: rotate 2s linear infinite;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: #7c7289;
+  margin: 0;
 }
 
 @keyframes rotate {

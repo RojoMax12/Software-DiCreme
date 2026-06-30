@@ -31,6 +31,10 @@
         :categories="categoriesList"
       />
       
+      <div v-if="isLoading" class="loading-state">
+        <IceCream class="spinner" :size="100" color="#e4869f" />
+      </div>
+
       <div class="products-grid">
         <ProductCard 
           v-for="item in filteredIceCreams" 
@@ -59,14 +63,13 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import Banner from '@/components/Banner.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import CartModal from '@/components/CartModal.vue'
 import ProductDetailModal from '@/components/ProductDetailModal.vue';
 import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
 import fotoCaja from '@/assets/caja_dicreme.webp'
-import { ShoppingCart } from 'lucide-vue-next'
+import { ShoppingCart, IceCream } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 import Footer from '@/components/Footer.vue'
@@ -81,6 +84,7 @@ const bannerImages = [
 ];
 
 // Estados reactivos
+const isLoading = ref(true)
 const isCartOpen = ref(false);
 const isDetailOpen = ref(false);
 const isNoticeOpen = ref(false);
@@ -125,14 +129,7 @@ watch(() => router.currentRoute.value.path, () => {
   checkAuthStatus();
 });
 
-// Función para cerrar sesión
-const handleLogout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  isLoggedIn.value = false;
-  currentUser.value = null;
-  alert('Has cerrado sesión exitosamente.');
-};
+
 
 const totalCartItems = computed(() => {
   return cartItems.value.reduce((total, item) => total + (item.quantity || 1), 0);
@@ -238,22 +235,30 @@ const goToQuotation = () => {
   }
 };
 
-const handleGoToLogin = () => {
-  isNoticeOpen.value = false;
-  isCartOpen.value = false;
-  router.push('/login');
-};
+const fetchCategory = async () => {
+  try {
+    const response = await categoryService.getCategory();
+    
+    // Suponiendo que la respuesta es un array directo o tiene una propiedad data
+    // Si response.data es el array de categorías:
+    categoriesList.value = response.data; 
 
-const clpFormatter = new Intl.NumberFormat('es-CL', { 
-  style: 'currency', 
-  currency: 'CLP', 
-  maximumFractionDigits: 0 
-});
+    // O si la estructura es distinta (ej. si Laravel devuelve { categorias: [...] }):
+    // categoriesList.value = response.data.categorias;
+
+  } catch (error) {
+    console.error("Error al cargar las categorías:", error);
+    // Opcional: mostrar una notificación de error
+  }
+}
 
 // Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
+  isLoading.value = true;
   try {
-    // 1. Una sola petición HTTP. 
+    // 1. Una sola petición HTTP. Ya no dependemos de categoryService.getCategory()
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const response = await productService.getProducts();
 
     if (!response?.data) {
@@ -314,11 +319,14 @@ const fetchIceCreams = async () => {
 
   } catch (error) {
     console.error('Error al cargar los productos:', error);
-  }  
+  }  finally {
+    isLoading.value = false; 
+  }
 }
 
 onMounted(() => {
   fetchIceCreams();
+  fetchCategory();
   checkAuthStatus();
 
   // Recuperación segura del estado persistido del carrito temporal
@@ -402,5 +410,26 @@ watch(
 .main-footer {
   margin-top: auto;
   width: 100%;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center; /* Centra horizontalmente */
+  align-items: center;     /* Centra verticalmente */
+  min-height: 50vh;        /* Ocupa al menos la mitad de la pantalla para verse bien */
+  width: 100%;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

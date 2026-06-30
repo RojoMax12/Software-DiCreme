@@ -3,6 +3,8 @@ import LoginView from '../components/LoginView.vue'
 import RegisterView from '../components/RegisterView.vue'
 import ForgotPasswordView from '../components/ForgotPasswordView.vue'
 import HomeView from '../views/Home/HomeView.vue'
+import { globalLoading } from '@/composables/useLoading';
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,19 +20,19 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
-      meta: { hideNavbar: true }
+      meta: { hideNavbar: true, useLoader: true }
     },
     {
       path: '/register',
       name: 'register',
       component: RegisterView,
-      meta: { hideNavbar: true }
+      meta: { hideNavbar: true, useLoader: true }
     },
     {
       path: '/forgot-password',
       name: 'forgot-password',
       component: ForgotPasswordView,
-      meta: { hideNavbar: true }
+      meta: { hideNavbar: true, useLoader: true}
     },
     {
       path: '/admin',
@@ -95,6 +97,24 @@ const router = createRouter({
 
   ],
 })
+
+
+router.beforeEach((to, from, next) => {
+  // Puedes hacer que solo se muestre si la ruta destino tiene "useLoader: true"
+  if (to.meta.useLoader) {
+    globalLoading.value = true;
+  }
+  next(); // Le dice a Vue que continúe el viaje
+});
+
+// 👇 3. APAGA EL LOADER CUANDO LA VISTA ESTÁ LISTA
+router.afterEach(() => {
+  // Le ponemos un pequeñísimo retraso (ej. 500ms) para que la animación 
+  // alcance a verse fluida y no sea un parpadeo brusco.
+  setTimeout(() => {
+    globalLoading.value = false;
+  }, 500); 
+});
 
 
 export default router

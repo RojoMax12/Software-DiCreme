@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { X, Trash2, Plus, Minus, ShoppingCart } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { useNotification } from '@/composables/useNotification';
+
+
+const { notify } = useNotification();
 
 // Recibimos la lista de productos agregados desde el Home
 const props = defineProps<{
@@ -25,6 +29,23 @@ const cartTotal = computed(() => {
   // Retorna el string formateado como moneda en Chile (ej: $91.980)
   return `$${totalRaw.toLocaleString('es-CL')}`;
 });
+
+
+const handleCheckout = () => {
+  // Validación de seguridad visual
+  if (props.cartItems.length === 0) {
+    // Pasamos los parámetros tal como los espera tu composable: (mensaje, tipo)
+    notify('Agrega algunos helados antes de continuar.', 'warning');
+    return;
+  }
+
+  // Si todo está bien, mostramos el mensaje de éxito
+  notify('Preparando tu cotización...', 'success');
+
+  // Finalmente, le decimos al Home que ejecute goToQuotation()
+  emit('checkout');
+};
+
 </script>
 
 <template>
@@ -90,7 +111,7 @@ const cartTotal = computed(() => {
               <span class="total-amount">{{ cartTotal }}</span>
             </div>
 
-            <button class="btn-checkout" @click="emit('checkout')">
+            <button class="btn-checkout" @click="handleCheckout">
               Finalizar Cotización
             </button>
           </div>
