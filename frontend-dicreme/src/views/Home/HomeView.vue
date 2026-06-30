@@ -22,7 +22,7 @@
       @confirm="router.push('/login')"
     />
 
-    <Banner />
+    <Carousel :images="bannerImages" :autoPlayInterval="5000"/>
     
     <main class="content-container">
       <SearchBar 
@@ -49,7 +49,7 @@
     </button>
   </div>
   <div>
-    <Footer />
+    <Footer class="main-footer"/>
   </div>
 </template>
 
@@ -67,6 +67,15 @@ import { ShoppingCart } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 import Footer from '@/components/Footer.vue'
+import Carousel from '@/components/Carousel.vue';
+import imgBanner1 from '@/assets/banner1.jpeg'
+import imgBanner2 from '@/assets/banner2.jpeg'
+
+
+const bannerImages = [
+  imgBanner1,
+  imgBanner2
+];
 
 // Estados reactivos
 const isCartOpen = ref(false);
@@ -228,15 +237,22 @@ const handleGoToLogin = () => {
   router.push('/login');
 };
 
+const clpFormatter = new Intl.NumberFormat('es-CL', { 
+  style: 'currency', 
+  currency: 'CLP', 
+  maximumFractionDigits: 0 
+});
+
 // Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
   try {
+    // 1. Paralelismo limpio
     const [productsResponse, categoriesResponse] = await Promise.all([
-      productService.getProducts(),
+      productService.getProducts(), // Alerta: Si trae miles de filas, necesitas paginar aquí
       categoryService.getCategory()
     ]);
 
-    if (!productsResponse || !categoriesResponse) {
+    if (!productsResponse?.data || !categoriesResponse?.data) {
       throw new Error('Error al obtener los datos');
     }
 
@@ -245,25 +261,31 @@ const fetchIceCreams = async () => {
 
     categoriesList.value = dbCategories;
 
-    // Diccionario de categorías para mapear IDs a nombres legibles
-    const categoryMap: Record<number, string> = {};
-    dbCategories.forEach((cat: any) => {
-      const catId = cat.id || cat.ID;
-      if (catId){
-        categoryMap[catId] = cat.nombre_categoria;
+    // 2. Diccionario de categorías indexado eficientemente
+    const categoryMap = new Map<number, string>();
+    for (let i = 0; i < dbCategories.length; i++) {
+      const cat = dbCategories[i];
+      const catId = cat.id ?? cat.ID;
+      if (catId) {
+        categoryMap.set(catId, cat.nombre_categoria);
       }
-    });
+    }
 
-    // Auxiliar para agrupar los formatos individuales bajo el mismo nombre de sabor
-    const grouped: Record<string, any> = {};
+    // 3. Agrupación usando Map (es más rápido que un objeto literal para inserciones dinámicas)
+    const grouped = new Map<string, any>();
+    
+    // Cacheamos el formateador de moneda de JavaScript (evita crear instancias en cada ciclo)
+    const clpFormatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-    dbProducts.forEach((prod: any) => {
+    for (let i = 0; i < dbProducts.length; i++) {
+      const prod = dbProducts[i];
       const flavorName = prod.nombre_producto;
-      const catId = prod.id_categoria || prod.ID_categoria;
-      const categoryName = categoryMap[catId] || 'Sin categoría';
+      const catId = prod.id_categoria ?? prod.ID_categoria;
+      const categoryName = categoryMap.get(catId) || 'Sin categoría';
 
-      if (!grouped[flavorName]){
-        grouped[flavorName] = {
+      // Si el sabor no existe en el mapa, lo inicializamos
+      if (!grouped.has(flavorName)) {
+        grouped.set(flavorName, {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
@@ -272,32 +294,29 @@ const fetchIceCreams = async () => {
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',
           id1l: null, price1l: 'No disponible'
-        };
+        });
       }
 
+      const item = grouped.get(flavorName);
       const rawPrice = prod.precio_producto || 0;
-      const formattedPrice = `$${Number(rawPrice).toLocaleString('es-CL')}`;
-      console.log(`Producto: ${flavorName}, Formato ID: ${prod.id_formato || prod.ID_formato}, Precio: ${rawPrice}`);
-
-      const formatId = prod.id_formato || prod.ID_formato;
       
-      // Asignamos el ID único de la base de datos de cada helado concreto a su respectivo formato mapeado
-      if (formatId === 1) {
-        grouped[flavorName].id10l = prod.id || prod.ID;
-        grouped[flavorName].price10l = formattedPrice;
-      } else if (formatId === 2) {
-        grouped[flavorName].id5l = prod.id || prod.ID;
-        grouped[flavorName].price5l = formattedPrice;
-      } else if (formatId === 3) {
-        grouped[flavorName].id25l = prod.id || prod.ID;
-        grouped[flavorName].price25l = formattedPrice;
-      } else if (formatId === 4) {
-        grouped[flavorName].id1l = prod.id || prod.ID;
-        grouped[flavorName].price1l = formattedPrice;
-      }
-    });
+      // Optimizamos el formateo de precios eliminando el toLocaleString tradicional
+      const formattedPrice = clpFormatter.format(rawPrice);
+      const formatId = prod.id_formato ?? prod.ID_formato;
+      const prodId = prod.id ?? prod.ID;
 
-    iceCreams.value = Object.values(grouped);
+      // Mapeo directo por posición de formato en lugar de múltiples IF/ELSE redundantes
+      switch (formatId) {
+        case 1: item.id10l = prodId; item.price10l = formattedPrice; break;
+        case 2: item.id5l = prodId; item.price5l = formattedPrice; break;
+        case 3: item.id25l = prodId; item.price25l = formattedPrice; break;
+        case 4: item.id1l = prodId; item.price1l = formattedPrice; break;
+      }
+    }
+
+    // Convertimos el mapa directamente a un arreglo para Vue
+    iceCreams.value = Array.from(grouped.values());
+
   } catch (error) {
     console.error('Error al cargar los productos:', error);
   }  
@@ -365,5 +384,10 @@ watch(
 
 .floating-cart:active {
   transform: scale(0.9);
+}
+
+.main-footer {
+  margin-top: auto;
+  width: 100%;
 }
 </style>
