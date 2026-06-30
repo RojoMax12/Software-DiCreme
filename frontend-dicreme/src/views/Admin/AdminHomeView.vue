@@ -37,6 +37,14 @@
         <h2>Gestión de Usuarios</h2>
         <p>Administrar cuentas de usuarios, roles y permisos</p>
       </router-link>
+
+      <router-link to="/admin/inventory" class="admin-option-card">
+        <div class="icon-container">
+          <ShoppingBag :size="48" />
+        </div>
+        <h2>Inventario</h2>
+        <p>Administra el inventario de los productos y sus lotes</p>
+      </router-link>
     </div>
   </div>
 </template>
