@@ -62,14 +62,14 @@ import ProductCard from '@/components/ProductCard.vue'
 import CartModal from '@/components/CartModal.vue'
 import ProductDetailModal from '@/components/ProductDetailModal.vue';
 import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
-import fotoCaja from '@/assets/caja_dicreme.jpg'
+import fotoCaja from '@/assets/caja_dicreme.webp'
 import { ShoppingCart } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 import Footer from '@/components/Footer.vue'
 import Carousel from '@/components/Carousel.vue';
-import imgBanner1 from '@/assets/banner1.jpeg'
-import imgBanner2 from '@/assets/banner2.jpeg'
+import imgBanner1 from '@/assets/banner1.webp'
+import imgBanner2 from '@/assets/banner2.webp'
 
 
 const bannerImages = [
@@ -246,44 +246,34 @@ const clpFormatter = new Intl.NumberFormat('es-CL', {
 // Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
   try {
-    // 1. Paralelismo limpio
-    const [productsResponse, categoriesResponse] = await Promise.all([
-      productService.getProducts(), // Alerta: Si trae miles de filas, necesitas paginar aquí
-      categoryService.getCategory()
-    ]);
+    // 1. Una sola petición HTTP. Ya no dependemos de categoryService.getCategory()
+    const response = await productService.getProducts();
 
-    if (!productsResponse?.data || !categoriesResponse?.data) {
-      throw new Error('Error al obtener los datos');
+    if (!response?.data) {
+      throw new Error('Error al obtener los datos del catálogo');
     }
 
-    const dbProducts = productsResponse.data;
-    const dbCategories = categoriesResponse.data;
-
-    categoriesList.value = dbCategories;
-
-    // 2. Diccionario de categorías indexado eficientemente
-    const categoryMap = new Map<number, string>();
-    for (let i = 0; i < dbCategories.length; i++) {
-      const cat = dbCategories[i];
-      const catId = cat.id ?? cat.ID;
-      if (catId) {
-        categoryMap.set(catId, cat.nombre_categoria);
-      }
-    }
-
-    // 3. Agrupación usando Map (es más rápido que un objeto literal para inserciones dinámicas)
+    const dbProducts = response.data;
+    
+    // Usamos Map porque es el mecanismo más rápido en JS para agrupar elementos dinámicos
     const grouped = new Map<string, any>();
     
-    // Cacheamos el formateador de moneda de JavaScript (evita crear instancias en cada ciclo)
-    const clpFormatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+    // Instanciamos el formateador de pesos chilenos una sola vez fuera del bucle (ahorra CPU)
+    const clpFormatter = new Intl.NumberFormat('es-CL', { 
+      style: 'currency', 
+      currency: 'CLP', 
+      maximumFractionDigits: 0 
+    });
 
+    // 2. Un único bucle lineal para agrupar los formatos por sabor
     for (let i = 0; i < dbProducts.length; i++) {
       const prod = dbProducts[i];
       const flavorName = prod.nombre_producto;
-      const catId = prod.id_categoria ?? prod.ID_categoria;
-      const categoryName = categoryMap.get(catId) || 'Sin categoría';
+      
+      // Accedemos al nombre directo que nos envía Laravel gracias al JOIN
+      const categoryName = prod.nombre_categoria || 'Sin categoría'; 
 
-      // Si el sabor no existe en el mapa, lo inicializamos
+      // Si es la primera vez que vemos este sabor de helado, creamos su base
       if (!grouped.has(flavorName)) {
         grouped.set(flavorName, {
           name: flavorName,
@@ -297,15 +287,13 @@ const fetchIceCreams = async () => {
         });
       }
 
+      // Obtenemos la referencia de la tarjeta que estamos armando
       const item = grouped.get(flavorName);
-      const rawPrice = prod.precio_producto || 0;
-      
-      // Optimizamos el formateo de precios eliminando el toLocaleString tradicional
-      const formattedPrice = clpFormatter.format(rawPrice);
-      const formatId = prod.id_formato ?? prod.ID_formato;
-      const prodId = prod.id ?? prod.ID;
+      const formattedPrice = clpFormatter.format(prod.precio_producto || 0);
+      const formatId = prod.id_formato;
+      const prodId = prod.id;
 
-      // Mapeo directo por posición de formato en lugar de múltiples IF/ELSE redundantes
+      // Asignamos el ID y precio al formato que corresponda
       switch (formatId) {
         case 1: item.id10l = prodId; item.price10l = formattedPrice; break;
         case 2: item.id5l = prodId; item.price5l = formattedPrice; break;
@@ -314,7 +302,7 @@ const fetchIceCreams = async () => {
       }
     }
 
-    // Convertimos el mapa directamente a un arreglo para Vue
+    // 3. Convertimos el mapa de sabores en un arreglo limpio para la vista de Vue
     iceCreams.value = Array.from(grouped.values());
 
   } catch (error) {
