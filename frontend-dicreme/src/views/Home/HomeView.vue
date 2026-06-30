@@ -46,6 +46,9 @@
 
     <button class="floating-cart" @click="isCartOpen = true">
       <ShoppingCart :size="28" color="white" :stroke-width="2" />
+      <span v-if="totalCartItems > 0" class="cart-badge">
+        {{ totalCartItems }}
+      </span>
     </button>
   </div>
   <div>
@@ -130,6 +133,10 @@ const handleLogout = () => {
   currentUser.value = null;
   alert('Has cerrado sesión exitosamente.');
 };
+
+const totalCartItems = computed(() => {
+  return cartItems.value.reduce((total, item) => total + (item.quantity || 1), 0);
+});
 
 // Computado para filtrar helados por categoría y búsqueda de texto
 const filteredIceCreams = computed(() => {
@@ -246,7 +253,7 @@ const clpFormatter = new Intl.NumberFormat('es-CL', {
 // Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
   try {
-    // 1. Una sola petición HTTP. Ya no dependemos de categoryService.getCategory()
+    // 1. Una sola petición HTTP. 
     const response = await productService.getProducts();
 
     if (!response?.data) {
@@ -372,6 +379,24 @@ watch(
 
 .floating-cart:active {
   transform: scale(0.9);
+}
+
+.cart-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background-color: white;
+  color: var(--DC-gray);
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 4px 6px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .main-footer {
