@@ -17,7 +17,8 @@ class Despacho extends Model
         'comuna',
         'fecha_entrega',
         'persona_recibe',
-        'estado_despacho'
+        'estado_despacho',
+        'id_usuario_dicreme'
     ];
 
     protected $casts = [

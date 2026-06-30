@@ -31,6 +31,11 @@ class LoteServices
         return $this->loteRepository->getLoteById($id);
     }
 
+    public function getLoteMasReciente()
+    {
+        return $this->loteRepository->getLoteMasReciente();
+    }
+
     public function getLotesByProductoId($idProducto)
     {
         return $this->loteRepository->getLotesByProductoId($idProducto);

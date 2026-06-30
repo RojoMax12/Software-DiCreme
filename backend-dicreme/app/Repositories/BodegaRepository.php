@@ -63,4 +63,21 @@ class BodegaRepository
         }
         return false;
     }
+
+    // Funciones auxiliares
+
+    // Esta función actualiza la cantidad de elementos en una bodega sumando la cantidad de productos en los lotes asociados a esa bodega.
+    public function updateCantidadElementos(int $id): ?Bodega
+    {
+        $bodega = Bodega::find($id);
+
+        if ($bodega) {
+            $total = $bodega->lotes()->sum('cantidad_producto');
+            $bodega->update(['cantidad_productos' => $total]); 
+            return $bodega;
+        }
+
+        return null;
+    }
+
 }

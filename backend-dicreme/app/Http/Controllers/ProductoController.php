@@ -24,6 +24,15 @@ class ProductoController extends Controller
         return response()->json($this->productoServices->getProductoById($id));
     }
 
+    public function getCantidadTotal($id){
+        return response()->json($this->productoServices->getCantidadTotalProductoFromAllLotes($id));
+    }
+
+    public function getResumenTodosLosProductos()
+    {
+        return response()->json($this->productoServices->getResumenTodosLosProductos());
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

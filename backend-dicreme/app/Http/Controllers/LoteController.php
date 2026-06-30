@@ -24,11 +24,15 @@ class LoteController extends Controller
         return response()->json($this->loteServices->getLoteById($id));
     }
 
+    public function getLoteMasReciente()
+    {
+        return response()->json($this->loteServices->getLoteMasReciente());
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
             'id_producto' => 'required|integer|exists:productos,id',
-            'id_stock' => 'required|integer|exists:stocks,id',
             'id_bodega' => 'required|integer|exists:bodegas,id',
             'cantidad_producto' => 'required|integer|min:0',
             'fecha_vencimiento' => 'required|date',
@@ -38,11 +42,15 @@ class LoteController extends Controller
         return response()->json($this->loteServices->createLote($data), 201);
     }
 
+    public function getLotesByProductoId($id)
+    {
+        return response()->json($this->loteServices->getLotesByProductoId($id));
+    }
+
     public function update(Request $request, $id)
     {
         $data = $request->validate([
             'id_producto' => 'sometimes|required|integer|exists:productos,id',
-            'id_stock' => 'sometimes|required|integer|exists:stocks,id',
             'id_bodega' => 'sometimes|required|integer|exists:bodegas,id',
             'cantidad_producto' => 'sometimes|required|integer|min:0',
             'fecha_vencimiento' => 'sometimes|required|date',

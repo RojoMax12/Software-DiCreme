@@ -6,6 +6,10 @@ export default {
         return api.get('/productos');
     },
 
+    getInventory(){
+        return api.get('/productos/resumen_totales');
+    },
+
     getProductById(id: number){
         return api.get(`/productos/${id}`);
     },
@@ -21,6 +25,6 @@ export default {
     createProduct(data: unknown){
         return api.post('/productos', data);
 
-    },
+    }
 
 }

@@ -53,4 +53,8 @@ class Usuario_dicremeController extends Controller
     {
         return response()->json($this->usuarioDicremeServices->deleteUsuarioDicreme($id), 204);
     }
+
+    public function getusuariodicremedespachadores(){
+        return response()->json($this->usuarioDicremeServices->getUsuariosDicremeDespachador(),201);
+    }
 }

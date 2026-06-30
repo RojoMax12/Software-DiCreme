@@ -82,11 +82,15 @@ const router = createRouter({
       name: 'order-detail',
       component: () => import('@/views/Distributor/OrderDetailView.vue'),
     },
-
     {
       path: '/admin/user-management',
       name: 'admin-users',
-      component: () => import('../views/Admin/UserManagementView.vue')
+      component: () => import('../views/Admin/UserManagementView.vue'),
+    },
+    {
+      path: '/admin/inventory',
+      name: 'admin-inventory',
+      component: () => import('../views/Admin/InventoryView.vue')
     }
 
   ],
