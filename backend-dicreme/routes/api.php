@@ -114,6 +114,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/bodegas/{id}', [BodegaController::class, 'update'])->middleware('role:1');
         Route::delete('/bodegas/{id}', [BodegaController::class, 'destroy'])->middleware('role:1');
         Route::post('/lotes', [LoteController::class, 'store'])->middleware('role:1');
+        Route::put('/lotes/{id}/cantidad_producto', [LoteController::class, 'updateCantidadProducto'])->middleware('role:1');
         Route::put('/lotes/{id}', [LoteController::class, 'update'])->middleware('role:1');
         Route::delete('/lotes/{id}', [LoteController::class, 'destroy'])->middleware('role:1');
         Route::get('/lotes/producto/{id}', [LoteController::class, 'getLotesByProductoId'])->middleware('role:1');

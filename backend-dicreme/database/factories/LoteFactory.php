@@ -26,7 +26,8 @@ class LoteFactory extends Factory
         return [
             'id_producto' => $producto,
             'id_bodega' => $bodega,
-            'cantidad_producto' => $this->faker->numberBetween(20, 400),
+            'cantidad_producida' => $this->faker->numberBetween(20, 400),
+            'cantidad_producto' => 'cantidad_producida',
             'fecha_emision' => $this->faker->dateTimeBetween('-30 days', 'now'),
             'fecha_vencimiento' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
         ];

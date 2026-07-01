@@ -15,12 +15,14 @@ class Lote extends Model
     protected $fillable = [
         'id_producto',
         'id_bodega',
+        'cantidad_producida',
         'cantidad_producto',
         'fecha_vencimiento',
         'fecha_emision'
     ];
 
     protected $casts = [
+        'cantidad_producida' => 'integer',
         'cantidad_producto' => 'integer',
         'fecha_vencimiento' => 'date',
         'fecha_emision' => 'date',
