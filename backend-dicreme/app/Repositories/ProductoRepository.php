@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 # Repositorio Producto
 class ProductoRepository
 {   
-    private const CACHE_KEY = 'catalogo_completo_productos';
+    public const CACHE_KEY = 'catalogo_completo_productos';
 
     # Create
     public function createProducto($data)
@@ -21,20 +21,22 @@ class ProductoRepository
 
     # Geters
     public function getAllProductos()
-    {
-        // Si ya está en caché, lo devuelve en < 10ms. Si no, va a la DB.
-        return Cache::remember(self::CACHE_KEY, now()->addHours(24), function () {
-            // Traemos todos, pero optimizando la consulta al máximo
-            return Producto::select('id', 'nombre_producto', 'precio_producto', 'id_categoria', 'id_formato') // 1. Solo campos necesarios
-                ->with([
-                    'categoria' => function($query) { $query->select('id', 'nombre_categoria'); }, // 2. Eager loading limpio
-                    'formato'  => function($query) { $query->select('id', 'nombre_formato'); }
-                ])
-                ->get()
-                ->values()
-                ->toArray();
-        });
-    }
+{
+    return Cache::remember(self::CACHE_KEY, now()->addHours(24), function () {
+        return Producto::join('categorias', 'productos.id_categoria', '=', 'categorias.id')
+            ->select(
+                'productos.id', 
+                'productos.nombre_producto', 
+                'productos.precio_producto', 
+                'productos.id_formato',
+                'productos.id_categoria',
+                'categorias.nombre_categoria' // Trae el nombre directamente aquí
+            ) 
+            ->get()
+            ->toArray();
+    });
+}
+
 
     public function getCantidadTotalProductoFromAllLotes($id)
     {
@@ -58,7 +60,6 @@ class ProductoRepository
 
     public function getResumenTodosLosProductos()
     {
-        // Usamos Eager Loading para evitar el problema de N+1 consultas
         $productos = Producto::with(['formato', 'lotes'])->get();
         
         return $productos->map(function ($producto) {
@@ -123,4 +124,21 @@ class ProductoRepository
     {
         Cache::forget(self::CACHE_KEY); // Adiós fotografía vieja
     }
+
+    public function activarydesactivar($nombreExacto)
+{
+    $producto = Producto::where('nombre_producto', '=', $nombreExacto)->first();
+
+    if ($producto) {
+        $producto->estado_producto = !$producto->estado_producto;
+        $producto->save();
+
+        $this->clearCache(); 
+        
+        // Retornamos el estado actual para que el front lo sepa
+        return $producto; 
+    }
+
+    return false;
+}
 }

@@ -2,16 +2,30 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
 
 const router = useRouter()
 const username = ref('')
+const userRole = ref('Usuario') // 🌟 Nueva variable reactiva para el rol
 
 const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
   if (userParsed) {
     try {
       const userObj = JSON.parse(userParsed)
-      username.value = userObj.nombre_usuario || userObj.nombre || 'Administrador'
+      username.value = userObj.nombre_usuario || userObj.nombre || 'Usuario'
+      
+      // 🌟 Evaluamos el id_rol o la propiedad rol para setear el texto dinámico
+      if (userObj.id_rol == 1 || userObj.rol === '1') {
+        userRole.value = 'Sesión Administrador'
+      } else if (userObj.id_rol == 2 || userObj.rol === '2') {
+        userRole.value = 'Sesión Trabajador'
+      } else {
+        userRole.value = 'Sesión Operador' // Por si tienes un rol alternativo en el futuro
+      }
+
     } catch (e) {
       console.error('Error parsing user session:', e)
     }
@@ -25,6 +39,7 @@ onMounted(() => {
 const emit = defineEmits(['toggleSidebar'])
 
 const handleLogout = () => {
+  notify("Sesión correctamente cerrada", "success")
   localStorage.clear()
   router.push('/')
 }
@@ -59,7 +74,7 @@ const toggleSidebar = () => {
           <UserIcon :size="20" />
         </div>
         <div class="user-details">
-          <span class="user-role">Sesión Administrador</span>
+          <span class="user-role">{{ userRole }}</span>
           <span class="user-name">{{ username }}</span>
         </div>
       </div>
@@ -72,6 +87,7 @@ const toggleSidebar = () => {
 </template>
 
 <style scoped>
+/* Los estilos se mantienen exactamente igual a como los tenías */
 .admin-navbar {
   background-color: white;
   height: 80px;

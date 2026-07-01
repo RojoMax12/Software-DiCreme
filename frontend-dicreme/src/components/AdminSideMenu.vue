@@ -49,6 +49,7 @@ const isActive = (path: string) => {
               class="nav-item" 
               :class="{ active: isActive('/admin/quotes') }"
               @click="navigateTo('/admin/quotes')"
+              v-role="[1,2]"
             >
               <FileText :size="20" />
               <span>Cotizaciones</span>
@@ -58,6 +59,7 @@ const isActive = (path: string) => {
               class="nav-item" 
               :class="{ active: isActive('/admin/orders') }"
               @click="navigateTo('/admin/orders')"
+              v-role="[1,2]"
             >
               <ShoppingBag :size="20" />
               <span>Pedidos</span>
@@ -67,6 +69,7 @@ const isActive = (path: string) => {
               class="nav-item" 
               :class="{ active: isActive('/admin/generate-quote') }"
               @click="navigateTo('/admin/generate-quote')"
+              v-role="[1,2]"
             >
               <FilePlus :size="20" />
               <span>Generar Cotización</span>
@@ -76,6 +79,7 @@ const isActive = (path: string) => {
               class="nav-item" 
               :class="{ active: isActive('/admin/user-management') }"
               @click="navigateTo('/admin/user-management')"
+              v-role="1"
             >
               <FileText :size="20" />
               <span>Gestión de Usuarios</span>
@@ -83,8 +87,8 @@ const isActive = (path: string) => {
 
             <button 
               class="nav-item" 
-              :class="{ active: isActive('/admin/inventory') }"
-              @click="navigateTo('/admin/inventory')"
+              :class="{ active: isActive('/admin/inventario') }"
+              @click="navigateTo('/admin/inventario')"
             >
               <FileText :size="20" />
               <span>Gestión de Inventario</span>

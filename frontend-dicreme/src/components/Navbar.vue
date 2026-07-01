@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
 import DistributorSideMenu from '@/components/DistributorSideMenu.vue'
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
 
 const router = useRouter()
 
@@ -37,6 +40,7 @@ onMounted(() => {
 
 // Cierra la sesión y redirige al catálogo
 const handleLogout = () => {
+  notify("Sesion correctamente cerrada", "success")
   localStorage.clear()
   isLoggedIn.value = false
   username.value = ''
@@ -69,7 +73,7 @@ const goToHome = () => {
         </button>
         
         <div class="brand-group" @click="goToHome">
-          <img src="@/assets/logo_dicreme.png" alt="Di Creme Logo" class="brand-logo" />
+          <img src="@/assets/logo_dicreme.webp" alt="Di Creme Logo" class="brand-logo" />
           <div class="brand-info">
             <span class="brand-text">Di Creme</span>
           </div>

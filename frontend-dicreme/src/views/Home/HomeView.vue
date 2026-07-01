@@ -31,6 +31,10 @@
         :categories="categoriesList"
       />
       
+      <div v-if="isLoading" class="loading-state">
+        <IceCream class="spinner" :size="100" color="#e4869f" />
+      </div>
+
       <div class="products-grid">
         <ProductCard 
           v-for="item in filteredIceCreams" 
@@ -46,6 +50,9 @@
 
     <button class="floating-cart" @click="isCartOpen = true">
       <ShoppingCart :size="28" color="white" :stroke-width="2" />
+      <span v-if="totalCartItems > 0" class="cart-badge">
+        {{ totalCartItems }}
+      </span>
     </button>
   </div>
   <div>
@@ -56,20 +63,19 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import Banner from '@/components/Banner.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import CartModal from '@/components/CartModal.vue'
 import ProductDetailModal from '@/components/ProductDetailModal.vue';
 import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
-import fotoCaja from '@/assets/caja_dicreme.jpg'
-import { ShoppingCart } from 'lucide-vue-next'
+import fotoCaja from '@/assets/caja_dicreme.webp'
+import { ShoppingCart, IceCream } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 import Footer from '@/components/Footer.vue'
 import Carousel from '@/components/Carousel.vue';
-import imgBanner1 from '@/assets/banner1.jpeg'
-import imgBanner2 from '@/assets/banner2.jpeg'
+import imgBanner1 from '@/assets/banner1.webp'
+import imgBanner2 from '@/assets/banner2.webp'
 
 
 const bannerImages = [
@@ -78,6 +84,7 @@ const bannerImages = [
 ];
 
 // Estados reactivos
+const isLoading = ref(true)
 const isCartOpen = ref(false);
 const isDetailOpen = ref(false);
 const isNoticeOpen = ref(false);
@@ -122,14 +129,11 @@ watch(() => router.currentRoute.value.path, () => {
   checkAuthStatus();
 });
 
-// Función para cerrar sesión
-const handleLogout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  isLoggedIn.value = false;
-  currentUser.value = null;
-  alert('Has cerrado sesión exitosamente.');
-};
+
+
+const totalCartItems = computed(() => {
+  return cartItems.value.reduce((total, item) => total + (item.quantity || 1), 0);
+});
 
 // Computado para filtrar helados por categoría y búsqueda de texto
 const filteredIceCreams = computed(() => {
@@ -231,59 +235,57 @@ const goToQuotation = () => {
   }
 };
 
-const handleGoToLogin = () => {
-  isNoticeOpen.value = false;
-  isCartOpen.value = false;
-  router.push('/login');
-};
+const fetchCategory = async () => {
+  try {
+    const response = await categoryService.getCategory();
+    
+    // Suponiendo que la respuesta es un array directo o tiene una propiedad data
+    // Si response.data es el array de categorías:
+    categoriesList.value = response.data; 
 
-const clpFormatter = new Intl.NumberFormat('es-CL', { 
-  style: 'currency', 
-  currency: 'CLP', 
-  maximumFractionDigits: 0 
-});
+    // O si la estructura es distinta (ej. si Laravel devuelve { categorias: [...] }):
+    // categoriesList.value = response.data.categorias;
+
+  } catch (error) {
+    console.error("Error al cargar las categorías:", error);
+    // Opcional: mostrar una notificación de error
+  }
+}
 
 // Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
+  isLoading.value = true;
   try {
-    // 1. Paralelismo limpio
-    const [productsResponse, categoriesResponse] = await Promise.all([
-      productService.getProducts(), // Alerta: Si trae miles de filas, necesitas paginar aquí
-      categoryService.getCategory()
-    ]);
+    // 1. Una sola petición HTTP. Ya no dependemos de categoryService.getCategory()
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!productsResponse?.data || !categoriesResponse?.data) {
-      throw new Error('Error al obtener los datos');
+    const response = await productService.getProducts();
+
+    if (!response?.data) {
+      throw new Error('Error al obtener los datos del catálogo');
     }
 
-    const dbProducts = productsResponse.data;
-    const dbCategories = categoriesResponse.data;
-
-    categoriesList.value = dbCategories;
-
-    // 2. Diccionario de categorías indexado eficientemente
-    const categoryMap = new Map<number, string>();
-    for (let i = 0; i < dbCategories.length; i++) {
-      const cat = dbCategories[i];
-      const catId = cat.id ?? cat.ID;
-      if (catId) {
-        categoryMap.set(catId, cat.nombre_categoria);
-      }
-    }
-
-    // 3. Agrupación usando Map (es más rápido que un objeto literal para inserciones dinámicas)
+    const dbProducts = response.data;
+    
+    // Usamos Map porque es el mecanismo más rápido en JS para agrupar elementos dinámicos
     const grouped = new Map<string, any>();
     
-    // Cacheamos el formateador de moneda de JavaScript (evita crear instancias en cada ciclo)
-    const clpFormatter = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+    // Instanciamos el formateador de pesos chilenos una sola vez fuera del bucle (ahorra CPU)
+    const clpFormatter = new Intl.NumberFormat('es-CL', { 
+      style: 'currency', 
+      currency: 'CLP', 
+      maximumFractionDigits: 0 
+    });
 
+    // 2. Un único bucle lineal para agrupar los formatos por sabor
     for (let i = 0; i < dbProducts.length; i++) {
       const prod = dbProducts[i];
       const flavorName = prod.nombre_producto;
-      const catId = prod.id_categoria ?? prod.ID_categoria;
-      const categoryName = categoryMap.get(catId) || 'Sin categoría';
+      
+      // Accedemos al nombre directo que nos envía Laravel gracias al JOIN
+      const categoryName = prod.nombre_categoria || 'Sin categoría'; 
 
-      // Si el sabor no existe en el mapa, lo inicializamos
+      // Si es la primera vez que vemos este sabor de helado, creamos su base
       if (!grouped.has(flavorName)) {
         grouped.set(flavorName, {
           name: flavorName,
@@ -297,15 +299,13 @@ const fetchIceCreams = async () => {
         });
       }
 
+      // Obtenemos la referencia de la tarjeta que estamos armando
       const item = grouped.get(flavorName);
-      const rawPrice = prod.precio_producto || 0;
-      
-      // Optimizamos el formateo de precios eliminando el toLocaleString tradicional
-      const formattedPrice = clpFormatter.format(rawPrice);
-      const formatId = prod.id_formato ?? prod.ID_formato;
-      const prodId = prod.id ?? prod.ID;
+      const formattedPrice = clpFormatter.format(prod.precio_producto || 0);
+      const formatId = prod.id_formato;
+      const prodId = prod.id;
 
-      // Mapeo directo por posición de formato en lugar de múltiples IF/ELSE redundantes
+      // Asignamos el ID y precio al formato que corresponda
       switch (formatId) {
         case 1: item.id10l = prodId; item.price10l = formattedPrice; break;
         case 2: item.id5l = prodId; item.price5l = formattedPrice; break;
@@ -314,16 +314,19 @@ const fetchIceCreams = async () => {
       }
     }
 
-    // Convertimos el mapa directamente a un arreglo para Vue
+    // 3. Convertimos el mapa de sabores en un arreglo limpio para la vista de Vue
     iceCreams.value = Array.from(grouped.values());
 
   } catch (error) {
     console.error('Error al cargar los productos:', error);
-  }  
+  }  finally {
+    isLoading.value = false; 
+  }
 }
 
 onMounted(() => {
   fetchIceCreams();
+  fetchCategory();
   checkAuthStatus();
 
   // Recuperación segura del estado persistido del carrito temporal
@@ -386,8 +389,49 @@ watch(
   transform: scale(0.9);
 }
 
+.cart-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background-color: white;
+  color: var(--DC-gray);
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 4px 6px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
 .main-footer {
   margin-top: auto;
   width: 100%;
+}
+
+
+
+.loading-state {
+  display: flex;
+  justify-content: center; /* Centra horizontalmente */
+  align-items: center;     /* Centra verticalmente */
+  min-height: 50vh;        /* Ocupa al menos la mitad de la pantalla para verse bien */
+  width: 100%;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
 }
 </style>

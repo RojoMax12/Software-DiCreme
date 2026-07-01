@@ -6,7 +6,7 @@
     </div>
     
     <div class="admin-options-grid">
-      <router-link to="/admin/quotes" class="admin-option-card">
+      <router-link v-role="[1,2]" to="/admin/quotes" class="admin-option-card">
         <div class="icon-container">
           <FileText :size="48" />
         </div>
@@ -14,7 +14,7 @@
         <p>Gestionar y revisar las cotizaciones de los distribuidores</p>
       </router-link>
 
-      <router-link to="/admin/orders" class="admin-option-card">
+      <router-link v-role="[1,2]" to="/admin/orders" class="admin-option-card">
         <div class="icon-container">
           <ShoppingBag :size="48" />
         </div>
@@ -22,7 +22,7 @@
         <p>Administrar los pedidos y estados de despacho</p>
       </router-link>
 
-      <router-link to="/admin/generate-quote" class="admin-option-card">
+      <router-link v-role="[1,2]" to="/admin/generate-quote" class="admin-option-card">
         <div class="icon-container">
           <FilePlus :size="48" />
         </div>
@@ -30,7 +30,7 @@
         <p>Crear una nueva cotización para un distribuidor (existente o nuevo)</p>
       </router-link>
 
-      <router-link to="/admin/user-management" class="admin-option-card">
+      <router-link v-role="1" to="/admin/user-management" class="admin-option-card">
         <div class="icon-container">
           <FileText :size="48" />
         </div>
@@ -38,7 +38,7 @@
         <p>Administrar cuentas de usuarios, roles y permisos</p>
       </router-link>
 
-      <router-link to="/admin/inventory" class="admin-option-card">
+      <router-link v-role="[1,2]" to="/admin/inventario" class="admin-option-card">
         <div class="icon-container">
           <ShoppingBag :size="48" />
         </div>
