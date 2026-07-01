@@ -20,6 +20,7 @@ class Producto extends Model
         'id_formato',
         'nombre_producto',
         'precio_producto',
+        'estado_producto'
     ];
 
     protected $casts = [

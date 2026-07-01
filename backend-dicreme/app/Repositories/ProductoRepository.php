@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 # Repositorio Producto
 class ProductoRepository
 {   
-    private const CACHE_KEY = 'catalogo_completo_productos';
+    public const CACHE_KEY = 'catalogo_completo_productos';
 
     # Create
     public function createProducto($data)
@@ -123,4 +123,21 @@ class ProductoRepository
     {
         Cache::forget(self::CACHE_KEY); // Adiós fotografía vieja
     }
+
+    public function activarydesactivar($nombreExacto)
+{
+    $producto = Producto::where('nombre_producto', '=', $nombreExacto)->first();
+
+    if ($producto) {
+        $producto->estado_producto = !$producto->estado_producto;
+        $producto->save();
+
+        $this->clearCache(); 
+        
+        // Retornamos el estado actual para que el front lo sepa
+        return $producto; 
+    }
+
+    return false;
+}
 }

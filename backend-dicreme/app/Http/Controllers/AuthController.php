@@ -50,6 +50,12 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (! $user->estado_usuario) {
+            return response()->json([
+                'message' => 'El usuario está inactivo. Contacta al administrador.',
+            ], 403);
+        }
+
         // 4. Emitimos el JWT pasando el tipo de usuario detectado automáticamente
         return response()->json($jwtService->issueForUser(
             $user, 

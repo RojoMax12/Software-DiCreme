@@ -19,7 +19,8 @@ class Usuario_distribuidores extends Authenticatable
         'direccion',
         'telefono',
         'correo_electronico',
-        'comuna'
+        'comuna',
+        'estado_usuario'
     ];
 
     protected $hidden = [
@@ -30,6 +31,7 @@ class Usuario_distribuidores extends Authenticatable
     {
         return [
             'contrasena' => 'hashed',
+            'estado_usuario' => 'boolean'
         ];
     }
 

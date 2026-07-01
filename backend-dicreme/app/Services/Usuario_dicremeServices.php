@@ -24,7 +24,8 @@ class Usuario_dicremeServices
     }
 
     public function createUsuarioDicreme($data)
-    {
+    {   
+        $data['estado_usuario'] = $data['estado_usuario'] ?? true;
         return $this->usuarioDicremeRepository->createUsuarioDicreme($data);
     }
 
