@@ -51,12 +51,12 @@
             
             <tbody v-else>
               <tr v-for="item in productsInventory" :key="item.id">
-                <td style="text-align: left; padding-left: 20px;">{{ item.nombre_producto }}</td>
-                <td>{{ item.formato?.nombre_formato || '-' }}</td>
+                <td style="text-align: left; padding-left: 20px;">{{ item.nombre_producto || '-' }}</td>
+                <td>{{ item.formato?.nombre_formato|| '-' }}</td>
                 <td>{{ item.cantidad_total }}</td>
                 <td>{{ formatDate(item.ultima_actualizacion_lote) }}</td>
                 <td>
-                  <button class="btn-details">VER DETALLES</button>
+                  <button class="btn-details" @click="goToDetails(item)">VER DETALLES</button>
                 </td>
               </tr>
             </tbody>
@@ -90,23 +90,23 @@
         </div>
 
         <div class="alert-card mt-4">
-          <div class="floating-badge badge-pink">Lotes</div>
+          <div class="floating-badge badge-pink">lotes</div>
           <h3 class="alert-title">Atención a lotes por vencer</h3>
           
           <div class="alert-list">
-            <div v-if="expiringLotesAlerts.length === 0" class="empty-alerts">
+            <div v-if="expiringbatchesAlerts.length === 0" class="empty-alerts">
               No hay lotes por vencer pronto.
             </div>
 
             <div 
               v-else 
-              v-for="lote in expiringLotesAlerts" 
-              :key="lote.id" 
+              v-for="batch in expiringbatchesAlerts" 
+              :key="batch.id" 
               class="alert-item"
             >
-              <span class="item-name">{{ lote.name }}</span>
-              <span class="status-pill" :class="lote.pillClass">
-                {{ lote.lotNumber }}
+              <span class="item-name">{{ batch.name }}</span>
+              <span class="status-pill" :class="batch.pillClass">
+                {{ batch.batchNumber }}
               </span>
             </div>
           </div>
@@ -125,9 +125,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Filter, Search } from 'lucide-vue-next'
 import AddProductModal from '@/components/AddProductModal.vue'
 import productService from '@/services/productService'
+
+const router = useRouter()
 
 // Estados generales
 const isAddModalOpen = ref(false)
@@ -170,6 +173,15 @@ const formatDate = (dateString: string | null) => {
   }
 }
 
+const goToDetails = (item: any) => {
+  router.push({
+    path: `/admin/lotes/${item.id}`,
+    query: {
+      product_name: item.nombre_producto || '',
+      format_name: item.formato?.nombre_formato || '' 
+    }
+  })
+}
 // --- LÓGICA PARA LAS ALERTAS ---
 
 // 1. Alertas de Déficit de Stock
@@ -194,20 +206,20 @@ const deficitAlerts = computed(() => {
 
     return {
       id: item.id,
-      name: `${item.nombre_producto} - ${item.formato?.nombre_formato || 'N/A'}`,
+      name: `${item.nombre_producto || 'N/A'} - ${item.formato?.nombre_formato || 'N/A'}`,
       statusText,
       pillClass
     }
   })
 })
 
-// 2. Alertas de Lotes por vencer (estáticos por ahora)
-const expiringLotesAlerts = computed(() => {
+// 2. Alertas de batches por vencer (estáticos por ahora)
+const expiringbatchesAlerts = computed(() => {
   return [
     { 
       id: 'mock1', 
       name: 'Chocolate - 5L', 
-      lotNumber: 'Lote N°0005', 
+      batchNumber: 'Lote N°0005', 
       pillClass: 'pill-red' 
     }
   ]

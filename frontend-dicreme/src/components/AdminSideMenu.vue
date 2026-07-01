@@ -83,8 +83,8 @@ const isActive = (path: string) => {
 
             <button 
               class="nav-item" 
-              :class="{ active: isActive('/admin/inventory') }"
-              @click="navigateTo('/admin/inventory')"
+              :class="{ active: isActive('/admin/inventario') }"
+              @click="navigateTo('/admin/inventario')"
             >
               <FileText :size="20" />
               <span>Gestión de Inventario</span>

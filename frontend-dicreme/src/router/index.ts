@@ -102,13 +102,18 @@ const router = createRouter({
       meta: {useLoader: true}
     },
     {
-      path: '/admin/inventory',
+      path: '/admin/inventario',
       name: 'admin-inventory',
       component: () => import('../views/Admin/InventoryView.vue'),
       meta: {useLoader: true}
-    }
+    },
+    {
+      path: '/admin/lotes/:id',
+      name: 'admin-batches-detail',
+      component: () => import('../views/Admin/BatchesView.vue'),
 
-  ],
+    }
+  ]
 })
 
 

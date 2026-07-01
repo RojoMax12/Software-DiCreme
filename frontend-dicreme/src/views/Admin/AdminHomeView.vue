@@ -38,7 +38,7 @@
         <p>Administrar cuentas de usuarios, roles y permisos</p>
       </router-link>
 
-      <router-link to="/admin/inventory" class="admin-option-card">
+      <router-link to="/admin/inventario" class="admin-option-card">
         <div class="icon-container">
           <ShoppingBag :size="48" />
         </div>
