@@ -81,8 +81,9 @@ class CotizacionController extends Controller
     }
 
     public function transformarCotizacionEnPedido($idCotizacion)
-    {   
-    $pedido = $this->cotizacionServices->transformarCotizacionEnPedido($idCotizacion);
+{
+    try {
+        $pedido = $this->cotizacionServices->transformarCotizacionEnPedido($idCotizacion);
 
         if ($pedido === false) { 
             return response()->json([
@@ -96,7 +97,16 @@ class CotizacionController extends Controller
             'message' => 'La cotización ahora es un pedido',
             'data'    => $pedido
         ], 200);
+
+    } catch (\Exception $e) {
+        // ✨ AQUÍ ATRAPAMOS EL ERROR DE STOCK INSUFICIENTE
+        // Retornamos un 422 para que el Frontend sepa que fue un error de validación/lógica
+        return response()->json([
+            'status'  => 'error',
+            'message' => $e->getMessage() // "Stock insuficiente..."
+        ], 422);
     }
+}
 
     public function getallCotizacionesByUsuariodicreme($id_usuario_dicreme)
     {

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('telefono');
             $table->string('correo_electronico')->unique();
             $table->string('comuna');
+            $table->boolean('estado_usuario')->default(true);
             $table->timestamps();
         });
     }

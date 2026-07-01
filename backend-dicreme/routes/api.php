@@ -90,6 +90,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/formatos/{id}', [FormatoController::class, 'destroy'])->middleware('role:1');
         Route::post('/productos', [ProductoController::class, 'store'])->middleware('role:1');
         Route::put('/productos/{id}', [ProductoController::class, 'update'])->middleware('role:1');
+        Route::put('/productos/{nombre}/toggle-estado', [ProductoController::class, 'toggleestadoproducto'])->middleware('role:1');
         Route::delete('/productos/{id}', [ProductoController::class, 'destroy'])->middleware('role:1');
         Route::post('/roles', [RolController::class, 'store'])->middleware('role:1');
         Route::put('/roles/{id}', [RolController::class, 'update'])->middleware('role:1');
