@@ -30,7 +30,9 @@ class LoteRepository
 
     public function getLotesByProductoId($idProducto)
     {
-        return Lote::where('id_producto', $idProducto)->get();
+        return Lote::with('bodega')
+                ->where('id_producto', $idProducto)
+                ->get();
     }
 
         public function getLotesDisponiblesByProductoId($idProducto)
@@ -80,5 +82,16 @@ class LoteRepository
             return true;
         }
         return false;
+    }
+
+    public function updateLoteCantidadProducto($id, $cantidad)
+    {
+        $lote = Lote::find($id);
+        if ($lote) {
+            $lote->cantidad_producto = $cantidad;
+            $lote->save();
+            return $lote;
+        }
+        return null;
     }
 }
