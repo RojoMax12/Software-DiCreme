@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
 import DistributorSideMenu from '@/components/DistributorSideMenu.vue'
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
 
 const router = useRouter()
 
@@ -37,6 +40,7 @@ onMounted(() => {
 
 // Cierra la sesión y redirige al catálogo
 const handleLogout = () => {
+  notify("Sesion correctamente cerrada", "success")
   localStorage.clear()
   isLoggedIn.value = false
   username.value = ''

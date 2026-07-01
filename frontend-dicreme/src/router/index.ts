@@ -4,6 +4,7 @@ import RegisterView from '../components/RegisterView.vue'
 import ForgotPasswordView from '../components/ForgotPasswordView.vue'
 import HomeView from '../views/Home/HomeView.vue'
 import { globalLoading } from '@/composables/useLoading';
+import { nextTick } from 'vue';
 
 
 const router = createRouter({
@@ -37,83 +38,104 @@ const router = createRouter({
     {
       path: '/admin',
       name: 'admin-home',
-      component: () => import('../views/Admin/AdminHomeView.vue')
+      component: () => import('../views/Admin/AdminHomeView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/admin/quotes',
       name: 'admin-quotes',
-      component: () => import('../views/Admin/Quotes.vue')
+      component: () => import('../views/Admin/Quotes.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/admin/orders',
       name: 'admin-orders',
-      component: () => import('../views/Admin/Orders.vue')
+      component: () => import('../views/Admin/Orders.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/admin/generate-quote',
       name: 'admin-generate-quote',
-      component: () => import('../views/Admin/AdminGenerateQuoteView.vue')
+      component: () => import('../views/Admin/AdminGenerateQuoteView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/cotizacion',
       name: 'quotation',
-      component: () => import('../views/Checkout/QuotationView.vue')
+      component: () => import('../views/Checkout/QuotationView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/cotizacion-exitosa',
       name: 'CotizacionExitosa',
-      component: () => import('@/views/Checkout/SuccesfulQuotationView.vue')
+      component: () => import('@/views/Checkout/SuccesfulQuotationView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/mis-cotizaciones',
       name: 'my-quotations',
-      component: () => import('@/views/Distributor/MyQuotationsView.vue')
+      component: () => import('@/views/Distributor/MyQuotationsView.vue'),
+      meta: {useLoader: true}
     },
     {
     path: '/cotizacion/:id', 
     name: 'quotation-detail',
     component: () => import('@/views/Distributor/QuotationDetailView.vue'),
+    meta: {useLoader: true}
     },
     {
       path: '/mis-pedidos',
       name: 'my-orders',
-      component: () => import('@/views/Distributor/MyOrdersView.vue')
+      component: () => import('@/views/Distributor/MyOrdersView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/pedido/:id', 
       name: 'order-detail',
       component: () => import('@/views/Distributor/OrderDetailView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/admin/user-management',
       name: 'admin-users',
       component: () => import('../views/Admin/UserManagementView.vue'),
+      meta: {useLoader: true}
     },
     {
       path: '/admin/inventory',
       name: 'admin-inventory',
-      component: () => import('../views/Admin/InventoryView.vue')
+      component: () => import('../views/Admin/InventoryView.vue'),
+      meta: {useLoader: true}
     }
 
   ],
 })
 
 
+// router/index.ts
 router.beforeEach((to, from, next) => {
-  // Puedes hacer que solo se muestre si la ruta destino tiene "useLoader: true"
+  // Solo activamos si la ruta lo requiere
   if (to.meta.useLoader) {
     globalLoading.value = true;
   }
-  next(); // Le dice a Vue que continúe el viaje
+  
+  // Usamos un pequeño retraso para asegurar que Vue procese el estado "true"
+  // antes de renderizar la nueva ruta
+  setTimeout(() => {
+    next();
+  }, 50); 
 });
 
-// 👇 3. APAGA EL LOADER CUANDO LA VISTA ESTÁ LISTA
-router.afterEach(() => {
-  // Le ponemos un pequeñísimo retraso (ej. 500ms) para que la animación 
-  // alcance a verse fluida y no sea un parpadeo brusco.
-  setTimeout(() => {
+router.afterEach((to) => {
+  // Si la ruta no usa loader, aseguramos que esté apagado
+  if (!to.meta.useLoader) {
     globalLoading.value = false;
-  }, 500); 
+  } else {
+    // Si la ruta sí usa loader, apagamos después de un tiempo
+    setTimeout(() => {
+      globalLoading.value = false;
+    }, 600);
+  }
 });
 
 

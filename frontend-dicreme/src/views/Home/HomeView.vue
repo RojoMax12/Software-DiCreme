@@ -412,9 +412,7 @@ watch(
   width: 100%;
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
-}
+
 
 .loading-state {
   display: flex;
@@ -431,5 +429,9 @@ watch(
   to {
     transform: rotate(360deg);
   }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
 }
 </style>

@@ -6,6 +6,7 @@ import AdminNavbar from './components/AdminNavbar.vue';
 import AdminSideMenu from './components/AdminSideMenu.vue';
 import { useNotification } from '@/composables/useNotification';
 import GlobalLoader from '@/components/LoadingScreen.vue';
+import { globalLoading } from '@/composables/useLoading';
 
 const route = useRoute();
 const { notifications } = useNotification();
@@ -34,7 +35,7 @@ const getIcon = (type: string) => {
   </template>
   
   <GlobalLoader />
-  <router-view/>
+  <router-view v-if="!globalLoading"/>
 
   <div class="notification-container">
     <TransitionGroup name="toast">
