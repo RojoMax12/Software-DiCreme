@@ -4,6 +4,10 @@ import { useRouter } from 'vue-router'
 import boxPlaceholderImage from '@/assets/caja_dicreme.jpg'
 import { AlertTriangle } from 'lucide-vue-next'
 import quoteService from '@/services/quoteService'
+import { useNotification } from '@/composables/useNotification';
+
+
+const { notify } = useNotification();
 
 const router = useRouter()
 
@@ -96,7 +100,7 @@ const totalEstimated = computed(() => {
 })
 
 // Envía el payload plano y corregido rumbo al endpoint del backend
-const   handleConfirmQuotation = async () => {
+const handleConfirmQuotation = async () => {
   
   // --- VALIDACIONES DE ENTRADA VISUAL ---
   if (!email.value.trim()) { triggerAlert('Por favor, ingresa el correo electrónico.'); return; }
@@ -181,7 +185,7 @@ const   handleConfirmQuotation = async () => {
     const response = await quoteService.createQuote(quotationPayload)
     const result = response.data
 
-    alert(`¡Cotización confirmada exitosamente! N°: ${result.id || result.ID || 'Generada'}`)
+    notify(`¡Cotización confirmada exitosamente! N°: ${result.id || result.ID || 'Generada'}`, 'success')
     
     const quotationId = result.id || result.ID || null
 
