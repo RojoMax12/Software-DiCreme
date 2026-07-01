@@ -127,6 +127,7 @@ class ProductoFactory extends Factory
             'id_formato'      => $idFormato,
             'nombre_producto' => $itemSabor['sabor'], 
             'precio_producto' => $precioElegido, // Ahora va perfectamente de la mano con el tamaño del envase
+            'estado_producto' => $this->faker->boolean(true), // 80% de probabilidad de ser true
         ];
     }
 }

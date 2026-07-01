@@ -153,7 +153,7 @@ onUnmounted(() => {
 }
 
 .indicator-dot.active {
-  background: #E28743; /* Tu color naranja corporativo */
+  background: var(--DC-pink);
   transform: scale(1.2);
 }
 

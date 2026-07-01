@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('id_producto');
             $table->unsignedBigInteger('id_bodega');
+            $table->integer('cantidad_producida')->default(0);
             $table->integer('cantidad_producto')->default(0);
             $table->date('fecha_vencimiento')->nullable();
             $table->date('fecha_emision')->nullable();

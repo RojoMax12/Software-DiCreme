@@ -24,7 +24,9 @@ class Usuario_distribuidoresServices
     }
 
     public function createUsuarioDistribuidor($data)
-    {
+    {   
+        $data['estado_usuario'] = $data['estado_usuario'] ?? true;
+        
         return $this->usuarioDistribuidoresRepository->createUsuarioDistribuidor($data);
     }
 

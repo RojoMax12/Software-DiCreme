@@ -67,5 +67,11 @@ class ProductoServices
         return $this->productoRepository->deleteProducto($id);
     }
 
+    public function activarydesactivar($name)
+    {
+        // Retorna el objeto Producto o null directamente hacia el controlador
+        return $this->productoRepository->activarydesactivar($name);
+    }
+
 
 }

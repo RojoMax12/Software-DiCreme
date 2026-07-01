@@ -136,6 +136,14 @@
           </tr>
         </thead>
         <tbody>
+          <tr v-if="isLoading">
+            <td colspan="7">
+              <div class="loading-container">
+                <IceCream class="spinner" :size="80" color="#e4869f" />
+                <p>Cargando cotizaciones...</p>
+              </div>
+            </td>
+          </tr>
           <tr v-for="order in sortedOrders" :key="order.id">
             <td class="bold-text">#{{ order.id }}</td>
             <td class="bold-text">{{ order.distributor }}</td>
@@ -255,6 +263,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { IceCream } from 'lucide-vue-next'
 import QuotesDetailModal from './QuotesDetailModal.vue';
 import quoteService from '@/services/quoteService';
 import distributorService from '@/services/distributorService';
@@ -284,6 +293,7 @@ import { useNotification } from '@/composables/useNotification'; // Importamos e
 const itemsPerPage = 10;
 const currentPage = ref(1);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalResults.value / itemsPerPage)));
+
 
 // Filter logic
 const activeFilter = ref('actual'); // 'actual' or 'completed'
@@ -1079,4 +1089,30 @@ const getStatusClass = (status: string) => {
   background-color: #e4869f;
   color: white;
 }
+
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  gap: 15px;
+  font-weight: 600;
+  color: #e4869f;
+}
+
 </style>

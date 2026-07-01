@@ -3,31 +3,30 @@
 namespace Database\Factories;
 
 use App\Models\Lote;
+use App\Models\Producto;
+use App\Models\Bodega;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Lote>
- */
 class LoteFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Lote::class;
+
     public function definition(): array
     {
-        $producto = \App\Models\Producto::inRandomOrder()->first()?->id
-            ?? \App\Models\Producto::factory();
-
-        $bodega = \App\Models\Bodega::inRandomOrder()->first()?->id
-            ?? \App\Models\Bodega::factory();
+        // Generamos la cantidad primero para poder reutilizarla
+        $cantidad = $this->faker->numberBetween(20, 400);
 
         return [
-            'id_producto' => $producto,
-            'id_bodega' => $bodega,
-            'cantidad_producto' => $this->faker->numberBetween(20, 400),
-            'fecha_emision' => $this->faker->dateTimeBetween('-30 days', 'now'),
+            // Si existen productos/bodegas, usa uno al azar, sino crea uno nuevo
+            'id_producto' => Producto::inRandomOrder()->first()?->id ?? Producto::factory(),
+            'id_bodega'   => Bodega::inRandomOrder()->first()?->id ?? Bodega::factory(),
+            
+            'cantidad_producida' => $cantidad,
+            
+            // Usamos la variable $cantidad que definimos arriba
+            'cantidad_producto'  => $cantidad, 
+            
+            'fecha_emision'     => $this->faker->dateTimeBetween('-30 days', 'now'),
             'fecha_vencimiento' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
         ];
     }

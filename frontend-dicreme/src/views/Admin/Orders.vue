@@ -178,10 +178,10 @@
         </thead>
         <tbody>
           <tr v-if="isLoading">
-            <td colspan="6" class="text-center padding-large">
+            <td colspan="7">
               <div class="loading-container">
-                <div class="spinner"></div>
-                <span>Cargando pedidos...</span>
+                <IceCream class="spinner" :size="80" color="#e4869f" />
+                <p>Cargando Pedidos...</p>
               </div>
             </td>
           </tr>
@@ -261,6 +261,7 @@ import {
   Eye,
   ChevronsUpDown
 } from 'lucide-vue-next';
+import { IceCream } from 'lucide-vue-next'
 
 const orders = ref<any[]>([]);
 const isLoading = ref(true);
@@ -912,14 +913,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #eeedee;
-  border-top: 4px solid #e4869f;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
+
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
@@ -972,5 +966,22 @@ onUnmounted(() => {
 
 .orders-table th:hover .sort-icon {
   color: #666;
+}
+
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  gap: 15px;
+  font-weight: 600;
+  color: #e4869f;
+}
+
+.spinner {
+  animation: spin 1.5s linear infinite;
+  margin-bottom: 10px;
 }
 </style>

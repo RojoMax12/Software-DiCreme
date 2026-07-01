@@ -34,7 +34,7 @@ class LoteController extends Controller
         $data = $request->validate([
             'id_producto' => 'required|integer|exists:productos,id',
             'id_bodega' => 'required|integer|exists:bodegas,id',
-            'cantidad_producto' => 'required|integer|min:0',
+            'cantidad_producida' => 'required|integer|min:0',
             'fecha_vencimiento' => 'required|date',
             'fecha_emision' => 'required|date',
         ]);
@@ -52,6 +52,7 @@ class LoteController extends Controller
         $data = $request->validate([
             'id_producto' => 'sometimes|required|integer|exists:productos,id',
             'id_bodega' => 'sometimes|required|integer|exists:bodegas,id',
+            'cantidad_producida' => 'required|integer|min:0',
             'cantidad_producto' => 'sometimes|required|integer|min:0',
             'fecha_vencimiento' => 'sometimes|required|date',
             'fecha_emision' => 'sometimes|required|date',
@@ -63,5 +64,14 @@ class LoteController extends Controller
     public function destroy($id)
     {
         return response()->json($this->loteServices->deleteLote($id));
+    }
+
+    public function updateCantidadProducto(Request $request, $id)
+    {
+        $data = $request->validate([
+            'cantidad_producto' => 'required|integer|min:0',
+        ]);
+
+        return response()->json($this->loteServices->updateCantidadProducto($id, $data['cantidad_producto']));
     }
 }

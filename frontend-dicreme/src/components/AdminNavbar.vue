@@ -2,6 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
 
 const router = useRouter()
 const username = ref('')
@@ -25,6 +28,7 @@ onMounted(() => {
 const emit = defineEmits(['toggleSidebar'])
 
 const handleLogout = () => {
+  notify("Sesion correctamente cerrada", "success")
   localStorage.clear()
   router.push('/')
 }

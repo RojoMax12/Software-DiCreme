@@ -4,11 +4,11 @@ import { useRoute } from 'vue-router';
 import Navbar from './components/Navbar.vue';
 import AdminNavbar from './components/AdminNavbar.vue';
 import AdminSideMenu from './components/AdminSideMenu.vue';
-// 1. Importamos el estado global de notificaciones
 import { useNotification } from '@/composables/useNotification';
+import GlobalLoader from '@/components/LoadingScreen.vue';
+import { globalLoading } from '@/composables/useLoading';
 
 const route = useRoute();
-// 2. Extraemos el arreglo de notificaciones reactivas
 const { notifications } = useNotification();
 
 const isAdminSidebarOpen = ref(false);
@@ -16,18 +16,26 @@ const isAdminSidebarOpen = ref(false);
 const toggleAdminSidebar = () => {
   isAdminSidebarOpen.value = !isAdminSidebarOpen.value;
 };
+
+// Función rápida para determinar el ícono según el tipo de alerta
+const getIcon = (type: string) => {
+  if (type === 'success') return '✅';
+  if (type === 'warning') return '⚠️';
+  return '❌';
+};
 </script>
 
 <template>
-  <template v-if="!route.meta.hideNavbar">
-    <template v-if="route.path.startsWith('/admin')">
+  <template v-if="!route.meta?.hideNavbar">
+    <template v-if="route.path?.startsWith('/admin')">
       <AdminNavbar @toggleSidebar="toggleAdminSidebar" />
       <AdminSideMenu :isOpen="isAdminSidebarOpen" @close="isAdminSidebarOpen = false" />
     </template>
     <Navbar v-else />
   </template>
-  <router-view/>
-
+  
+  <GlobalLoader />
+  <router-view v-if="!globalLoading"/>
 
   <div class="notification-container">
     <TransitionGroup name="toast">
@@ -36,7 +44,7 @@ const toggleAdminSidebar = () => {
         :key="notification.id" 
         :class="['toast-card', `toast-${notification.type}`]"
       >
-        <span class="toast-icon">{{ notification.type === 'success' ? '✅' : '❌' }}</span>
+        <span class="toast-icon">{{ getIcon(notification.type) }}</span>
         <span class="toast-text">{{ notification.message }}</span>
       </div>
     </TransitionGroup>
@@ -46,21 +54,19 @@ const toggleAdminSidebar = () => {
 <style scoped>
 /* 🎨 4. ESTILOS DE LOS TOASTS FLOTANTES */
 
-/* Contenedor fijo arriba a la derecha */
 .notification-container {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 9999; /* Un número alto para que flote por encima de cualquier modal */
+  z-index: 9999; 
   display: flex;
   flex-direction: column;
-  gap: 10px; /* Espacio entre alertas apiladas */
-  pointer-events: none; /* Evita que el contenedor invisible bloquee clics en la app */
+  gap: 10px; 
+  pointer-events: none; 
 }
 
-/* Tarjeta base de la notificación */
 .toast-card {
-  pointer-events: auto; /* Permite hacer clic en la alerta si fuera necesario */
+  pointer-events: auto; 
   background-color: #fff;
   padding: 14px 20px;
   border-radius: 8px;
@@ -74,7 +80,6 @@ const toggleAdminSidebar = () => {
   font-family: 'Inter', sans-serif;
 }
 
-/* Colores según el tipo de alerta (Sincronizado con DiCreme) */
 .toast-success {
   border-left-color: #2ec4b6;
   background-color: #f0fdfa;
@@ -87,6 +92,13 @@ const toggleAdminSidebar = () => {
   color: #9b1c1c;
 }
 
+/* 2. CORRECCIÓN: Agregamos estilos para el warning */
+.toast-warning {
+  border-left-color: #f59e0b;
+  background-color: #fffbeb;
+  color: #92400e;
+}
+
 .toast-icon {
   font-size: 1.2rem;
 }
@@ -96,7 +108,10 @@ const toggleAdminSidebar = () => {
   font-weight: 500;
 }
 
-/* ✨ ANIMACIONES (Efecto deslizar desde la derecha) */
+/* ✨ ANIMACIONES Y TRANSICIONES */
+
+/* 3. CORRECCIÓN: Agregamos .toast-move para que las alertas se reacomoden suavemente */
+.toast-move,
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.4s ease;
@@ -110,5 +125,10 @@ const toggleAdminSidebar = () => {
 .toast-leave-to {
   opacity: 0;
   transform: translateX(100px);
+}
+
+/* 3. CORRECCIÓN: Fundamental para que el elemento que sale no estorbe a los que suben */
+.toast-leave-active {
+  position: absolute;
 }
 </style>

@@ -78,7 +78,25 @@
             </div>
             <div class="input-group">
               <label>Comuna</label>
-              <input v-model="distributorForm.comuna" type="text"  class="dc-input" />
+              <div class="search-comuna">
+                <input 
+                  v-model="comunaSearch" 
+                  type="text" 
+                  placeholder="Escriba la comuna..." 
+                  class="dc-input"
+                  @focus="showComunaDropdown = true"
+                />
+                <div v-if="showComunaDropdown && filteredComunas.length > 0" class="comuna-dropdown">
+                  <div 
+                    v-for="comuna in filteredComunas" 
+                    :key="comuna" 
+                    class="dropdown-item"
+                    @click="selectComuna(comuna)"
+                  >
+                    {{ comuna }}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -229,6 +247,12 @@ import categoryService from '@/services/productCategoryService';
 import quoteService from '@/services/quoteService';
 import { authService } from '@/services/authService';
 import fotoCaja from '@/assets/caja_dicreme.jpg';
+import { useNotification } from '@/composables/useNotification';
+
+const comunaSearch = ref('');
+const showComunaDropdown = ref(false);
+
+const { notify } = useNotification();
 
 const router = useRouter();
 const currentStep = ref(1);
@@ -255,6 +279,18 @@ const categoriesList = ref<any[]>([]);
 const cartItems = ref<any[]>([]);
 const productSearch = ref('');
 const selectedCategory = ref('Todas');
+
+
+const comunasSantiago = [
+  'Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central', 'Huechuraba', 
+  'Independencia', 'La Cisterna', 'La Florida', 'La Granja', 'La Pintana', 'La Reina', 
+  'Las Condes', 'Lo Barnechea', 'Lo Espejo', 'Lo Prado', 'Macul', 'Maipú', 'Ñuñoa', 
+  'Pedro Aguirre Cerda', 'Peñalolén', 'Providencia', 'Pudahuel', 'Quilicura', 'Quinta Normal', 
+  'Recoleta', 'Renca', 'San Joaquín', 'San Miguel', 'San Ramón', 'Santiago', 'Vitacura',
+  'Puente Alto', 'Pirque', 'San José de Maipo', 'San Bernardo', 'Buin', 'Calera de Tango', 
+  'Paine', 'Colina', 'Lampa', 'Tiltil', 'Talagante', 'El Monte', 'Isla de Maipo', 
+  'Padre Hurtado', 'Peñaflor', 'Melipilla', 'Alhué', 'Curacaví', 'María Pinto', 'San Pedro'
+].sort()
 
 const fetchDistributors = async () => {
   try {
@@ -396,15 +432,17 @@ const totalQuote = computed(() => {
 const nextStep = () => {
   if (currentStep.value === 1) {
     if (!distributorForm.value.nombre_empresa || !distributorForm.value.rut_empresa) {
-      alert('Por favor ingrese al menos el nombre y RUT de la empresa.');
+      notify('Por favor ingrese al menos el nombre y RUT de la empresa.', 'warning');
       return;
     }
+    notify('Datos del cliente registrado correctamente', 'success');
     currentStep.value = 2;
   } else if (currentStep.value === 2) {
     if (cartItems.value.length === 0) {
-      alert('Debe añadir al menos un producto a la cotización.');
+      notify('Debe añadir al menos un producto a la cotización.', 'warning');
       return;
     }
+    notify('Productos añadidos a la cotizacion correctamente', 'success');
     currentStep.value = 3;
   }
 };
@@ -447,7 +485,7 @@ const confirmQuote = async () => {
     };
 
     await quoteService.createQuote(payload);
-    alert('Cotización generada exitosamente.');
+    notify('Cotización generada exitosamente.', 'success');
     router.push('/admin/quotes');
   } catch (error: any) {
     console.error('Error en el flujo:', error);
@@ -457,10 +495,23 @@ const confirmQuote = async () => {
     } else if (error.response?.data?.message) {
        msg = error.response.data.message;
     }
-    alert(`Error: ${msg}`);
+    notify(`Error: ${msg}`, 'error');
   } finally {
     isSubmitting.value = false;
   }
+};
+
+const filteredComunas = computed(() => {
+  if (!comunaSearch.value) return comunasSantiago.slice(0, 5); // Muestra solo las 5 primeras si está vacío
+  return comunasSantiago.filter(c => 
+    c.toLowerCase().includes(comunaSearch.value.toLowerCase())
+  ).slice(0, 5); // Limita a 5 resultados para que no ocupe toda la pantalla
+});
+
+const selectComuna = (comuna: string) => {
+  distributorForm.value.comuna = comuna;
+  comunaSearch.value = comuna;
+  showComunaDropdown.value = false;
 };
 
 onMounted(() => {
@@ -595,6 +646,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative; 
 }
 
 .input-group label {
@@ -611,6 +663,7 @@ onMounted(() => {
   font-size: 1rem;
   outline: none;
   background: white;
+  appearance: none; 
 }
 
 .product-layout {
@@ -867,5 +920,34 @@ onMounted(() => {
 
 .btn-secondary:hover {
   background: #e5e5e5;
+}
+
+.search-comuna {
+  position: relative; /* Clave para que el dropdown se ancle a este div */
+}
+
+
+.comuna-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e4869f;
+  border-radius: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000; /* Siempre encima de todo */
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  margin-top: 5px;
+}
+
+.dropdown-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: #fce4ec;
 }
 </style>
