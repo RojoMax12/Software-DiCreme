@@ -57,4 +57,27 @@ class Usuario_dicremeController extends Controller
     public function getusuariodicremedespachadores(){
         return response()->json($this->usuarioDicremeServices->getUsuariosDicremeDespachador(),201);
     }
+
+    public function toggleestadousuario($id)
+    {
+        $resultado = $this->usuarioDicremeServices->activarydesactivar($id);
+
+        if (is_null($resultado)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se pudo encontrar el usuario.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Estado del usuario cambiado correctamente.',
+            'data' => [
+                'id' => $resultado->id,
+                'nombre_usuario' => $resultado->nombre_usuario,
+                'correo_electronico' => $resultado->correo_electronico,
+                'estado_usuario' => (bool) $resultado->estado_usuario
+            ]
+        ], 200);
+    }
 }
