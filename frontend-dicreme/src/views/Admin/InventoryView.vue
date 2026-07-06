@@ -219,7 +219,7 @@ const expiringbatchesAlerts = computed(() => {
     { 
       id: 'mock1', 
       name: 'Chocolate - 5L', 
-      batchNumber: 'Lote N°0005', 
+      batchNumber: 'Lote N°5', 
       pillClass: 'pill-red' 
     }
   ]

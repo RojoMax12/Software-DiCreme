@@ -61,6 +61,7 @@
             <td class="action-cell">
               <button 
                 :class="batch.remainingUnits > 0 ? 'btn-update-active' : 'btn-update-inactive'"
+                @click="openUpdateModal(batch)"
               >
                 ACTUALIZAR
               </button>
@@ -69,6 +70,14 @@
         </tbody>
       </table>
     </div>
+    <UpdateBatchModal 
+      :isOpen="isUpdateModalOpen" 
+      :BatchNumber="selectedBatch?.number || ''" 
+      :currentUnits="selectedBatch?.remainingUnits || 0"
+      :maxUnits="selectedBatch?.producedQuantity || 0"
+      @close="isUpdateModalOpen = false"
+      @update="handleUpdateBatch"
+    />
   </div>
 </template>
 
@@ -77,12 +86,16 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { Filter, Search, Warehouse } from 'lucide-vue-next';
 import batchService from '@/services/batchService';
+import UpdateBatchModal from '@/components/UpdateBatchModal.vue';
 
 const route = useRoute();
 
 const productId= route.params.id;
 const productName = route.query.product_name || 'Producto Desconocido';
 const productFormat = route.query.format_name || 'Formato Desconocido';
+
+const isUpdateModalOpen = ref(false);
+const selectedBatch = ref<any>(null);
 
 const searchQuery = ref('');
 const batchesData = ref<any[]>([]);
@@ -107,6 +120,34 @@ const CheckIfExpiringSoon = (expirationDate: string) => {
 
   } catch (error){
     return false;
+  }
+};
+
+const openUpdateModal = (batch: any) => {
+  if (batch.remainingUnits > 0) {
+  selectedBatch.value = batch;
+    isUpdateModalOpen.value = true;
+  }
+};
+
+const handleUpdateBatch = async (newQuantity: number) => {
+  if (!selectedBatch.value) return;
+
+  try {
+    const response = await batchService.updateBatchQuantity(selectedBatch.value.id, newQuantity);
+    if (response.status === 200) {
+      selectedBatch.value.remainingUnits = newQuantity;
+      if (newQuantity === 0) {
+        selectedBatch.value.alertExpiration = false;
+      }
+
+    } else {
+      console.error('Error updating batch:', response);
+    }
+  } catch (error) {
+    console.error('Error updating batch:', error);
+  }finally {
+    isUpdateModalOpen.value = false;
   }
 };
 
