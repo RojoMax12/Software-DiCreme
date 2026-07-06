@@ -39,4 +39,9 @@ class Usuario_distribuidoresServices
     {
         return $this->usuarioDistribuidoresRepository->deleteUsuarioDistribuidor($id);
     }
+
+    public function activarydesactivar($id)
+    {
+        return $this->usuarioDistribuidoresRepository->activarydesactivar($id);
+    }
 }

@@ -29,6 +29,7 @@ class ProductoRepository
                 'productos.nombre_producto', 
                 'productos.precio_producto', 
                 'productos.id_formato',
+                'productos.id_categoria',
                 'categorias.nombre_categoria' // Trae el nombre directamente aquí
             ) 
             ->get()

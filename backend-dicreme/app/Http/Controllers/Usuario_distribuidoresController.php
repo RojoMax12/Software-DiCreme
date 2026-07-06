@@ -60,4 +60,28 @@ class Usuario_distribuidoresController extends Controller
     {
         return response()->json($this->usuarioDistribuidoresService->deleteUsuarioDistribuidor($id), 204);
     }
+
+    public function toggleestadousuario($id)
+    {
+        $resultado = $this->usuarioDistribuidoresService->activarydesactivar($id);
+
+        if (is_null($resultado)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se pudo encontrar el usuario distribuidor.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Estado del usuario distribuidor cambiado correctamente.',
+            'data' => [
+                'id' => $resultado->id,
+                'nombre_empresa' => $resultado->nombre_empresa,
+                'rut_empresa' => $resultado->rut_empresa,
+                'correo_electronico' => $resultado->correo_electronico,
+                'estado_usuario' => (bool) $resultado->estado_usuario
+            ]
+        ], 200);
+    }
 }

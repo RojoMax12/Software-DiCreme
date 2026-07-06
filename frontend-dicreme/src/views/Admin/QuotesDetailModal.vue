@@ -319,7 +319,8 @@ interface CatalogProduct {
   id: number;
   nombre_producto: string;
   id_formato: number;
-  id_categoria: number;
+  id_categoria?: number;
+  nombre_categoria?: string;
   precio_producto: number;
 }
 
@@ -391,11 +392,12 @@ const currentUser = ref(obtenerUsuarioInicial());
 // Carga inicial mapeando id_producto e inicializando copias de la cantidad original
 onMounted(async () => {
   try {
-    const [quoteProdsRes, allProdsRes, catsRes, formatsRes] = await Promise.all([
+    const [quoteProdsRes, allProdsRes, catsRes, formatsRes, quoteRes] = await Promise.all([
       quoteService.getQuoteProducts(props.orderId),
       productService.getProducts(),
       productCategoryService.getCategory(),
-      productFormatService.getFormats()
+      productFormatService.getFormats(),
+      quoteService.getQuoteById(props.orderId)
     ]);
 
     availableCatalog.value = allProdsRes.data;
@@ -404,22 +406,30 @@ onMounted(async () => {
     catsRes.data.forEach((c: any) => catMap.value.set(c.id, c.nombre_categoria));
     formatsRes.data.forEach((f: any) => formatMap.value.set(f.id, f.nombre_formato));
 
+    const generalDiscountType = quoteRes?.data?.tipo_descuento_general === 'fixed' ? 'fixed' : 'percentage';
+    const generalDiscountValue = Number(quoteRes?.data?.valor_descuento_general || 0);
+
+    discountType.value = generalDiscountType;
+    discountInput.value = generalDiscountValue;
+
     products.value = quoteProdsRes.data.map((qp: any) => {
       const p: any = prodMap.get(qp.id_producto);
       const subtotal = qp.cantidad * qp.precio_unitario_venta;
+      const productDiscountType = qp?.tipo_descuento === 'fixed' ? 'fixed' : qp?.tipo_descuento === 'percentage' ? 'percentage' : 'none';
+      const productDiscountValue = Number(qp?.valor_descuento || 0);
       
       return {
         id: qp.id,
         id_producto: qp.id_producto, 
         name: p ? p.nombre_producto : 'Producto desconocido',
         format: p ? formatMap.value.get(p.id_formato) : '-',
-        category: p ? catMap.value.get(p.id_categoria) : '-',
+        category: p ? (p.nombre_categoria || catMap.value.get(p.id_categoria) || '-') : '-',
         quantity: qp.cantidad,
         initialQuantity: qp.cantidad, 
         price: Number(qp.precio_unitario_venta),
         subtotal: subtotal,
-        discountType: 'none',
-        discountValue: 0
+        discountType: productDiscountType,
+        discountValue: productDiscountValue
       };
     });
   } catch (error) {
@@ -464,7 +474,7 @@ const addProductToTable = () => {
     id_producto: p.id,
     name: p.nombre_producto,
     format: formatMap.value.get(p.id_formato) || '-',
-    category: catMap.value.get(p.id_categoria) || '-',
+    category: p.nombre_categoria || catMap.value.get(p.id_categoria) || '-',
     quantity: 1,
     initialQuantity: 0, // Inicia en 0 porque no existe en la DB
     price: Number(p.precio_producto),

@@ -42,5 +42,10 @@ class Usuario_dicremeServices
     public function getUsuariosDicremeDespachador(){
         return $this->usuarioDicremeRepository->getUsuariosdespachadores();
     }
+
+    public function activarydesactivar($id)
+    {
+        return $this->usuarioDicremeRepository->activarydesactivar($id);
+    }
 }
 

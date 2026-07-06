@@ -38,6 +38,7 @@
             <div class="col-id">ID</div>
             <div class="col-user">Nombre Usuario</div>
             <div class="col-email">Correo Electrónico</div>
+            <div class="col-status">Estado</div>
             <div class="col-actions">Acciones</div>
         </div>
 
@@ -47,6 +48,20 @@
                     <div class="col-id">#{{ user.id }}</div>
                     <div class="col-user-name">{{ user.nombre_usuario }}</div>
                     <div class="col-email-text">{{ user.correo_electronico }}</div>
+                    
+                    <div class="col-status">
+                        <button 
+                            class="toggle-status-btn" 
+                            :class="{ 'is-active': user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true }"
+                            @click="toggleEstado(user)"
+                        >
+                            <span class="toggle-circle"></span>
+                            <span class="toggle-text">
+                                {{ (user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true) ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </button>
+                    </div>
+
                     <div class="col-actions-btns">
                         <button class="btn-delete" @click="eliminarUsuario(user.id)">Eliminar</button>
                     </div>
@@ -61,6 +76,20 @@
                     <div class="col-id">#{{ user.id }}</div>
                     <div class="col-user-name">{{ user.nombre_usuario }}</div>
                     <div class="col-email-text">{{ user.correo_electronico }}</div>
+                    
+                    <div class="col-status">
+                        <button 
+                            class="toggle-status-btn" 
+                            :class="{ 'is-active': user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true }"
+                            @click="toggleEstado(user)"
+                        >
+                            <span class="toggle-circle"></span>
+                            <span class="toggle-text">
+                                {{ (user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true) ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </button>
+                    </div>
+
                     <div class="col-actions-btns">
                         <button class="btn-delete" @click="eliminarUsuario(user.id)">Eliminar</button>
                     </div>
@@ -118,13 +147,13 @@
 <script setup lang="ts">
 import userService from '@/services/userService';
 import { ref, onMounted, reactive } from 'vue';
-import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
+import { useNotification } from '@/composables/useNotification';
 
 const activeFilter = ref('actual'); 
 const usersAdmin = ref<any[]>([]);
 const usersTrabajador = ref<any[]>([]);
 const isModalOpen = ref(false);
-const { notify } = useNotification(); // Desestructuramos la función notify del composable
+const { notify } = useNotification();
 
 const form = reactive({
     nombre_usuario: '',
@@ -136,6 +165,31 @@ const form = reactive({
 onMounted(() => {
     fetchUsers();
 });
+
+// Función de Cambio de Estado Descomentada y lista
+const toggleEstado = async (user: any) => {
+    const estadoOriginal = user.estado_usuario;
+
+    let nuevoEstado: any;
+    if (typeof estadoOriginal === 'string') {
+        nuevoEstado = estadoOriginal === 'Activo' ? 'Inactivo' : 'Activo';
+    } else {
+        nuevoEstado = (estadoOriginal == 1 || estadoOriginal === true) ? 0 : 1;
+    }
+
+    // Actualización optimista en la interfaz
+    user.estado_usuario = nuevoEstado;
+
+    try {
+        await userService.toggleUserStatus(user.id); 
+        notify("Estado del usuario actualizado correctamente.", "success");
+    } catch (error: any) {
+        // Revertir en caso de error
+        user.estado_usuario = estadoOriginal;
+        console.error("Error al cambiar estado:", error);
+        notify("No se pudo cambiar el estado del usuario.", "error");
+    }
+};
 
 const fetchUsers = async () => {
     try {
@@ -195,7 +249,7 @@ const eliminarUsuario = async (id: number) => {
 </script>
 
 <style scoped>  
-/* --- CAJA PRINCIPAL UNIFICADA (Estilo Dashboard) --- */
+/* --- CAJA PRINCIPAL --- */
 .admin-panel-box {
     width: 95%;
     max-width: 950px;
@@ -207,7 +261,6 @@ const eliminarUsuario = async (id: number) => {
     font-family: 'Inter', sans-serif;
 }
 
-/* Barra superior de herramientas */
 .panel-controls-bar {
     display: flex;
     justify-content: space-between;
@@ -215,7 +268,6 @@ const eliminarUsuario = async (id: number) => {
     gap: 20px;
 }
 
-/* Línea divisoria elegante */
 .panel-divider {
     border: 0;
     height: 1px;
@@ -230,7 +282,7 @@ const eliminarUsuario = async (id: number) => {
     font-weight: 700;
 }
 
-/* --- TABLA SIMÉTRICA --- */
+/* --- TABLA SIMÉTRICA REFACTORIZADA --- */
 .table-header-row, .user-table-row {
     display: flex;
     align-items: center;
@@ -259,13 +311,14 @@ const eliminarUsuario = async (id: number) => {
     background-color: #fffafb;
 }
 
-/* Porcentajes de columnas exactas */
+/* Rediseño de anchos para cuadrar al 100% exacto sin desfases */
 .col-id { flex: 0 0 10%; font-weight: 600; color: #adb5bd; }
-.col-user, .col-user-name { flex: 0 0 30%; font-weight: 500; }
-.col-email, .col-email-text { flex: 0 0 40%; color: #495057; }
+.col-user, .col-user-name { flex: 0 0 25%; font-weight: 500; }
+.col-email, .col-email-text { flex: 0 0 30%; color: #495057; word-break: break-all; }
+.col-status { flex: 0 0 15%; display: flex; align-items: center; } /* 🌟 Añadido para que cuadre el Toggle */
 .col-actions, .col-actions-btns { flex: 0 0 20%; text-align: right; display: flex; justify-content: flex-end; }
 
-/* --- REFACTORIZACIÓN DEL SWITCH SLIDER --- */
+/* --- REFACTORIZACIÓN DEL SWITCH FILTRO --- */
 .switch-container {
     display: flex;
     background-color: #f1f3f5;
@@ -352,11 +405,63 @@ const eliminarUsuario = async (id: number) => {
     border-color: #e11d48;
 }
 
-/* --- MODAL MODERNO --- */
+/* --- BOTÓN SWITCH TOGGLE (ESTADO INTERNO DE FILA) --- */
+.toggle-status-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    min-width: 95px;
+}
+
+.toggle-circle {
+    width: 12px;
+    height: 12px;
+    background-color: #adb5bd;
+    border-radius: 50%;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.toggle-status-btn.is-active {
+    background-color: #ecfdf5; 
+    border-color: #a7f3d0;
+}
+
+.toggle-status-btn.is-active .toggle-circle {
+    background-color: #10b981; 
+    transform: translateX(2px);
+}
+
+.toggle-status-btn.is-active .toggle-text {
+    color: #065f46;
+}
+
+.toggle-status-btn:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+
+.toggle-status-btn.is-active:hover {
+    background-color: #d1fae5;
+    border-color: #6ee7b7;
+}
+
+/* --- MODAL --- */
 .modal-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(50, 44, 68, 0.3);
-    backdrop-filter: blur(4px); /* Suave efecto borroso de fondo */
+    backdrop-filter: blur(4px); 
     display: flex; justify-content: center; align-items: center;
     z-index: 999;
 }
@@ -390,7 +495,6 @@ const eliminarUsuario = async (id: number) => {
 .close-x:hover { color: #495057; }
 
 .modal-body { padding: 24px; }
-
 .form-group { margin-bottom: 18px; display: flex; flex-direction: column; }
 .form-group label { font-size: 0.8rem; font-weight: 700; color: #495057; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
 

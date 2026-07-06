@@ -111,6 +111,7 @@ const router = createRouter({
       path: '/admin/lotes/:id',
       name: 'admin-batches-detail',
       component: () => import('../views/Admin/BatchesView.vue'),
+      meta: {useLoader: true}
 
     }
   ]

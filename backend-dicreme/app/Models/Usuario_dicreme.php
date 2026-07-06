@@ -28,6 +28,7 @@ class Usuario_dicreme extends Authenticatable
     {
         return [
             'contrasena' => 'hashed',
+            'estado_usuario' => 'boolean',
         ];
     }
 

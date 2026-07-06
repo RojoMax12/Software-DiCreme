@@ -30,6 +30,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error.response?.status;
+    const isAuthError = status === 401 || status === 403 || status === 419;
+
+    if (isAuthError) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.replace('/login');
+      }
+    }
+
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
