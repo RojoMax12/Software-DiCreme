@@ -59,7 +59,7 @@ Route::middleware('throttle:api_lectura')->group(function() {
 // ==========================================
 // 3. ENTORNO PROTEGIDO - REQUIERE INICIO DE SESIÓN JWT
 // ==========================================
-Route::middleware('jwt.auth')->group(function () {
+Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
 
     // --- Sub-Grupo de Escritura (POST, PUT, DELETE) ---
     Route::middleware('throttle:api_escritura')->group(function () {

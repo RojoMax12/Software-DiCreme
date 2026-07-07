@@ -26,9 +26,21 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores globales
+// 🚨 INTERCEPTOR DE RESPUESTA: Estructura JSend y Manejo de Errores Globales
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+
+    if (response.data && response.data.status === 'success') {
+      // Verificamos si existe la llave "data" anidada.
+      // Si existe, reemplazamos la respuesta de Axios directamente por tu arreglo/objeto real.
+      if (response.data.data !== undefined) {
+        response.data = response.data.data;
+      }
+    }
+    
+    // Devolvemos la respuesta modificada hacia tus componentes (Vue)
+    return response;
+  },
   (error) => {
     const status = error.response?.status;
     const isAuthError = status === 401 || status === 403 || status === 419;

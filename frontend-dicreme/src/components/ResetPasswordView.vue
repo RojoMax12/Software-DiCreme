@@ -1,35 +1,61 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Mail, ArrowLeft } from 'lucide-vue-next'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Lock, ArrowLeft } from 'lucide-vue-next'
 import { authService } from '../services/authService'
 
 const router = useRouter()
-const email = ref('')
+const route = useRoute()
+
+const token = ref('')
+const password = ref('')
+const confirmPassword = ref('')
 const isLoading = ref(false)
-const feedbackMessage = ref('')
+const errorMessage = ref('')
+const successMessage = ref('')
+
+onMounted(() => {
+  const t = route.query.token
+  token.value = typeof t === 'string' ? t : ''
+
+  if (!token.value) {
+    errorMessage.value = 'Este enlace no es válido. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".'
+  }
+})
 
 const goBack = () => {
-  router.back()
+  router.push('/login')
 }
 
-const handleResetPassword = async () => {
-  if (!email.value) {
-    feedbackMessage.value = 'Ingresa tu correo electrónico.'
+const handleSubmit = async () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  if (!token.value) {
+    errorMessage.value = 'Este enlace no es válido. Solicita uno nuevo.'
+    return
+  }
+
+  if (!password.value || !confirmPassword.value) {
+    errorMessage.value = 'Completa ambos campos.'
+    return
+  }
+
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = 'Las contraseñas no coinciden.'
     return
   }
 
   isLoading.value = true
-  feedbackMessage.value = ''
 
   try {
-    const data = await authService.forgotPassword(email.value)
-    // El backend siempre responde el mismo mensaje genérico, exista o no el
-    // correo, para no revelar qué cuentas existen en el sistema.
-    feedbackMessage.value = data.message
+    const data = await authService.resetPassword(token.value, password.value, confirmPassword.value)
+    successMessage.value = data.message || 'Tu contraseña fue restablecida correctamente.'
+    setTimeout(() => router.push('/login'), 2500)
   } catch (error: any) {
-    // Aun si hay un error de red, no distinguimos si el correo existe o no.
-    feedbackMessage.value = 'Si el correo está registrado, te enviaremos un enlace de recuperación en unos minutos.'
+    // El backend devuelve mensajes como "Token inválido o expirado" sin
+    // revelar más detalle que eso.
+    errorMessage.value = error.response?.data?.message || 'No se pudo restablecer la contraseña. Intenta nuevamente.'
   } finally {
     isLoading.value = false
   }
@@ -37,41 +63,54 @@ const handleResetPassword = async () => {
 </script>
 
 <template>
-  <div class="forgot-container">
-    <div class="forgot-wrapper">
+  <div class="reset-container">
+    <div class="reset-wrapper">
       <div class="back-button" @click="goBack">
         <ArrowLeft :size="24" color="#e4869f" />
         <span>Volver</span>
       </div>
 
-      <div class="forgot-card">
+      <div class="reset-card">
         <div class="logo-section">
-          <img src="../assets/logo_dicreme.png" alt="DiCreme Logo" class="logo" />
+          <img src="../assets/logo_dicreme.webp" alt="DiCreme Logo" class="logo" />
         </div>
-        
+
         <div class="divider"></div>
 
         <div class="text-section">
-          <h2>¿Olvidaste tu contraseña?</h2>
-          <p>Ingresa tu correo electrónico y te enviaremos instrucciones para restablecerla.</p>
+          <h2>Restablecer contraseña</h2>
+          <p>Ingresa tu nueva contraseña. Debe tener al menos 10 caracteres, con mayúsculas, minúsculas y números.</p>
         </div>
 
         <div class="form-section">
           <div class="input-group">
-            <input 
-              v-model="email" 
-              type="email" 
-              placeholder="Correo electrónico" 
+            <input
+              v-model="password"
+              type="password"
+              placeholder="Nueva contraseña"
               class="custom-input"
+              :disabled="!token"
             />
-            <Mail class="input-icon" :size="20" color="#322c44" />
+            <Lock class="input-icon" :size="20" color="#322c44" />
           </div>
 
-          <button @click="handleResetPassword" class="btn btn-primary" :disabled="isLoading">
-            {{ isLoading ? 'ENVIANDO...' : 'ENVIAR INSTRUCCIONES' }}
-          </button>
+          <div class="input-group">
+            <input
+              v-model="confirmPassword"
+              type="password"
+              placeholder="Confirma la nueva contraseña"
+              class="custom-input"
+              :disabled="!token"
+            />
+            <Lock class="input-icon" :size="20" color="#322c44" />
+          </div>
 
-          <p v-if="feedbackMessage" class="feedback-message">{{ feedbackMessage }}</p>
+          <p v-if="errorMessage" class="feedback-message error">{{ errorMessage }}</p>
+          <p v-if="successMessage" class="feedback-message success">{{ successMessage }}</p>
+
+          <button @click="handleSubmit" class="btn btn-primary" :disabled="isLoading || !token">
+            {{ isLoading ? 'GUARDANDO...' : 'RESTABLECER CONTRASEÑA' }}
+          </button>
         </div>
       </div>
     </div>
@@ -79,7 +118,7 @@ const handleResetPassword = async () => {
 </template>
 
 <style scoped>
-.forgot-container {
+.reset-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -88,7 +127,7 @@ const handleResetPassword = async () => {
   font-family: sans-serif;
 }
 
-.forgot-wrapper {
+.reset-wrapper {
   position: relative;
   width: 100%;
   max-width: 450px;
@@ -118,7 +157,7 @@ const handleResetPassword = async () => {
   margin-top: 0.5rem;
 }
 
-.forgot-card {
+.reset-card {
   background-color: white;
   padding: 2.5rem;
   border-radius: 1.5rem;
@@ -191,6 +230,10 @@ const handleResetPassword = async () => {
   box-sizing: border-box;
 }
 
+.custom-input:disabled {
+  opacity: 0.6;
+}
+
 .input-icon {
   position: absolute;
   right: 1rem;
@@ -214,21 +257,29 @@ const handleResetPassword = async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.btn-primary {
-  background-color: #e4869f;
-  color: white;
-}
-
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
+.btn-primary {
+  background-color: #e4869f;
+  color: white;
+}
+
 .feedback-message {
   text-align: center;
-  color: #322c44;
   font-size: 0.9rem;
   margin: 0;
+  width: 100%;
+}
+
+.feedback-message.error {
+  color: #c0392b;
+}
+
+.feedback-message.success {
+  color: #27ae60;
 }
 </style>

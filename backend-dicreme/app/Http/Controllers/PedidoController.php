@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Services\PedidoServices;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PedidoController extends Controller
@@ -13,17 +14,7 @@ class PedidoController extends Controller
         $this->pedidoService = $pedidoService;
     }
 
-    public function index()
-    {
-        return response()->json($this->pedidoService->getAllPedidos());
-    }
-
-    public function show($id)
-    {
-        return response()->json($this->pedidoService->getPedidoById($id));
-    }
-
-    public function store(Request $request)
+    public function store(Request $request):JsonResponse
     {
         $data = $request->validate([
             'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
@@ -35,10 +26,25 @@ class PedidoController extends Controller
             'monto_final' => 'required|integer',
         ]);
 
-        return response()->json($this->pedidoService->createPedido($data), 201);
+        try {
+            $pedido_creado = $this->pedidoService->createPedido($data);
+
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $pedido_creado,
+            'message' =>"Pedido creado exitosamente"], 
+            200); 
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al crear el pedido' . $e->getMessage()
+            ], 400);
+        }
+
+        
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id):JsonResponse
     {
         $data = $request->validate([
             'id_cotizacion' => 'sometimes|required|integer|exists:cotizaciones,id',
@@ -50,13 +56,53 @@ class PedidoController extends Controller
             'monto_final' => 'sometimes|required|integer',
         ]);
 
-        return response()->json($this->pedidoService->updatePedido($id, $data));
+        try {
+            $pedido_actualizado = $this->pedidoService->updatePedido($id, $data);
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $pedido_actualizado,
+            'message' => "Pedido actualizado correctamente"], 
+            200); 
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al actualizar el pedido' . $e->getMessage()
+            ], 400);
+        }
+
+
     }
 
-    public function destroy($id)
-    {
-        return response()->json($this->pedidoService->deletePedido($id));
+    public function destroy($id):JsonResponse
+    {   
+        try {
+            $pedido_eliminado = $this->pedidoService->deletePedido($id);
+
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $pedido_eliminado,
+            'message' => "Pedido eliminado correctamente"], 
+            200); 
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al eliminar el pedido' . $e->getMessage()
+            ], 400);
+        }
+
     }
+
+
+        public function index()
+    {
+        return response()->json($this->pedidoService->getAllPedidos());
+    }
+
+    public function show($id)
+    {
+        return response()->json($this->pedidoService->getPedidoById($id));
+    }
+
 
     public function getallPedidosByUsuariodicreme($id_usuario_dicreme)
     {

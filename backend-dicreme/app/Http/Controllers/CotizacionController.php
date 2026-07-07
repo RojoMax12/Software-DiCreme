@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Services\CotizacionServices;
 use Illuminate\Http\Request;
-
+use Illuminate\Http\JsonResponse; // Importación obligatoria
+use Exception; // Para el manejo de errores
 
 class CotizacionController extends Controller
 {
@@ -15,188 +17,215 @@ class CotizacionController extends Controller
         $this->cotizacionServices = $cotizacionServices;
     }
 
-    public function index()
+    public function index(): JsonResponse
     {
-        return response()->json($this->cotizacionServices->getAllCotizaciones());
+        try {
+            $cotizaciones = $this->cotizacionServices->getAllCotizaciones();
+            return response()->json([
+                'status' => 'success',
+                'data'   => $cotizaciones
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener las cotizaciones', $e);
+        }
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        // Validamos solo los campos que existen en la tabla y los que son necesarios
         $data = $request->validate([
             'id_distribuidor'      => 'required|integer|exists:usuarios_distribuidores,id',
             'id_usuario_dicreme'   => 'nullable|integer|exists:usuarios_dicreme,id',
             'id_estado_cotizacion' => 'required|integer|exists:estados_cotizacion,id',
-            'total_cotizacion'     => 'required|numeric', // Cambiado a numeric para ser preciso
-            'persona_recibe' => 'required|string',
-            
-            // Validamos el array de productos que viene en el JSON
+            'total_cotizacion'     => 'required|numeric',
+            'persona_recibe'       => 'required|string',
             'cotizacion_productos' => 'required|array|min:1',
-            'cotizacion_productos.*.id_producto'     => 'required|integer|exists:productos,id',
-            'cotizacion_productos.*.cantidad'        => 'required|integer|min:1',
+            'cotizacion_productos.*.id_producto'           => 'required|integer|exists:productos,id',
+            'cotizacion_productos.*.cantidad'              => 'required|integer|min:1',
             'cotizacion_productos.*.precio_unitario_venta' => 'required|numeric',
         ]);
 
-        // Agregamos las fechas que el usuario NO envía, pero que el sistema debe registrar
-        $data['fecha_creacion'] = now()->toDateString();
-        $data['hora_creacion']  = now()->toTimeString();
+        try {
+            // Asignación de fechas del lado del servidor (seguridad)
+            $data['fecha_creacion'] = now()->toDateString();
+            $data['hora_creacion']  = now()->toTimeString();
+            $data['subtotal_cotizacion'] = $data['total_cotizacion'];
 
-        $data['subtotal_cotizacion'] = $data['total_cotizacion'];
+            $cotizacion = $this->cotizacionServices->createCotizacion($data);
 
-        return response()->json($this->cotizacionServices->createCotizacion($data), 201);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Cotización creada exitosamente',
+                'data'    => $cotizacion
+            ], 201);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al crear la cotización', $e);
+        }
     }
 
-    public function show($id)
+    public function show($id): JsonResponse
     {   
-        return response()->json($this->cotizacionServices->getCotizacionById($id));
+        try {
+            $cotizacion = $this->cotizacionServices->getCotizacionById($id);
+            
+            if (!$cotizacion) {
+                return response()->json(['status' => 'error', 'message' => 'Cotización no encontrada'], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => $cotizacion
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener la cotización', $e);
+        }
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         $data = $request->validate([
-            'id_distribuidor' => 'required|integer|exists:usuarios_distribuidores,id',
-            'id_usuario_dicreme' => 'required | integer| exists:usuarios_dicreme, id',
+            'id_distribuidor'      => 'required|integer|exists:usuarios_distribuidores,id',
+            'id_usuario_dicreme'   => 'required|integer|exists:usuarios_dicreme,id',
             'id_estado_cotizacion' => 'required|integer|exists:estados_cotizacion,id',
             'total_cotizacion'     => 'required|numeric',
-            'fecha_creacion',
-            'hora_creacion',
-            'persona_recibe' => 'required|string'
+            'persona_recibe'       => 'required|string'
         ]);
 
-        return response()->json($this->cotizacionServices->updateCotizacion($id, $data));
+        try {
+            $cotizacion = $this->cotizacionServices->updateCotizacion($id, $data);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Cotización actualizada',
+                'data'    => $cotizacion
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al actualizar la cotización', $e);
+        }
     }
 
-    public function updateTotal(Request $request, $id)
+    public function updateTotal(Request $request, $id): JsonResponse
     {
         $data = $request->validate([
             'total_cotizacion' => 'required|numeric',
         ]);
 
-        return response()->json($this->cotizacionServices->updateTotalCotizacion($id, $data['total_cotizacion']));
+        try {
+            $resultado = $this->cotizacionServices->updateTotalCotizacion($id, $data['total_cotizacion']);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Total actualizado',
+                'data'    => $resultado
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al actualizar el total', $e);
+        }
     }
 
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
-        return response()->json($this->cotizacionServices->deleteCotizacion($id));
+        try {
+            $this->cotizacionServices->deleteCotizacion($id);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Cotización eliminada correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al eliminar la cotización', $e);
+        }
     }
 
-    public function transformarCotizacionEnPedido($idCotizacion)
-{
-    try {
-        $pedido = $this->cotizacionServices->transformarCotizacionEnPedido($idCotizacion);
+    public function transformarCotizacionEnPedido($idCotizacion): JsonResponse
+    {
+        try {
+            $pedido = $this->cotizacionServices->transformarCotizacionEnPedido($idCotizacion);
 
-        if ($pedido === false) { 
+            if ($pedido === false) { 
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'La cotización no está en estado completado o no se pudo procesar.',
+                ], 400); 
+            }
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'La cotización ahora es un pedido',
+                'data'    => $pedido
+            ], 200);
+        } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'La cotización no está en estado completado o no se pudo procesar.',
-            ], 400); 
+                'message' => $e->getMessage() // Captura stock insuficiente
+            ], 422);
         }
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'La cotización ahora es un pedido',
-            'data'    => $pedido
-        ], 200);
-
-    } catch (\Exception $e) {
-        // ✨ AQUÍ ATRAPAMOS EL ERROR DE STOCK INSUFICIENTE
-        // Retornamos un 422 para que el Frontend sepa que fue un error de validación/lógica
-        return response()->json([
-            'status'  => 'error',
-            'message' => $e->getMessage() // "Stock insuficiente..."
-        ], 422);
-    }
-}
-
-    public function getallCotizacionesByUsuariodicreme($id_usuario_dicreme)
-    {
-        return response()->json($this->cotizacionServices->getCotizacionesByUsuario($id_usuario_dicreme));
-
     }
 
-    public function tomarcotizacion($id_cotizacion, $id_usuario_dicreme){
-        
-    $cotizacionActualizada = $this->cotizacionServices->tomarcotizacionadmin($id_cotizacion, $id_usuario_dicreme);
+    public function tomarcotizacion($id_cotizacion, $id_usuario_dicreme): JsonResponse
+    {
+        try {
+            $cotizacion = $this->cotizacionServices->tomarcotizacionadmin($id_cotizacion, $id_usuario_dicreme);
 
-        if($cotizacionActualizada === false){
+            if ($cotizacion === false) {
+                return response()->json(['status' => 'error', 'message' => 'La cotizacion no existe'], 404);
+            }
+            if ($cotizacion === null) {
+                return response()->json(['status' => 'error', 'message' => 'El usuario no existe'], 404);
+            }
+
             return response()->json([
-            'status'  => 'error',
-            'message' => 'La cotizacion no existe',
-        ], 404);
+                'status'  => 'success',
+                'message' => 'El administrador tomó la cotización correctamente.',
+                'data'    => $cotizacion
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al tomar cotización', $e);
         }
-
-        if($cotizacionActualizada === null){
-            return response()->json([
-            'status'  => 'error',
-            'message' => 'el usuario no existe',
-        ], 404);
-        }
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'El administrador tomó la cotización correctamente.',
-            'data'    => $cotizacionActualizada
-        ], 200);
-
     }
 
-
-    public function dejarCotizacion($id, $id_usuario_dicreme) 
+    public function dejarCotizacion($id, $id_usuario_dicreme): JsonResponse
     {
-        $resultado = $this->cotizacionServices->Dejarcotizacionadmin($id, $id_usuario_dicreme);
+        try {
+            $resultado = $this->cotizacionServices->Dejarcotizacionadmin($id, $id_usuario_dicreme);
 
-        if ($resultado === false) {
+            if ($resultado === false) {
+                return response()->json(['status' => 'error', 'message' => 'No tienes permisos para liberar esta cotización.'], 403);
+            }
+            if ($resultado === null) {
+                return response()->json(['status' => 'error', 'message' => 'La cotización solicitada no existe.'], 404);
+            }
+
             return response()->json([
-                'status' => 'error',
-                'message' => 'No tienes permisos para liberar esta cotización porque está asignada a otro administrador.'
-            ], 403); // 403 Forbidden (Prohibido)
+                'status'  => 'success',
+                'message' => 'Cotización liberada correctamente.',
+                'data'    => $resultado
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al dejar cotización', $e);
         }
-
-        if ($resultado === null) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'La cotización solicitada no existe.'
-            ], 404); // 404 Not Found
-        }
-
-        // Éxito total
-        return response()->json([
-            'status' => 'success',
-            'message' => 'La cotización fue liberada correctamente y vuelve a estar disponible.',
-            'data' => $resultado
-        ], 200); // 200 OK
-    }   
-
-
-    public function cancelarCotizacion($id, $id_usuario) 
-    {
-        $resultado = $this->cotizacionServices->Cancelarcotizacionadmin($id, $id_usuario);
-
-        if ($resultado === false) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No tienes permisos para cancelar esta cotización porque está asignada a otro administrador.'
-            ], 403); // 403 Forbidden (Prohibido)
-        }
-
-        if ($resultado === null) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'La cotización solicitada no existe.'
-            ], 404); // 404 Not Found
-        }
-
-        // Éxito total
-        return response()->json([
-            'status' => 'success',
-            'message' => 'La cotización fue cancelada exitosamente',
-            'data' => $resultado
-        ], 200); // 200 OK
     }
 
-    public function validarCotizacion(Request $request, $id, $id_usuario_dicreme)
+    public function cancelarCotizacion($id, $id_usuario): JsonResponse
     {
-        
+        try {
+            $resultado = $this->cotizacionServices->Cancelarcotizacionadmin($id, $id_usuario);
+
+            if ($resultado === false) {
+                return response()->json(['status' => 'error', 'message' => 'No tienes permisos para cancelar esta cotización.'], 403);
+            }
+            if ($resultado === null) {
+                return response()->json(['status' => 'error', 'message' => 'La cotización solicitada no existe.'], 404);
+            }
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'La cotización fue cancelada exitosamente',
+                'data'    => $resultado
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al cancelar la cotización', $e);
+        }
+    }
+
+    public function validarCotizacion(Request $request, $id, $id_usuario_dicreme): JsonResponse
+    {
         $request->validate([
             'discountType' => 'required|in:percentage,fixed,none',
             'discountInput' => 'required|numeric|min:0', 
@@ -207,137 +236,127 @@ class CotizacionController extends Controller
         ]);
 
         try {
-
-            // 2. Llamamos a tu función del servicio pasando los 3 datos
             $this->cotizacionServices->validarCotizacion($id, $id_usuario_dicreme, $request->all());
 
             return response()->json([
-                'status' => 'success',
-                'message' => '¡Cotización validada, montos aplicados y pasada a estado Completado con éxito!'
+                'status'  => 'success',
+                'message' => '¡Cotización validada y pasada a estado Completado con éxito!'
             ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Error al validar la cotización: ' . $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al validar la cotización', $e);
         }
     }
 
-    public function getallCotizacionesByUsuariodistribuidor($id_usuario_distribuidor){
-        return response()->json($this->cotizacionServices->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor));
-    }
-
-    public function getdetailcotizacion($id){
-        
-        $resultado = $this->cotizacionServices->getDetailCotizacion($id);
-
-        if( $resultado === false){
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No existe la cotización'
-            ], 403); 
-        
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Detalles de la cotizacion obtenidas exitosamente',
-            'data' => $resultado
-        ], 200); // 200 OK
-    }
-
-    public function addproductocotizacion(Request $request, $id_cotizacion)
+    public function getallCotizacionesByUsuariodistribuidor($id_usuario_distribuidor): JsonResponse
     {
-        // Validación minimalista y optimizada
+        try {
+            $cotizaciones = $this->cotizacionServices->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor);
+            return response()->json(['status' => 'success', 'data' => $cotizaciones], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener las cotizaciones del distribuidor', $e);
+        }
+    }
+
+    public function getdetailcotizacion($id): JsonResponse
+    {
+        try {
+            $resultado = $this->cotizacionServices->getDetailCotizacion($id);
+
+            if ($resultado === false) {
+                return response()->json(['status' => 'error', 'message' => 'No existe la cotización'], 404); 
+            }
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Detalles obtenidos exitosamente',
+                'data'    => $resultado
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener el detalle', $e);
+        }
+    }
+
+    public function addproductocotizacion(Request $request, $id_cotizacion): JsonResponse
+    {
         $data = $request->validate([
             'id_producto' => 'required|integer|exists:productos,id',
             'cantidad'    => 'required|integer|min:1',
         ]);
 
         try {
-            // Formateamos como lista para el servicio
-            $listaProductos = [
-                [
-                    'id_producto' => $data['id_producto'],
-                    'cantidad'    => $data['cantidad']
-                ]
-            ];
-
-            $cotizacionActualizada = $this->cotizacionServices
-                ->add_productos_to_cotizacion($id_cotizacion, $listaProductos);
+            $listaProductos = [['id_producto' => $data['id_producto'], 'cantidad' => $data['cantidad']]];
+            $cotizacion = $this->cotizacionServices->add_productos_to_cotizacion($id_cotizacion, $listaProductos);
 
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Producto añadido correctamente.',
-                'data'    => $cotizacionActualizada
+                'data'    => $cotizacion
             ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al añadir producto', $e);
         }
     }
 
-    public function removeProductoCotizacion(Request $request, $id_cotizacion)
-{
-    // Solo validamos el ID del producto y la cantidad a quitar
-    $data = $request->validate([
-        'id_producto' => 'required|integer|exists:productos,id',
-        'cantidad'    => 'required|integer|min:1', // Cantidad que se quiere restar/quitar
-    ]);
+    public function removeProductoCotizacion(Request $request, $id_cotizacion): JsonResponse
+    {
+        $data = $request->validate([
+            'id_producto' => 'required|integer|exists:productos,id',
+            'cantidad'    => 'required|integer|min:1', 
+        ]);
 
-    try {
-        $listaProductos = [
-            [
-                'id_producto' => $data['id_producto'],
-                'cantidad'    => $data['cantidad']
-            ]
-        ];
+        try {
+            $listaProductos = [['id_producto' => $data['id_producto'], 'cantidad' => $data['cantidad']]];
+            $cotizacion = $this->cotizacionServices->remove_productos_to_cotizacion($id_cotizacion, $listaProductos);
 
-        // Llamamos al servicio para procesar la baja
-        $cotizacionActualizada = $this->cotizacionServices
-            ->remove_productos_to_cotizacion($id_cotizacion, $listaProductos);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Producto removido con éxito.',
+                'data'    => $cotizacion
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
+        }
+    }
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Producto modificado/removido de la cotización con éxito.',
-            'data'    => $cotizacionActualizada
-        ], 200);
+    public function destroyProductoCotizacion(Request $request, $id_cotizacion): JsonResponse
+    {
+        $data = $request->validate([
+            'id_producto' => 'required|integer|exists:productos,id',
+        ]);
 
-    } catch (\Exception $e) {
+        try {
+            $cotizacion = $this->cotizacionServices->force_remove_producto($id_cotizacion, $data['id_producto']);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Producto eliminado por completo.',
+                'data'    => $cotizacion
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function getallCotizacionesByUsuariodicreme($id_usuario_dicreme): JsonResponse
+    {
+        try {
+            $cotizaciones = $this->cotizacionServices->getCotizacionesByUsuario($id_usuario_dicreme);
+            return response()->json(['status' => 'success', 'data' => $cotizaciones], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener cotizaciones del usuario', $e);
+        }
+    }
+
+    /**
+     * Función privada (Helper) para centralizar y estandarizar los errores 500.
+     * Si la App está en debug (Local) te muestra el error real, si está en Producción lo oculta.
+     */
+    private function errorResponse(string $message, Exception $e): JsonResponse
+    {
         return response()->json([
             'status'  => 'error',
-            'message' => 'Error al remover el producto: ' . $e->getMessage()
-        ], 400); // 400 Bad Request si la regla de negocio falla
+            'message' => $message,
+            'debug'   => config('app.debug') ? $e->getMessage() : 'Contacte al administrador'
+        ], 500);
     }
-}
-
-public function destroyProductoCotizacion(Request $request, $id_cotizacion)
-{
-    $data = $request->validate([
-        'id_producto' => 'required|integer|exists:productos,id',
-    ]);
-
-    try {
-        // Llamamos al nuevo método del servicio
-        $cotizacionActualizada = $this->cotizacionServices
-            ->force_remove_producto($id_cotizacion, $data['id_producto']);
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Producto eliminado por completo de la cotización.',
-            'data'    => $cotizacionActualizada
-        ], 200);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'Error al eliminar el producto: ' . $e->getMessage()
-        ], 400);
-    }
-}
-
 }

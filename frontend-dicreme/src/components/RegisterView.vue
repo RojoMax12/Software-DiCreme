@@ -9,6 +9,11 @@ import {
 import { authService } from '../services/authService'
 import SuccessAccountModal from './SuccessAccountModal.vue'
 
+const hasMinLength = computed(() => form.value.contrasena.length >= 8)
+const hasUpperCase = computed(() => /[A-Z]/.test(form.value.contrasena))
+const hasNumber = computed(() => /[0-9]/.test(form.value.contrasena))
+const hasSpecialChar = computed(() => /[@$!%*#?&]/.test(form.value.contrasena))
+
 const router = useRouter()
 
 const form = ref({
@@ -19,7 +24,7 @@ const form = ref({
   comuna: '',
   direccion: '',
   contrasena: '',
-  confirmPassword: ''
+  contrasena_confirmation: ''
 })
 
 const isLoading = ref(false)
@@ -90,7 +95,7 @@ const handleRegister = async () => {
     return
   }
 
-  if (form.value.contrasena !== form.value.confirmPassword) {
+  if (form.value.contrasena !== form.value.contrasena_confirmation) {
     errorMessage.value = 'Las contraseñas no coinciden.'
     return
   }
@@ -99,7 +104,7 @@ const handleRegister = async () => {
   isLoading.value = true
 
   try {
-    // 2. Llamada al backend
+
     await authService.registerDistribuidor({
       rut_empresa: form.value.rut_empresa,
       nombre_empresa: form.value.nombre_empresa,
@@ -107,13 +112,14 @@ const handleRegister = async () => {
       telefono: form.value.telefono,
       comuna: form.value.comuna,
       direccion: form.value.direccion,
-      contrasena: form.value.contrasena
+      contrasena: form.value.contrasena,
+      contrasena_confirmation: form.value.contrasena_confirmation
     })
+
 
     // 3. Éxito: Mostramos el modal
     showSuccessModal.value = true
   } catch (error: any) {
-    // 4. Error: Capturamos mensajes del backend (ej. "El correo_electronico ya existe")
     errorMessage.value = error.response?.data?.message || 'Error al crear la cuenta. Intenta nuevamente.'
   } finally {
     isLoading.value = false
@@ -274,7 +280,7 @@ const goToLogin = () => {
           <!-- Fila 7: Confirmar Contraseña -->
           <div class="input-group">
             <input 
-              v-model="form.confirmPassword" 
+              v-model="form.contrasena_confirmation" 
               :type="showConfirmPassword ? 'text' : 'password'" 
               placeholder="Confirmar contraseña" 
               class="custom-input"
@@ -284,6 +290,13 @@ const goToLogin = () => {
               <Eye v-if="!showConfirmPassword" class="input-icon clickable" :size="20" color="#322c44" />
               <EyeOff v-else class="input-icon clickable" :size="20" color="#322c44" />
             </div>
+          </div>
+
+          <div class="password-hints">
+            <p :class="{'valid': hasMinLength}">✓ Mínimo 8 caracteres</p>
+            <p :class="{'valid': hasUpperCase}">✓ Una mayúscula</p>
+            <p :class="{'valid': hasNumber}">✓ Un número</p>
+            <p :class="{'valid': hasSpecialChar}">✓ Un carácter especial (@$!%*#?&)</p>
           </div>
 
           <button 
@@ -657,4 +670,7 @@ const goToLogin = () => {
   background-color: #e4869f;
   color: white;
 }
+
+.password-hints { font-size: 0.75rem; color: #9793a0; margin-top: 5px; }
+.password-hints p.valid { color: #16a34a; }
 </style>

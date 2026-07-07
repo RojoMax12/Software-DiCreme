@@ -10,7 +10,7 @@ use RuntimeException;
 
 class JwtService
 {   
-    public function issueForUser(Authenticatable $user, array $extraClaims = []): array
+    public function issueForUser(Authenticatable $user, array $extraClaims = [], ?int $ttlSecondsOverride = null): array
     {
         $issuedAt = now()->timestamp;
         $expiresIn = $ttlSecondsOverride ?? $this->ttlInSeconds();

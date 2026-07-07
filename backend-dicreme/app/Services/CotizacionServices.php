@@ -91,6 +91,7 @@ class CotizacionServices
 
 public function transformarCotizacionEnPedido($idCotizacion)
 {
+    return DB::transaction(function () use ($idCotizacion) {
     $cotizacion = $this->cotizacionRepository->getCotizacionConProductos($idCotizacion);
     $usuario = $this->usuario_distribuidoresRepository->getUsuarioDistribuidorById($cotizacion->id_distribuidor);
 
@@ -172,6 +173,7 @@ public function transformarCotizacionEnPedido($idCotizacion)
 
 
     return $pedido;
+    });
 }
 
     public function tomarcotizacionadmin($id_cotizacion, $id_usuario_dicreme){

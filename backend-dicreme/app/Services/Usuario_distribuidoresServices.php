@@ -3,6 +3,8 @@
 namespace App\Services;
 use App\Repositories\Usuario_distribuidoresRepository;
 use App\Repositories\RolRepository;
+use Illuminate\Support\Facades\Hash;
+
 class Usuario_distribuidoresServices
 {
     protected $usuarioDistribuidoresRepository;
@@ -30,6 +32,7 @@ class Usuario_distribuidoresServices
         
         $rolDistribuidor = $this->rolRepository->getRoleByName('Distribuidor');
         $data['id_rol'] = $rolDistribuidor->id;
+        $data['contrasena'] = Hash::make($data['contrasena']);
 
         return $this->usuarioDistribuidoresRepository->createUsuarioDistribuidor($data);
     }
