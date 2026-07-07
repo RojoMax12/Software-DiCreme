@@ -31,11 +31,12 @@ class Usuario_distribuidoresController extends Controller
             'telefono' => 'required|string|max:20',
             'direccion' => 'required|string|max:255',
             'comuna' => 'required|string|max:255',
-            'id_rol' => 'required|integer|exists:rol,id',
             'contrasena' => 'required|string|min:6',
             'rut_empresa' => 'required|string|max:255|unique:usuarios_distribuidores,rut_empresa',
             'nombre_empresa' => 'required|string|max:255',
         ]);
+
+        
 
         return response()->json($this->usuarioDistribuidoresService->createUsuarioDistribuidor($data), 201);
     }

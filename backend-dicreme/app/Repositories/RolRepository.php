@@ -24,6 +24,10 @@ class RolRepository
         return Rol::create($data);
     }
 
+    public function getRoleByName($name){
+        return Rol::where("nombre", $name)->firstOrFail();
+    }
+
     public function updateRole($id, $data)
     {
         $role = Rol::find($id);

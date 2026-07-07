@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth' => AuthenticateJwt::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'audit.pii' => \App\Http\Middleware\AuditPersonalDataAccess::class,
         ]);
 
         $middleware->api(append: [

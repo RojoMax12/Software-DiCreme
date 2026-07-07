@@ -13,7 +13,7 @@ class JwtService
     public function issueForUser(Authenticatable $user, array $extraClaims = []): array
     {
         $issuedAt = now()->timestamp;
-        $expiresIn = $this->ttlInSeconds();
+        $expiresIn = $ttlSecondsOverride ?? $this->ttlInSeconds();
         $expiresAt = $issuedAt + $expiresIn;
 
         $claims = array_merge([
