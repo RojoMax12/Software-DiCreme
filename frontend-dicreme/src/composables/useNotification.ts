@@ -15,7 +15,7 @@ export function useNotification() {
 
     setTimeout(() => {
       notifications.value = notifications.value.filter(n => n.id !== id);
-    }, 4000);
+    }, 2000);
   };
 
   return {

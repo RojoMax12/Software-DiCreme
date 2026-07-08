@@ -46,79 +46,79 @@ const router = createRouter({
       path: '/admin',
       name: 'admin-home',
       component: () => import('../views/Admin/AdminHomeView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
     },
     {
       path: '/admin/quotes',
       name: 'admin-quotes',
       component: () => import('../views/Admin/Quotes.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1] }
     },
     {
       path: '/admin/orders',
       name: 'admin-orders',
       component: () => import('../views/Admin/Orders.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
     },
     {
       path: '/admin/generate-quote',
       name: 'admin-generate-quote',
       component: () => import('../views/Admin/AdminGenerateQuoteView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
     },
     {
       path: '/cotizacion',
       name: 'quotation',
       component: () => import('../views/Checkout/QuotationView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [3] }
     },
     {
       path: '/cotizacion-exitosa',
       name: 'CotizacionExitosa',
       component: () => import('@/views/Checkout/SuccesfulQuotationView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [3] }
     },
     {
       path: '/mis-cotizaciones',
       name: 'my-quotations',
       component: () => import('@/views/Distributor/MyQuotationsView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [3] }
     },
     {
     path: '/cotizacion/:id', 
     name: 'quotation-detail',
     component: () => import('@/views/Distributor/QuotationDetailView.vue'),
-    meta: {useLoader: true}
+    meta: {useLoader: true, requiresAuth: true, roles: [3] }
     },
     {
       path: '/mis-pedidos',
       name: 'my-orders',
       component: () => import('@/views/Distributor/MyOrdersView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [3] }
     },
     {
       path: '/pedido/:id', 
       name: 'order-detail',
       component: () => import('@/views/Distributor/OrderDetailView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [3] }
     },
     {
       path: '/admin/user-management',
       name: 'admin-users',
       component: () => import('../views/Admin/UserManagementView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1] }
     },
     {
       path: '/admin/inventario',
       name: 'admin-inventory',
       component: () => import('../views/Admin/InventoryView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
     },
     {
       path: '/admin/lotes/:id',
       name: 'admin-batches-detail',
       component: () => import('../views/Admin/BatchesView.vue'),
-      meta: {useLoader: true}
+      meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
 
     }
   ]
@@ -127,17 +127,43 @@ const router = createRouter({
 
 // router/index.ts
 router.beforeEach((to, from, next) => {
-  // Solo activamos si la ruta lo requiere
-  if (to.meta.useLoader) {
-    globalLoading.value = true;
+  if (to.meta.requiresAuth) {
+    const token = localStorage.getItem('token')
+    const userRaw = localStorage.getItem('user')
+    const user = userRaw ? JSON.parse(userRaw) : null
+
+    // Si no hay token o usuario guardado, patada al login
+    if (!token || !user || !user.id_rol) {
+      console.warn('Falta token o datos de usuario incompletos. Redirigiendo a Login.')
+      next('/login')
+      return
+    }
+
+    // Convertimos el rol a número para evitar errores de comparación ("1" vs 1)
+    const userRole = Number(user.id_rol)
+
+    // 2. Verificar Roles (Si la ruta tiene roles definidos)
+    const rolesPermitidos = to.meta.roles as number[] | undefined
+    
+    if (rolesPermitidos && !rolesPermitidos.includes(userRole)) {
+      console.warn(`Acceso denegado: Se requiere rol ${rolesPermitidos}, pero el usuario tiene rol ${userRole}.`)
+      
+      // Redirigir a su panel correspondiente
+      if (userRole === 1 || userRole === 2) {
+        next('/admin')
+      } else {
+        next('/') 
+      }
+      return
+    }
   }
-  
-  // Usamos un pequeño retraso para asegurar que Vue procese el estado "true"
-  // antes de renderizar la nueva ruta
-  setTimeout(() => {
-    next();
-  }, 50); 
-});
+
+  if (to.meta.useLoader) {
+    globalLoading.value = true
+  }
+
+  setTimeout(() => next(), 50)
+})
 
 router.afterEach((to) => {
   // Si la ruta no usa loader, aseguramos que esté apagado

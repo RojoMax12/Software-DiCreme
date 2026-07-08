@@ -6,7 +6,7 @@
     </div>
     
     <div class="admin-options-grid">
-      <router-link v-role="[1,2]" to="/admin/quotes" class="admin-option-card">
+      <router-link v-role="[1]" to="/admin/quotes" class="admin-option-card">
         <div class="icon-container">
           <FileText :size="48" />
         </div>

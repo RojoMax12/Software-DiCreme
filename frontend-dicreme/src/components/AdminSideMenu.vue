@@ -49,7 +49,7 @@ const isActive = (path: string) => {
               class="nav-item" 
               :class="{ active: isActive('/admin/quotes') }"
               @click="navigateTo('/admin/quotes')"
-              v-role="[1,2]"
+              v-role="[1]"
             >
               <FileText :size="20" />
               <span>Cotizaciones</span>

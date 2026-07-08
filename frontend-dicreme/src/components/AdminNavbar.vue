@@ -61,7 +61,7 @@ const toggleSidebar = () => {
       </button>
       
       <div class="brand-group" @click="goToAdminHome">
-        <img src="@/assets/logo_dicreme.png" alt="Di Creme Logo" class="brand-logo" />
+        <img src="@/assets/logo_dicreme.webp" alt="Di Creme Logo" class="brand-logo" />
         <div class="brand-info">
           <span class="brand-text">Di Creme</span>
         </div>
