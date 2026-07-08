@@ -154,11 +154,11 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1,2');
         Route::get('/roles', [RolController::class, 'index']);           
         Route::get('/roles/{id}', [RolController::class, 'show']);      
-        Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index']);      
-        Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show']);             
-        Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
+        Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index'])->middleware('role:1');;      
+        Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show'])->middleware('role:1');;             
+        Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index'])->middleware('role:1');          
         Route::get('/usuarios_dicreme/despachadores', [Usuario_dicremeController::class, 'getusuariodicremedespachadores'])->middleware('role:1');
-        Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
+        Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show'])->middleware('role:1');        
         Route::get('/pedidos', [PedidoController::class, 'index']);
         Route::get('/pedidos/{id}/details', [PedidoController::class, 'getdetailpedido'])->middleware('role:1,2,3');
         Route::get('/pedidos/{id}', [PedidoController::class, 'show']);
