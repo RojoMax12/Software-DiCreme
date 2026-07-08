@@ -45,4 +45,15 @@ class Usuario_distribuidoresRepository
         
         return Usuario_distribuidores::where("correo_electronico", $correo)->first();
     }
+
+    public function activarydesactivar($id)
+    {
+        $usuarioDistribuidor = Usuario_distribuidores::find($id);
+        if ($usuarioDistribuidor) {
+            $usuarioDistribuidor->estado_usuario = !$usuarioDistribuidor->estado_usuario;
+            $usuarioDistribuidor->save();
+            return $usuarioDistribuidor;
+        }
+        return null;
+    }
 }

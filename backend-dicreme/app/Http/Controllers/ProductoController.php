@@ -14,6 +14,85 @@ class ProductoController extends Controller
         $this->productoServices = $productoServices;
     }
 
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'id_categoria' => 'required|integer|exists:categorias,id',
+            'id_formato' => 'required|integer|exists:formatos,id',
+            'nombre_producto' => 'required|string|max:255',
+            'precio_producto' => 'required|integer|min:0',
+            'estado_producto' => 'required|boolean',
+        ]);
+
+        try {
+            $producto_creado = $this->productoServices->createProducto($data);
+
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $producto_creado,
+            'message', "Producto creado correctamente"], 
+            200); 
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al crear el producto' . $e->getMessage()
+            ], 400);
+        }
+
+       
+    }
+
+    public function update(Request $request, $id)
+    {
+        $data = $request->validate([
+            'id_categoria' => 'sometimes|required|integer|exists:categorias,id',
+            'id_formato' => 'sometimes|required|integer|exists:formatos,id',
+            'nombre_producto' => 'sometimes|required|string|max:255',
+            'precio_producto' => 'sometimes|required|integer|min:0',
+            'estado_producto' => 'sometimes|required|boolean',
+        ]);
+
+        try {
+            $producto_actualizado = $this->productoServices->updateProducto($id, $data);
+
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $producto_actualizado,
+            'message', "Producto creado correctamente"], 
+            200); 
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al actualizar el producto' . $e->getMessage()
+            ], 400);
+        }
+
+    }
+
+    public function destroy($id)
+    {   
+        try {
+            $producto_destroy = $this->productoServices->deleteProducto($id);
+
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $producto_destroy,
+            'message', "Producto creado correctamente"], 
+            200); 
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al eliminar el producto' . $e->getMessage()
+            ], 400);
+        }
+
+    }
+
+
+
+
     public function index()
     {
         return response()->json($this->productoServices->getAllProductos());
@@ -31,37 +110,6 @@ class ProductoController extends Controller
     public function getResumenTodosLosProductos()
     {
         return response()->json($this->productoServices->getResumenTodosLosProductos());
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'id_categoria' => 'required|integer|exists:categorias,id',
-            'id_formato' => 'required|integer|exists:formatos,id',
-            'nombre_producto' => 'required|string|max:255',
-            'precio_producto' => 'required|integer|min:0',
-            'estado_producto' => 'required|boolean',
-        ]);
-
-        return response()->json($this->productoServices->createProducto($data), 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $data = $request->validate([
-            'id_categoria' => 'sometimes|required|integer|exists:categorias,id',
-            'id_formato' => 'sometimes|required|integer|exists:formatos,id',
-            'nombre_producto' => 'sometimes|required|string|max:255',
-            'precio_producto' => 'sometimes|required|integer|min:0',
-            'estado_producto' => 'sometimes|required|boolean',
-        ]);
-
-        return response()->json($this->productoServices->updateProducto($id, $data));
-    }
-
-    public function destroy($id)
-    {
-        return response()->json($this->productoServices->deleteProducto($id));
     }
 
     public function toggleestadoproducto($name)

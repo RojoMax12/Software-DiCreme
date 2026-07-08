@@ -28,6 +28,7 @@ onMounted(async () => {
 
       // Llamada al servicio centralizado con el ID del distribuidor
       const response = await quoteService.getQuotesByDistributor(userId.value)
+      console.log(response.data)
       quotations.value = response.data || []
       
     } catch (error) {

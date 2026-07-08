@@ -2,15 +2,18 @@
 
 namespace App\Services;
 use App\Repositories\Usuario_distribuidoresRepository;
-use App\Models\Usuario_distribuidores;
+use App\Repositories\RolRepository;
+use Illuminate\Support\Facades\Hash;
 
 class Usuario_distribuidoresServices
 {
     protected $usuarioDistribuidoresRepository;
+    protected $rolRepository;
 
-    public function __construct(Usuario_distribuidoresRepository $usuarioDistribuidoresRepository)
+    public function __construct(Usuario_distribuidoresRepository $usuarioDistribuidoresRepository, RolRepository $rolRepository)
     {
         $this->usuarioDistribuidoresRepository = $usuarioDistribuidoresRepository;
+        $this->rolRepository = $rolRepository;
     }
 
     public function getAllUsuariosDistribuidores()
@@ -27,6 +30,10 @@ class Usuario_distribuidoresServices
     {   
         $data['estado_usuario'] = $data['estado_usuario'] ?? true;
         
+        $rolDistribuidor = $this->rolRepository->getRoleByName('Distribuidor');
+        $data['id_rol'] = $rolDistribuidor->id;
+        $data['contrasena'] = Hash::make($data['contrasena']);
+
         return $this->usuarioDistribuidoresRepository->createUsuarioDistribuidor($data);
     }
 
@@ -38,5 +45,10 @@ class Usuario_distribuidoresServices
     public function deleteUsuarioDistribuidor($id)
     {
         return $this->usuarioDistribuidoresRepository->deleteUsuarioDistribuidor($id);
+    }
+
+    public function activarydesactivar($id)
+    {
+        return $this->usuarioDistribuidoresRepository->activarydesactivar($id);
     }
 }

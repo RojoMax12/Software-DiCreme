@@ -52,4 +52,15 @@ class Usuario_dicremeRepository
         return Usuario_dicreme::where("id_rol", 4)->get();
 
     }
+
+    public function activarydesactivar($id)
+    {
+        $usuarioDicreme = $this->getUsuarioDicremeById($id);
+        if ($usuarioDicreme) {
+            $usuarioDicreme->estado_usuario = !$usuarioDicreme->estado_usuario;
+            $usuarioDicreme->save();
+            return $usuarioDicreme;
+        }
+        return null;
+    }
 }

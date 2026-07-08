@@ -27,7 +27,7 @@ class LoteFactory extends Factory
             'cantidad_producto'  => $cantidad, 
             
             'fecha_emision'     => $this->faker->dateTimeBetween('-30 days', 'now'),
-            'fecha_vencimiento' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
+            'fecha_vencimiento' => $this->faker->dateTimeBetween('+1 month', '+1 year'),
         ];
     }
 }
