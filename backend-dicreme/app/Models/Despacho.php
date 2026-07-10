@@ -4,6 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Despacho extends Model
 {
@@ -28,6 +29,11 @@ class Despacho extends Model
     public function pedido(): HasOne
     {
         return $this->hasOne(Pedido::class, 'id_pedido');
+    }
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(Usuario_dicreme::class, 'id_usuario_dicreme');
     }
 
 }
