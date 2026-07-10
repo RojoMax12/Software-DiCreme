@@ -152,4 +152,25 @@ class DespachoController extends Controller
             'debug'   => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
         ], 500);
     }
+
+    public function enviarCorreoDistribuidor($id_despacho): JsonResponse
+    {
+        try {
+            $enviado = $this->despachoServices->enviarNotificacionDespacho($id_despacho);
+
+            if (!$enviado) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No se pudo enviar la notificación. Verifica que el despacho, el pedido asociado y el distribuidor existan y tengan un correo válido.'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Correo enviado correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al enviar correo', $e);
+        }
+    }
 }
