@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { IceCream } from 'lucide-vue-next' 
 import orderService from '@/services/orderService'
+import {ShoppingBag} from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -77,61 +78,49 @@ const formatCurrency = (value: any) => {
 <template>
   <div class="my-orders-page">
     <main class="history-container">
-      <div class="header-section">
-        <h2 class="page-title">Mis Pedidos Históricos</h2>
-        <p class="page-subtitle">Revisa el estado y el detalle de tus compras procesadas.</p>
+      <div class="title-section">
+        <h2 class="main-title">Mis Pedidos Históricos</h2>
+        <p class="page-subtitle">Revisa el estado y detalle de tus compras procesadas.</p>
+        <div class="title-line"></div>
       </div>
 
       <div v-if="isLoading" class="loading-state">
         <IceCream class="spinner" :size="40" color="#e4869f" />
-        <p class="loading-text">Buscando tus pedidos...</p>
+        <p>Buscando tus pedidos...</p>
       </div>
 
-      <div v-else-if="errorMessage" class="state-message error">{{ errorMessage }}</div>
-      <div v-else-if="ordersList.length === 0" class="state-message empty">
-        Aún no tienes pedidos registrados en tu cuenta.
+      <div v-else-if="ordersList.length === 0" class="empty-state">
+        <ShoppingBag :size="48" color="#b5b2bc" />
+        <p class="empty-text">Aún no tienes pedidos registrados.</p>
       </div>
 
-      <div v-else class="orders-grid">
+      <div v-else class="orders-list">
         <div 
           v-for="order in ordersList" 
           :key="order.id" 
-          class="order-card"
+          class="order-item-card"
           @click="router.push(`/pedido/${order.id}`)"
         >
-          <div class="card-header">
-            <span class="order-id">Pedido N° {{ String(order.id).padStart(6, '0') }}</span>
-            <span class="order-date">{{ formatDate(order.fecha_creacion ?? order.created_at) }}</span>
-          </div>
-
-          <div class="card-body">
-            <div class="info-row">
-              <span class="info-label">Estado:</span>
-              <span class="status-badge" :class="'status-' + (order.id_estado_pedido ?? 1)">
-                {{ order.estado_nombre ?? getOrderStatusLabel(order.id_estado_pedido) }}
-              </span>
+          <div class="card-left">
+            <div class="file-icon-box">
+              <ShoppingBag :size="24" color="#322c44" />
             </div>
-
-            <div class="info-row">
-              <span class="info-label">Receptor:</span>
-              <span class="info-value">
-                {{ order.nombre_receptor ?? order.receptor ?? fallbackUserCompany }}
-              </span>
-            </div>
-
-            <div class="info-row">
-              <span class="info-label">Dirección:</span>
-              <span class="info-value text-truncate">
-                {{ order.direccion_despacho ?? order.direccion ?? fallbackUserAddress }}
-              </span>
+            <div class="order-meta">
+              <h4 class="order-number">Pedido N° {{ String(order.id).padStart(6, '0') }}</h4>
+              <div class="time-group">
+                <span class="time-item"><Calendar :size="14" /> {{ formatDate(order.fecha_creacion ?? order.created_at) }}</span>
+              </div>
             </div>
           </div>
 
-          <div class="card-footer">
-            <span class="total-label">Total del Pedido:</span>
-            <span class="total-price">
-              {{ formatCurrency(order.monto_final ?? order.total ?? order.monto ?? order.total_cotizacion ?? 0) }}
+          <div class="card-right">
+            <span class="status-badge" :class="'status-' + (order.id_estado_pedido ?? 1)">
+              {{ order.estado_nombre ?? getOrderStatusLabel(order.id_estado_pedido) }}
             </span>
+            <span class="order-total">
+              {{ formatCurrency(order.monto_final ?? order.total ?? 0) }}
+            </span>
+            <ChevronRight :size="20" color="#b5b2bc" />
           </div>
         </div>
       </div>
@@ -140,186 +129,42 @@ const formatCurrency = (value: any) => {
 </template>
 
 <style scoped>
-.my-orders-page {
-  background-color: #eeedee;
-  min-height: 100vh;
-  font-family: sans-serif;
-  padding-bottom: 60px;
-}
+.my-orders-page { background-color: #eeedee; min-height: 100vh; padding-bottom: 60px; }
+.history-container { max-width: 850px; margin: 35px auto; padding: 0 20px; }
 
-.decorative-banner {
-  height: 40px;
-  background-color: #322c44;
-  opacity: 0.85;
-}
+.title-section { margin-bottom: 30px; }
+.main-title { font-size: 1.25rem; font-weight: 800; color: #1a1624; margin: 0 0 6px 0; text-align: left; }
+.title-line { height: 2px; background-color: #e4869f; width: 100%; margin-top: 10px; }
 
-.history-container {
-  max-width: 1100px;
-  margin: 35px auto;
-  padding: 0 20px;
-}
+.orders-list { display: flex; flex-direction: column; gap: 15px; }
 
-.header-section {
-  text-align: left;
-  margin-bottom: 30px;
-  border-bottom: 2px solid #e4869f;
-  padding-bottom: 10px;
-}
-
-.page-title {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #1a1624;
-  margin: 0 0 4px 0;
-}
-
-.page-subtitle {
-  font-size: 0.9rem;
-  color: #7c7289;
-  margin: 0;
-}
-
-.loading-state {
-  background-color: white;
-  border-radius: 20px;
-  padding: 50px;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-}
-
-.loading-text {
-  color: #7c7289;
-  font-size: 1rem;
-  margin: 0;
-  font-weight: 600;
-}
-
-.spinner {
-  animation: rotate 2s linear infinite;
-}
-
-@keyframes rotate {
-  100% { transform: rotate(360deg); }
-}
-
-.state-message {
-  text-align: center;
-  padding: 50px;
-  background: white;
-  border-radius: 18px;
-  color: #7c7289;
-  font-size: 1rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-}
-
-.state-message.error { color: #e11d48; }
-
-.orders-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 25px;
-}
-
-.order-card {
-  background: white;
-  border-radius: 18px;
-  border: 1px solid #e0dde0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+.order-item-card {
+  background: white; border-radius: 18px; padding: 16px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.02);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+.order-item-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(228, 134, 159, 0.12); }
 
-.order-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(228, 134, 159, 0.12);
-}
+.card-left, .card-right { display: flex; align-items: center; gap: 20px; }
 
-.card-header {
-  background-color: #322c44;
-  padding: 14px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: white;
-}
+.file-icon-box { background-color: #f3eff2; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.order-number { margin: 0 0 4px 0; font-weight: 700; color: #1a1624; }
+.time-group { display: flex; gap: 10px; color: #888; font-size: 0.8rem; }
+.time-item { display: flex; align-items: center; gap: 4px; }
 
-.order-id { font-weight: 700; font-size: 0.95rem; }
-.order-date { font-size: 0.85rem; color: #b5b2bc; font-weight: 600; }
+.status-badge { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; min-width: 100px; text-align: center; }
+.order-total { font-weight: 800; color: #1a1624; font-size: 1.05rem; min-width: 80px; text-align: right; }
 
-.card-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  text-align: left;
-  flex: 1;
-}
+/* Estados */
+.status-1 { background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
+.status-2 { background-color: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
+.status-3 { background-color: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
+.status-4 { background-color: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
 
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-  gap: 15px;
-}
-
-.info-label { color: #7c7289; font-weight: 600; min-width: 80px; }
-.info-value { color: #1a1624; font-weight: 700; text-align: right; }
-.text-truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
-}
-
-.status-badge {
-  padding: 4px 14px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-/* 🚨 Clases mapeadas con id_estado_pedido (1, 2, 3, 4) */
-.status-1 { 
-  background-color: #fffbeb; 
-  color: #d97706; 
-  border: 1px solid #fef3c7;
-} 
-
-.status-2 { 
-  background-color: #fef2f2; 
-  color: #dc2626; 
-  border: 1px solid #fee2e2;
-} 
-
-.status-3 { 
-  background-color: #eff6ff; 
-  color: #2563eb; 
-  border: 1px solid #dbeafe;
-}
-
-.status-4 { 
-  background-color: #f0fdf4; 
-  color: #16a34a; 
-  border: 1px solid #dcfce7;
-}
-
-.card-footer {
-  background-color: #fff0f3;
-  border-top: 1px solid #fad2dc;
-  padding: 14px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.total-label { font-size: 0.95rem; font-weight: bold; color: #322c44; }
-.total-price { font-size: 1.1rem; font-weight: 800; color: #e4869f; }
+/* Estados vacíos */
+.loading-state, .empty-state { background-color: white; border-radius: 20px; padding: 50px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+.empty-text { color: #666; margin-top: 15px; }
+.spinner { animation: rotate 2s linear infinite; }
+@keyframes rotate { 100% { transform: rotate(360deg); } }
 </style>

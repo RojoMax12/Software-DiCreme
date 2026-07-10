@@ -14,5 +14,13 @@ export default {
 
     deleteUser(id: number) {
         return api.delete(`/usuarios_dicreme/${id}`);
+    },
+
+    toggleUserStatus(id:number){
+        return api.put(`/usuarios_dicreme/${id}/toggle-estado`)
+    },
+
+    updateuser(id: number, userData: { nombre: string; email: string; password: string; rol: string }){
+        return api.put(`/usuarios_dicreme/${id}`, userData)
     }
 }

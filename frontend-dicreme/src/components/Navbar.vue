@@ -13,6 +13,7 @@ const router = useRouter()
 const username = ref('')
 const isLoggedIn = ref(false)
 const isSideMenuOpen = ref(false) // Controla la barra lateral
+const userAvatar = ref<string | null>(null);
 
 // Carga el nombre real del usuario logueado
 const checkAuth = () => {
@@ -24,6 +25,11 @@ const checkAuth = () => {
       const userObj = JSON.parse(userParsed)
       username.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Distribuidor'
       isLoggedIn.value = true
+
+      if (userObj.avatar_url) {
+      userAvatar.value = `http://localhost:8000/storage/${userObj.avatar_url}`;
+    }
+    
     } catch (e) {
       console.error('Error parsing user session inside Navbar:', e)
       isLoggedIn.value = false
@@ -82,12 +88,13 @@ const goToHome = () => {
 
       <div class="nav-right">
         <template v-if="isLoggedIn">
-          <div class="session-display">
+          <div class="session-display" @click="router.push('/perfile')" role="button" title="Ir a mi perfil">
             <div class="user-avatar">
-              <UserIcon :size="20" />
+              <img v-if="userAvatar" :src="userAvatar" class="avatar-img" />
+              <UserIcon v-else :size="20" />
             </div>
             <div class="user-details">
-              <span class="user-role">Sesión Distribuidor</span>
+              <span class="user-role">Distribuidor</span>
               <span class="user-name">{{ username }}</span>
             </div>
           </div>
@@ -102,8 +109,15 @@ const goToHome = () => {
             <span>INGRESAR</span>
           </button>
         </template>
-      </div>
+        </div>
     </nav>
+    <div class="ticker-wrapper">
+      <div class="ticker-content">
+        <span>📢 Aviso: Horario de atención extendido hasta las 20:00 hrs.</span>
+        <span>❄️ Promoción: 10% de descuento en todos los helados de 10L.</span>
+        <span>🚛 Envíos gratuitos a todo Buin por compras sobre $50.000.</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -251,6 +265,36 @@ const goToHome = () => {
 
 .btn-login:hover {
   background-color: #1a1624;
+}
+
+.ticker-wrapper {
+  background-color: #e4869f; /* Color rosa corporativo */
+  color: white;
+  height: 30px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 1000;
+}
+
+.ticker-content {
+  display: flex;
+  white-space: nowrap;
+  animation: ticker-move 25s linear infinite;
+  gap: 50px;
+}
+
+@keyframes ticker-move {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Opcional: Pausar al pasar el mouse */
+.ticker-wrapper:hover .ticker-content {
+  animation-play-state: paused;
 }
 
 @media (max-width: 768px) {

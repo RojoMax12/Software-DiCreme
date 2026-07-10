@@ -43,7 +43,7 @@ api.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status;
-    const isAuthError = status === 401 || status === 403 || status === 419;
+    const isAuthError = status === 401 || status === 419;
 
     if (isAuthError) {
       localStorage.removeItem('token');

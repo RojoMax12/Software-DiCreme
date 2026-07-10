@@ -11,7 +11,7 @@
             </svg>
             <span>WhatsApp</span>
           </button>
-          <button class="btn-export">
+          <button class="btn-export" @click="exportarPDF">
             <Upload :size="18" />
             <span>Exportar</span>
           </button>
@@ -77,7 +77,7 @@
                 </div>
                 <div class="meta-text">
                   <span class="meta-label">Fecha de ingreso</span>
-                  <span class="meta-value">{{ date }} {{ time ? '- ' + time : '' }}</span>
+                  <span class="meta-value">{{ date }}</span>
                 </div>
               </div>
 
@@ -91,6 +91,18 @@
                     {{ localStatus }}
                   </span>
                 </div>
+              </div>
+
+              <div class="meta-item">
+                  <div class="meta-icon-box"><CircleDollarSign :size="20" /></div>
+                  <div class="meta-text">
+                      <span class="meta-label">Estado de Pago</span>
+                      <label class="switch">
+                          <input type="checkbox" :checked="localPago === 'Pagada'" @change="togglePago">
+                          <span class="slider round"></span>
+                          <span class="status-label">{{ localPago }}</span>
+                      </label>
+                  </div>
               </div>
             </div>
 
@@ -187,15 +199,19 @@
 </template>
 
 <script setup lang="ts">
+
+import jsPDF from 'jspdf'; //npm install jspdf jspdf-autotable
+import autoTable from 'jspdf-autotable'; // Importa la función directamente
 import { ref, computed, onMounted } from 'vue';
 import { 
   X, Upload, Building2, Calendar, 
   ClipboardList, LayoutGrid,
   ChevronLeft, ChevronRight, Check,
-  Banknote, Receipt, Package, Truck, Home
+  Banknote, Receipt, Package, Truck, Home, CircleDollarSign
 } from 'lucide-vue-next';
 import orderService from '@/services/orderService';
 import { useNotification } from '@/composables/useNotification';
+
 
 const { notify } = useNotification();
 const backendSubtotal = ref(0);
@@ -218,6 +234,7 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'statusChanged']);
 const localStatus = ref(props.status);
 const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
+const localPago = ref(props.pago || 'Pendiente'); // Ajusta según el prop que recibas
 
 // Lógica de la línea de tiempo
 const timelineSteps = [
@@ -271,6 +288,7 @@ const updateStatus = async () => {
   isUpdatingStatus.value = true;
   try {
     const result = await orderService.changeOrderStatus(Number(props.orderId), selectedTimelineId.value);
+    console.log("estado",result)
     notify(result.data.message, 'success');
 
     localStatusId.value = selectedTimelineId.value;
@@ -360,7 +378,8 @@ const category = (CategoryId: number) =>
 const getproducts = async () => {
   try {
     const response = await orderService.getOrderDetails(Number(props.orderId));
-    const orderData = response.data?.data; 
+    console.log("datos",response.data)
+    const orderData = response.data; 
 
     console.log('Objeto interno de la cotización/pedido:', orderData);
 
@@ -426,6 +445,85 @@ onMounted(() => {
   }
   getproducts();
 });
+
+const getBase64FromUrl = async (url: string): Promise<string> => {
+  const data = await fetch(url);
+  const blob = await data.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => resolve(reader.result as string);
+  });
+};
+
+const exportarPDF = async () => {
+  const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  
+  // 1. Logo ajustado
+  const logoBase64 = await getBase64FromUrl('/src/assets/logo_dicreme.png');
+  // Ajuste: 35 ancho, 12 alto (más rectangular para logos)
+  doc.addImage(logoBase64, 'PNG', 15, 10, 19, 19); 
+
+  // 2. Encabezado mejor posicionado
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(50, 44, 68); // Color #322c44
+  doc.text(`Pedido N° ${String(props.orderId).padStart(6, '0')}`, 195, 20, { align: 'right' });
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80); // Un gris oscuro para texto secundario
+  doc.text(`Distribuidor: ${props.distributor || 'N/A'}`, 15, 32);
+  doc.text(`Teléfono: ${props.distributorPhone || 'N/A'}`, 15, 37);
+  doc.text(`Estado de Pago: ${localPago.value}`, 15, 42);
+  
+  doc.setDrawColor(228, 134, 159); // Color #e4869f
+  doc.setLineWidth(0.5);
+  doc.line(15, 47, 195, 47); // Línea con color de marca
+
+  // 3. Tabla con mejor padding
+  autoTable(doc, {
+    startY: 55, // Bajamos la tabla para que no toque el encabezado
+    head: [['Producto', 'Formato', 'Cantidad', 'Precio Unit.', 'Subtotal']],
+    body: products.value.map(p => [
+      p.name, 
+      formato(p.format), 
+      p.quantity, 
+      `$${formatNumber(p.price)}`, 
+      `$${formatNumber(p.subtotal)}`
+    ]),
+    theme: 'striped',
+    headStyles: { fillColor: [50, 44, 68], textColor: 255, fontStyle: 'bold' },
+    styles: { cellPadding: 3, fontSize: 10 },
+    columnStyles: { 
+        2: { halign: 'center' },
+        3: { halign: 'right' },
+        4: { halign: 'right' }
+    }
+  });
+
+  // 4. Resumen (Cálculo dinámico de posición Y)
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(`Descuento:`, 150, finalY);
+  doc.text(`-$${formatNumber(currentDiscount.value)}`, 195, finalY, { align: 'right' });
+  
+  doc.setFontSize(14);
+  doc.text(`TOTAL FINAL:`, 145, finalY + 10);
+  doc.text(`$${formatNumber(totalAmount.value)}`, 195, finalY + 10, { align: 'right' });
+
+  // 5. Pie de página (con borde superior opcional)
+  doc.setLineWidth(0.2);
+  doc.line(15, 280, 195, 280);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "italic");
+  doc.text("Documento generado automáticamente por DiCreme - Sistema de Gestión de Pedidos", 105, 285, { align: 'center' });
+
+  doc.save(`Pedido_${props.orderId}.pdf`);
+};
+
 </script>
 
 <style scoped>
@@ -972,4 +1070,29 @@ onMounted(() => {
   color: #adb5bd;
   cursor: not-allowed;
 }
+
+
+.switch { position: relative; display: inline-block; width: 50px; height: 24px; margin-top: 5px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s; border-radius: 24px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px;
+    background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: #37b24d; }
+input:checked + .slider:before { transform: translateX(26px); }
+
+.status-label { font-size: 0.8rem; font-weight: 600; margin-left: 10px; vertical-align: middle; }
+
+/* Botón Exportar */
+.btn-export {
+    display: flex; align-items: center; gap: 8px; padding: 10px 20px;
+    background-color: #322c44; color: white; border: none; border-radius: 12px;
+    font-weight: 700; cursor: pointer; transition: 0.2s;
+}
+.btn-export:hover { background-color: #4a445c; }
+
 </style>

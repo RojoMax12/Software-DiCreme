@@ -138,7 +138,7 @@
         </div>
 
         <div class="actions-right">
-          <button class="btn-export">
+          <button class="btn-export" @click="exportarExcel">
             <Download :size="18" />
             <span>Exportar</span>
           </button>
@@ -262,10 +262,12 @@ import {
   ChevronsUpDown
 } from 'lucide-vue-next';
 import { IceCream } from 'lucide-vue-next'
+import * as XLSX from 'xlsx';
 
 const orders = ref<any[]>([]);
 const isLoading = ref(true);
 const activeTab = ref('pedidos');
+const isExporting = ref(false);
 
 // Mapa reactivo que se llenará EXCLUSIVAMENTE desde la BDD
 const statusMap = ref<Map<number, string>>(new Map());
@@ -296,7 +298,7 @@ const fetchOrders = async () => {
     };
 
     orders.value = rawOrders.map((o: any) => {
-      // 🛡️ Buscamos el ID tolerando si viene en formato string o número desde Laravel
+
       const statusId = Number(o.id_estado_pedido || o.id_estado || 1);
       const distId = Number(o.id_usuario_distribuidor || o.id_distribuidor || 0);
       
@@ -309,18 +311,38 @@ const fetchOrders = async () => {
         status: statusMap.value.get(statusId) || DEFAULT_NAMES[statusId] || `Estado #${statusId}`,
         total: Number(o.monto_final || o.total_pedido || o.total_cotizacion || 0),
         date: formatDate(o.fecha_creacion || o.fecha_pedido || o.created_at),
-        time: (o.hora_creacion || o.created_at || '').substring(0, 5),
+        time: o.hora_creacion ? o.hora_creacion.substring(14, 19) : '',
         rawStatusId: statusId
       };
     });
 
-    console.log('Mapeo de grilla general refrescado con éxito:', orders.value.length);
+    console.log('Mapeo de grilla general refrescado con éxito:', orders.value);
 
   } catch (error) {
     console.error('Error crítico al refrescar la grilla:', error);
   } finally {
     isLoading.value = false;
   }
+};
+
+const exportarExcel = () => {
+  isExporting.value = true;
+  const dataToExport = sortedOrders.value.map(o => ({
+    'ID Pedido': o.id,
+    'Distribuidor': o.distributor,
+    'Estado': o.status,
+    'Fecha': o.date,
+    'Hora': o.time,
+    'Total ($)': o.total
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Pedidos");
+  
+  // Generar archivo
+  XLSX.writeFile(workbook, `Reporte_Pedidos_${new Date().toLocaleDateString()}.xlsx`);
+  isExporting.value = false;
 };
 
 const formatDate = (dateString: string) => {

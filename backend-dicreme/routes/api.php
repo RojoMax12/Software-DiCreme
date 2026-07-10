@@ -96,7 +96,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::put('/roles/{id}', [RolController::class, 'update'])->middleware('role:1');
         Route::delete('/roles/{id}', [RolController::class, 'destroy'])->middleware('role:1');
         Route::put('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update'])->middleware('role:2', 'audit.pii');
-        Route::put('/usuarios_distribuidores/{id}/toggle-estado', [Usuario_distribuidoresController::class, 'toggleestadousuario'])->middleware('role:2', 'audit.pii');
+        Route::put('/usuarios_distribuidores/{id}/toggle-estado', [Usuario_distribuidoresController::class, 'toggleestadousuario'])->middleware('role:1,2', 'audit.pii');
         Route::delete('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'destroy'])->middleware('role:1', 'audit.pii');
         Route::put('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'update'])->middleware('role:1', 'audit.pii');
         Route::put('/usuarios_dicreme/{id}/toggle-estado', [Usuario_dicremeController::class, 'toggleestadousuario'])->middleware('role:1', 'audit.pii');
@@ -120,7 +120,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::put('/lotes/{id}/cantidad_producto', [LoteController::class, 'updateCantidadProducto'])->middleware('role:1');
         Route::put('/lotes/{id}', [LoteController::class, 'update'])->middleware('role:1');
         Route::delete('/lotes/{id}', [LoteController::class, 'destroy'])->middleware('role:1');
-        Route::get('/lotes/producto/{id}', [LoteController::class, 'getLotesByProductoId'])->middleware('role:1');
+        Route::get('/lotes/producto/{id}', [LoteController::class, 'getLotesByProductoId'])->middleware('role:1,2');
         Route::post('/pedido_producto', [Pedido_productoController::class, 'store']);
         Route::put('/pedido_producto/{id}', [Pedido_productoController::class, 'update'])->middleware('role:1');
         Route::delete('/pedido_producto/{id}', [Pedido_productoController::class, 'destroy'])->middleware('role:1');
@@ -154,11 +154,11 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1,2');
         Route::get('/roles', [RolController::class, 'index']);           
         Route::get('/roles/{id}', [RolController::class, 'show']);      
-        Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index']);      
-        Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show']);             
-        Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index']);          
+        Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index'])->middleware('role:1,2');;      
+        Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show'])->middleware('role:1,2');;             
+        Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index'])->middleware('role:1');          
         Route::get('/usuarios_dicreme/despachadores', [Usuario_dicremeController::class, 'getusuariodicremedespachadores'])->middleware('role:1');
-        Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show']);        
+        Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show'])->middleware('role:1');        
         Route::get('/pedidos', [PedidoController::class, 'index']);
         Route::get('/pedidos/{id}/details', [PedidoController::class, 'getdetailpedido'])->middleware('role:1,2,3');
         Route::get('/pedidos/{id}', [PedidoController::class, 'show']);
@@ -171,9 +171,9 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::get('/despachos/{id}/despachador', [DespachoController::class, 'getdespachobyidusuariodicreme'])->middleware('role:1,4');
         Route::get('/bodegas', [BodegaController::class, 'index'])->middleware('role:1');
         Route::get('/bodegas/{id}', [BodegaController::class, 'show'])->middleware('role:1');
-        Route::get('/lotes/reciente', [LoteController::class, 'getLoteMasReciente'])->middleware('role:1');
-        Route::get('/lotes', [LoteController::class, 'index'])->middleware('role:1');
-        Route::get('/lotes/{id}', [LoteController::class, 'show'])->middleware('role:1');
+        Route::get('/lotes/reciente', [LoteController::class, 'getLoteMasReciente'])->middleware('role:1,2');
+        Route::get('/lotes', [LoteController::class, 'index'])->middleware('role:1,2');
+        Route::get('/lotes/{id}', [LoteController::class, 'show'])->middleware('role:1,2');
         Route::get('/pedido_producto', [Pedido_productoController::class, 'index'])->middleware('role:1,2');
         Route::get('/pedido_producto/{id}', [Pedido_productoController::class, 'show'])->middleware('role:1,2');
         Route::get('/ventas', [VentaController::class, 'index'])->middleware('role:1');

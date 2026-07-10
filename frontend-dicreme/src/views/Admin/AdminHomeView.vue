@@ -6,7 +6,7 @@
     </div>
     
     <div class="admin-options-grid">
-      <router-link v-role="[1,2]" to="/admin/quotes" class="admin-option-card">
+      <router-link v-role="[1]" to="/admin/quotes" class="admin-option-card">
         <div class="icon-container">
           <FileText :size="48" />
         </div>
@@ -32,7 +32,7 @@
 
       <router-link v-role="1" to="/admin/user-management" class="admin-option-card">
         <div class="icon-container">
-          <FileText :size="48" />
+          <Users :size="48" />
         </div>
         <h2>Gestión de Usuarios</h2>
         <p>Administrar cuentas de usuarios, roles y permisos</p>
@@ -40,7 +40,7 @@
 
       <router-link v-role="[1,2]" to="/admin/inventario" class="admin-option-card">
         <div class="icon-container">
-          <ShoppingBag :size="48" />
+          <Package2  :size="48" />
         </div>
         <h2>Inventario</h2>
         <p>Administra el inventario de los productos y sus lotes</p>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { FileText, ShoppingBag, FilePlus } from 'lucide-vue-next';
+import { FileText, ShoppingBag, FilePlus,Package2 ,Users } from 'lucide-vue-next';
 </script>
 
 <style scoped>
@@ -78,40 +78,40 @@ import { FileText, ShoppingBag, FilePlus } from 'lucide-vue-next';
 
 .admin-options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
 }
 
 .admin-option-card {
   background: white;
-  border-radius: 16px;
-  padding: 3rem 2rem;
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
   text-align: center;
   text-decoration: none;
   color: var(--DC-gray);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  border: 1px solid #eeedee;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .admin-option-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   border-color: var(--DC-pink);
   box-shadow: 0 12px 20px rgba(228, 134, 159, 0.15);
 }
 
 .icon-container {
-  width: 100px;
-  height: 100px;
+  width: 60px;
+  height: 60px;
   background: var(--DC-bg-gray);
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   color: var(--DC-pink);
   transition: all 0.3s ease;
 }
