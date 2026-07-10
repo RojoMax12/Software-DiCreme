@@ -29,7 +29,7 @@
 
         <div class="form-group">
           <label>RUT Empresa</label>
-          <input v-model="form.rut_empresa" type="text" disabled class="disabled-input">
+          <input :value="formattedRut" type="text" disabled class="disabled-input rut-styled">
         </div>
 
         <div class="form-group full-width">
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { Camera } from 'lucide-vue-next'; // Ícono para la foto
 import { useNotification } from '@/composables/useNotification';
@@ -85,6 +85,15 @@ const triggerFileInput = () => {
   if (fileInput.value) fileInput.value.click();
 };
 
+const formatRUT = (rut: string) => {
+  if (!rut) return '';
+  const cleanRut = rut.replace(/[^0-9kK]/g, '');
+  if (cleanRut.length > 1) {
+    return cleanRut.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + cleanRut.slice(-1).toUpperCase();
+  }
+  return cleanRut;
+};
+
 const handleFileChange = (event: Event) => {
   const input = event.target as HTMLInputElement;
   if (input.files && input.files[0]) {
@@ -99,6 +108,8 @@ const getImageUrl = (path: string) => {
   return path.startsWith('http') ? path : `http://tu-backend-url.com/storage/${path}`;
   // ⚠️ Cambia 'http://tu-backend-url.com' por la URL real de tu API en Laravel
 };
+
+const formattedRut = computed(() => formatRUT(form.rut_empresa));
 
 // --- LÓGICA DEL FORMULARIO ---
 const form = reactive({
@@ -160,6 +171,7 @@ const updateProfile = async () => {
 
   try {
     const token = localStorage.getItem('token');
+    
 
     // 1. Subimos los datos y la foto
     await axios.post('http://localhost:8000/api/distribuidor/perfil', formData, {
@@ -178,9 +190,13 @@ const updateProfile = async () => {
     });
     
     // 4. Mezclamos ambos para asegurar que el usuario quede 100% completo
+    // (dentro de try { ... } en updateProfile)
     const finalUser = { ...currentUser, ...freshData };
     localStorage.setItem('user', JSON.stringify(finalUser));
-    
+
+    // 1. Emite un evento global para avisarle al Navbar
+    window.dispatchEvent(new Event('perfil-actualizado'));
+
     notify('Perfil actualizado exitosamente', 'success');
     
     // Opcional: Actualizamos la vista previa del avatar con la nueva URL
@@ -291,4 +307,13 @@ input:focus { border-color: var(--DC-pink); outline: none; }
   transition: opacity 0.3s;
 }
 .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.rut-styled {
+  background: #f4f6f8;
+  color: #322c44;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-color: #eee;
+  opacity: 0.8;
+}
 </style>

@@ -18,11 +18,28 @@ const quantity = ref(1); // Cantidad por defecto
 // Resetear estados cuando se abre un producto diferente
 watch(() => props.product, (newProduct) => {
   if (newProduct) {
-    activeImage.value = getImageUrl('10L.webp'); // Imagen por defecto
+    // TRUCO 1: Usar la imagen de la tarjeta que el navegador YA tiene en caché.
+    // Esto hace que el modal no tenga tiempo de carga inicial al abrirse.
+    activeImage.value = newProduct.image || getImageUrl('10L.webp'); 
     selectedSize.value = '10L';
     quantity.value = 1;
+
+    // TRUCO 2: Precargar el resto de formatos de forma invisible
+    preloadFormatImages();
   }
 }, { immediate: true });
+
+const preloadFormatImages = () => {
+  // Le decimos al navegador que descargue estas imágenes en segundo plano
+  // para que, cuando el usuario pase el mouse, ya estén listas en la memoria.
+  Object.values(productImages).forEach((imageName) => {
+    const src = getImageUrl(imageName);
+    if (src) {
+      const img = new Image();
+      img.src = src; 
+    }
+  });
+};
 
 // Funciones para el contador de cantidad
 const increaseQuantity = () => {
@@ -36,10 +53,9 @@ const decreaseQuantity = () => {
 };
 
 const getImageUrl = (imageName: string) => {
-  const path = `/src/assets/${imageName}`;
-  return (images[path] as any)?.default || '';
+  if (!imageName) return '';
+  return new URL(`../assets/${imageName}`, import.meta.url).href;
 };
-
 const selectSize = (size: '10L' | '5L' | '2.5L' | '1L', imageName: string) => {
   selectedSize.value = size;
   activeImage.value = getImageUrl(imageName); 
@@ -230,12 +246,19 @@ const handleAddToCart = () => {
   border-radius: 15px;
   overflow: hidden;
   border: 1px solid #eee;
+  
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
 }
 
 .main-product-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: all 0.3s ease;
 }
 

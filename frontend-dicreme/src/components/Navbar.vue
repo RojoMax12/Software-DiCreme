@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
 import DistributorSideMenu from '@/components/DistributorSideMenu.vue'
@@ -41,8 +41,15 @@ const checkAuth = () => {
 }
 
 onMounted(() => {
-  checkAuth()
-})
+  checkAuth();
+  
+  // 2. Escucha si alguien cambió el perfil en otra parte
+  window.addEventListener('perfil-actualizado', checkAuth);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('perfil-actualizado', checkAuth);
+});
 
 // Cierra la sesión y redirige al catálogo
 const handleLogout = () => {
@@ -68,6 +75,7 @@ const goToHome = () => {
     />
 
     <nav class="dc-navbar">
+      <div class="navbar-main">
       <div class="nav-left">
         <button 
           v-if="isLoggedIn" 
@@ -91,7 +99,10 @@ const goToHome = () => {
           <div class="session-display" @click="router.push('/perfile')" role="button" title="Ir a mi perfil">
             <div class="user-avatar">
               <img v-if="userAvatar" :src="userAvatar" class="avatar-img" />
-              <UserIcon v-else :size="20" />
+              
+              <span v-else class="avatar-initial">
+                {{ username ? username.charAt(0).toUpperCase() : 'U' }}
+              </span>
             </div>
             <div class="user-details">
               <span class="user-role">Distribuidor</span>
@@ -110,30 +121,40 @@ const goToHome = () => {
           </button>
         </template>
         </div>
+        </div>
+        <div class="ticker-wrapper">
+          <div class="ticker-content">
+            <span>📢 Aviso: Horario de atención extendido hasta las 20:00 hrs.</span>
+            <span>❄️ Promoción: 10% de descuento en todos los helados de 10L.</span>
+            <span>🚛 Envíos gratuitos a todo Buin por compras sobre $50.000.</span>
+          </div>
+        </div>
     </nav>
-    <div class="ticker-wrapper">
-      <div class="ticker-content">
-        <span>📢 Aviso: Horario de atención extendido hasta las 20:00 hrs.</span>
-        <span>❄️ Promoción: 10% de descuento en todos los helados de 10L.</span>
-        <span>🚛 Envíos gratuitos a todo Buin por compras sobre $50.000.</span>
-      </div>
-    </div>
   </div>
 </template>
 
 <style scoped>
 .dc-navbar {
   background-color: white;
-  height: 80px;
+  display: flex;
+  flex-direction: column; /* Apila menú y ticker */
+  width: 100%;            /* Asegura que ocupe todo el ancho */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 990;
+  font-family: sans-serif;
+  height: auto;
+}
+
+.navbar-main {
+  width: 100%;
+  height: 80px; /* Aquí recuperas la altura del menú */
   padding: 0 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 990; 
-  font-family: sans-serif;
+  box-sizing: border-box; /* Fundamental para que el padding no rompa el ancho */
 }
 
 .nav-left {
@@ -204,12 +225,13 @@ const goToHome = () => {
 .user-avatar {
   width: 36px;
   height: 36px;
-  background-color: #e4869f;
+  background-color: #e4869f; /* Color corporativo de fondo */
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; /* Para que la imagen respete el círculo */
 }
 
 .user-details {
@@ -277,7 +299,6 @@ const goToHome = () => {
   align-items: center;
   font-size: 0.85rem;
   font-weight: 600;
-  z-index: 1000;
 }
 
 .ticker-content {
@@ -285,6 +306,18 @@ const goToHome = () => {
   white-space: nowrap;
   animation: ticker-move 25s linear infinite;
   gap: 50px;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 @keyframes ticker-move {
