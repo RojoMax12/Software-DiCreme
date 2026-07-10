@@ -1,159 +1,104 @@
 <template>
-    <div class="admin-panel-box">
-        
-        <div class="panel-controls-bar">
-            <div class="switch-container">
-                <div class="switch-slider" :class="{ 'slide-right': activeFilter === 'completed' }"></div>
-                
-                <button 
-                    class="switch-btn" 
-                    :class="{ active: activeFilter === 'actual' }"
-                    @click="activeFilter = 'actual'"
-                >
-                    <span>Administradores</span>
-                </button>
-                
-                <button 
-                    class="switch-btn" 
-                    :class="{ active: activeFilter === 'completed' }"
-                    @click="activeFilter = 'completed'"
-                >
-                    <span>Trabajadores</span>
-                </button>
-            </div>
+  <div class="admin-panel-box">
+    <div class="panel-controls-bar">
+      <div class="switch-container">
+        <div class="switch-slider" :class="`pos-${activeFilter}`"></div>
+        <button class="switch-btn" :class="{ active: activeFilter === 'admin' }" @click="activeFilter = 'admin'">Admins</button>
+        <button class="switch-btn" :class="{ active: activeFilter === 'trabajador' }" @click="activeFilter = 'trabajador'">Trabajadores</button>
+        <button class="switch-btn" :class="{ active: activeFilter === 'distribuidor' }" @click="activeFilter = 'distribuidor'">Distribuidores</button>
+      </div>
+      <button class="btn-primary" @click="openModal()">+ Añadir Usuario</button>
+    </div>
 
-            <button class="btn-primary" @click="openModal">
-                <span class="icon">+</span> Añadir Usuario
+    <hr class="panel-divider" />
+
+    <div class="table-header-row">
+      <div class="col-id">ID</div>
+      <div class="col-user">Nombre</div>
+      <div class="col-email">Correo</div>
+      <div class="col-status">Estado</div>
+      <div class="col-actions">Acciones</div>
+    </div>
+
+    <div class="users-list">
+      <div v-for="user in getFilteredUsers()" :key="user.id" class="user-table-row">
+        <div class="col-id">#{{ user.id }}</div>
+        <div class="col-user-name">{{ user.nombre_usuario || user.nombre_empresa }}</div>
+        <div class="col-email-text">{{ user.correo_electronico }}</div>
+        
+        <div class="col-status">
+            <button class="toggle-status-btn" :class="{ 'is-active': isUserActive(user) }" @click="toggleEstado(user)">
+                <span class="toggle-circle"></span>
+                <span class="toggle-text">{{ isUserActive(user) ? 'Activo' : 'Inactivo' }}</span>
             </button>
         </div>
-
-        <hr class="panel-divider" />
-
-        <div class="content-header">
-            <h2 v-if="activeFilter === 'actual'">Gestión de Administradores</h2>
-            <h2 v-else>Gestión de Trabajadores</h2>
-        </div>
         
-        <div class="table-header-row">
-            <div class="col-id">ID</div>
-            <div class="col-user">Nombre Usuario</div>
-            <div class="col-email">Correo Electrónico</div>
-            <div class="col-status">Estado</div>
-            <div class="col-actions">Acciones</div>
+        <div class="col-actions-btns">
+            <template v-if="activeFilter !== 'distribuidor'">
+                <button class="btn-edit" @click="openModal(user)">Editar</button>
+                <button class="btn-delete" @click="eliminarUsuario(user.id)">Eliminar</button>
+            </template>
+            <span v-else class="no-actions">Solo lectura</span>
         </div>
-
-        <div class="users-list">
-            <div v-if="activeFilter === 'actual'">
-                <div v-for="user in usersAdmin" :key="user.id" class="user-table-row">
-                    <div class="col-id">#{{ user.id }}</div>
-                    <div class="col-user-name">{{ user.nombre_usuario }}</div>
-                    <div class="col-email-text">{{ user.correo_electronico }}</div>
-                    
-                    <div class="col-status">
-                        <button 
-                            class="toggle-status-btn" 
-                            :class="{ 'is-active': user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true }"
-                            @click="toggleEstado(user)"
-                        >
-                            <span class="toggle-circle"></span>
-                            <span class="toggle-text">
-                                {{ (user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true) ? 'Activo' : 'Inactivo' }}
-                            </span>
-                        </button>
-                    </div>
-
-                    <div class="col-actions-btns">
-                        <button class="btn-delete" @click="eliminarUsuario(user.id)">Eliminar</button>
-                    </div>
-                </div>
-                <div v-if="usersAdmin.length === 0" class="empty-state">
-                    No hay administradores registrados.
-                </div>
-            </div>
-
-            <div v-else>
-                <div v-for="user in usersTrabajador" :key="user.id" class="user-table-row">
-                    <div class="col-id">#{{ user.id }}</div>
-                    <div class="col-user-name">{{ user.nombre_usuario }}</div>
-                    <div class="col-email-text">{{ user.correo_electronico }}</div>
-                    
-                    <div class="col-status">
-                        <button 
-                            class="toggle-status-btn" 
-                            :class="{ 'is-active': user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true }"
-                            @click="toggleEstado(user)"
-                        >
-                            <span class="toggle-circle"></span>
-                            <span class="toggle-text">
-                                {{ (user.estado_usuario === 'Activo' || user.estado_usuario === 1 || user.estado_usuario === true) ? 'Activo' : 'Inactivo' }}
-                            </span>
-                        </button>
-                    </div>
-
-                    <div class="col-actions-btns">
-                        <button class="btn-delete" @click="eliminarUsuario(user.id)">Eliminar</button>
-                    </div>
-                </div>
-                <div v-if="usersTrabajador.length === 0" class="empty-state">
-                    No hay trabajadores registrados.
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
     <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Registrar Nuevo Usuario</h3>
-                <button class="close-x" @click="closeModal">&times;</button>
-            </div>
-            
-            <form @submit.prevent="handleCreateUser">
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Nombre de Usuario</label>
-                        <input v-model="form.nombre_usuario" type="text" placeholder="Ej. johan_neira" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Correo Electrónico</label>
-                        <input v-model="form.correo_electronico" type="email" placeholder="Ej. admin@dicreme.cl" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Contraseña</label>
-                        <input v-model="form.contrasena" type="password" placeholder="Mínimo 6 caracteres" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Rol de Acceso del Sistema</label>
-                        <select v-model="form.id_rol" required>
-                            <option value="" disabled selected>Selecciona un rol...</option>
-                            <option value="1">Administrador (Acceso Total)</option>
-                            <option value="2">Trabajador (Operaciones)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
-                    <button type="submit" class="btn-submit">Guardar</button>
-                </div>
-            </form>
+      <div class="modal-card">
+        <div class="modal-header">
+            <h3>{{ isEditing ? 'Editar Usuario' : 'Registrar Usuario' }}</h3>
+            <button class="close-x" @click="closeModal">✕</button>
         </div>
+        <form @submit.prevent="handleSaveUser">
+          <div class="modal-body">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input v-model="form.nombre_usuario" required />
+            </div>
+            <div class="form-group">
+                <label>Correo</label>
+                <input v-model="form.correo_electronico" type="email" required />
+            </div>
+            <div class="form-group" v-if="!isEditing">
+                <label>Contraseña</label>
+                <input v-model="form.contrasena" type="password" required />
+            </div>
+            <div class="form-group">
+                <label>Rol</label>
+                <select v-model="form.id_rol" required>
+                    <option value="1">Administrador</option>
+                    <option value="2">Trabajador</option>
+                    <option value="3">Distribuidor</option>
+                </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
+            <button type="submit" class="btn-submit">{{ isEditing ? 'Guardar Cambios' : 'Crear Usuario' }}</button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import userService from '@/services/userService';
 import { ref, onMounted, reactive } from 'vue';
 import { useNotification } from '@/composables/useNotification';
+import distributorService from '@/services/distributorService';
 
-const activeFilter = ref('actual'); 
+
 const usersAdmin = ref<any[]>([]);
 const usersTrabajador = ref<any[]>([]);
+const usersDistribuidor = ref<any[]>([]);
 const isModalOpen = ref(false);
 const { notify } = useNotification();
+
+const activeFilter = ref('admin'); // 'admin', 'trabajador', 'distribuidor'
+const isEditing = ref(false);
+const editingId = ref<number | null>(null);
+const isUserActive = (user: any) => user.estado_usuario === 'Activo' || user.estado_usuario == 1 || user.estado_usuario === true;
 
 const form = reactive({
     nombre_usuario: '',
@@ -162,50 +107,54 @@ const form = reactive({
     id_rol: ''
 });
 
+const getFilteredUsers = () => {
+    if (activeFilter.value === 'admin') return usersAdmin.value;
+    if (activeFilter.value === 'trabajador') return usersTrabajador.value;
+    return usersDistribuidor.value;
+};
+
 onMounted(() => {
     fetchUsers();
 });
 
-// Función de Cambio de Estado Descomentada y lista
+
 const toggleEstado = async (user: any) => {
     const estadoOriginal = user.estado_usuario;
-
-    let nuevoEstado: any;
-    if (typeof estadoOriginal === 'string') {
-        nuevoEstado = estadoOriginal === 'Activo' ? 'Inactivo' : 'Activo';
-    } else {
-        nuevoEstado = (estadoOriginal == 1 || estadoOriginal === true) ? 0 : 1;
-    }
-
-    // Actualización optimista en la interfaz
-    user.estado_usuario = nuevoEstado;
+    user.estado_usuario = !estadoOriginal; // Optimista
 
     try {
-        await userService.toggleUserStatus(user.id); 
-        notify("Estado del usuario actualizado correctamente.", "success");
-    } catch (error: any) {
-        // Revertir en caso de error
+        // Detecta el servicio según el filtro
+        if (activeFilter.value === 'distribuidor') {
+            await distributorService.toggledistristatus(user.id);
+        } else {
+            await userService.toggleUserStatus(user.id);
+        }
+        notify("Estado actualizado", "success");
+    } catch (e) {
         user.estado_usuario = estadoOriginal;
-        console.error("Error al cambiar estado:", error);
-        notify("No se pudo cambiar el estado del usuario.", "error");
+        notify("Error al actualizar", "error");
     }
 };
+
+
 
 const fetchUsers = async () => {
     try {
-        const response = await userService.getUsers();
-        const users = response.data || response;
-
-        if (Array.isArray(users)) {
-            usersAdmin.value = users.filter(user => user.id_rol == 1 || user.rol === '1');
-            usersTrabajador.value = users.filter(user => user.id_rol == 2 || user.rol === '2');
-        }
-    } catch (error) {
-        console.error("Error cargando los usuarios:", error);
-    }
+        const [uRes, dRes] = await Promise.all([userService.getUsers(), distributorService.getDistributors()]);
+        usersAdmin.value = uRes.data.filter((u: any) => u.id_rol == 1);
+        usersTrabajador.value = uRes.data.filter((u: any) => u.id_rol == 2);
+        usersDistribuidor.value = dRes.data.filter((u: any) => u.id_rol == 3);
+    } catch (e) { notify("Error cargando usuarios", "error"); }
 };
 
-const openModal = () => {
+const openModal = (user: any = null) => {
+    isEditing.value = !!user;
+    if (user) {
+        editingId.value = user.id;
+        form.nombre_usuario = user.nombre_usuario || user.nombre_empresa;
+        form.correo_electronico = user.correo_electronico;
+        form.id_rol = user.id_rol;
+    }
     isModalOpen.value = true;
 };
 
@@ -217,21 +166,13 @@ const closeModal = () => {
     form.id_rol = '';
 };
 
-const handleCreateUser = async () => {
+const handleSaveUser = async () => {
     try {
-        await userService.createUser({
-            nombre_usuario: form.nombre_usuario,
-            correo_electronico: form.correo_electronico,
-            contrasena: form.contrasena,
-            id_rol: parseInt(form.id_rol)
-        });
-
-        notify("Usuario insertado correctamente.", "success");
+        isEditing.value ? await userService.updateuser(editingId.value, form) : await userService.createUser(form);
+        notify("Guardado exitoso", "success");
         closeModal();
         fetchUsers();
-    } catch (error: any) {
-        notify("Error al guardar: " + (error.response?.data?.message || error.message), "error");
-    }
+    } catch (e) { notify("Error al guardar", "error"); }
 };
 
 const eliminarUsuario = async (id: number) => {
@@ -329,15 +270,16 @@ const eliminarUsuario = async (id: number) => {
     max-width: 360px;
 }
 
+.btn-edit { background-color: #f0f7ff; color: #007bff; border: 1px solid #cce5ff; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px; }
+.no-actions { font-size: 0.8rem; color: #adb5bd; font-style: italic; }
+
 .switch-slider {
     position: absolute;
-    top: 4px; left: 4px; bottom: 4px;
-    width: calc(50% - 4px);
+    top: 4px; bottom: 4px;
+    width: calc(33.33% - 4px);
     background-color: #ffffff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border-radius: 7px;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 0;
+    transition: transform 0.3s ease;
 }
 
 .switch-slider.slide-right { 
@@ -521,6 +463,10 @@ const eliminarUsuario = async (id: number) => {
     gap: 12px;
 }
 
+.pos-admin { transform: translateX(0); }
+.pos-trabajador { transform: translateX(100%); }
+.pos-distribuidor { transform: translateX(200%); }
+
 .btn-secondary { background: none; border: 1px solid #dee2e6; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; color: #495057; }
 .btn-secondary:hover { background-color: #f1f3f5; }
 
@@ -528,6 +474,16 @@ const eliminarUsuario = async (id: number) => {
 .btn-submit:hover { background-color: #231e30; }
 
 .empty-state { text-align: center; color: #adb5bd; padding: 50px 20px; font-size: 0.95rem; }
+
+.btn-cancel {
+  padding: 10px 20px; border: 1px solid #ddd; background: white;
+  border-radius: 8px; cursor: pointer; font-weight: 600;
+}
+.btn-save {
+  padding: 10px 20px; border: none; background: #e4869f; /* Tu color rosa */
+  color: white; border-radius: 8px; cursor: pointer; font-weight: 600;
+}
+.btn-save:hover { background: #d1758e; }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95) translateY(10px); }

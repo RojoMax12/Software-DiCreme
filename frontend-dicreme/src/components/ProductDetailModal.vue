@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { X, Plus, Minus } from 'lucide-vue-next';
+const images = import.meta.glob('@/assets/*.{png,jpg,jpeg,webp}', { eager: true });
 
 const props = defineProps<{
   isOpen: boolean;
@@ -17,7 +18,7 @@ const quantity = ref(1); // Cantidad por defecto
 // Resetear estados cuando se abre un producto diferente
 watch(() => props.product, (newProduct) => {
   if (newProduct) {
-    activeImage.value = newProduct.image10l || newProduct.image;
+    activeImage.value = getImageUrl('10L.webp'); // Imagen por defecto
     selectedSize.value = '10L';
     quantity.value = 1;
   }
@@ -34,6 +35,27 @@ const decreaseQuantity = () => {
   }
 };
 
+const getImageUrl = (imageName: string) => {
+  const path = `/src/assets/${imageName}`;
+  return (images[path] as any)?.default || '';
+};
+
+const selectSize = (size: '10L' | '5L' | '2.5L' | '1L', imageName: string) => {
+  selectedSize.value = size;
+  activeImage.value = getImageUrl(imageName); 
+};
+
+const setTempImage = (imageName: string) => {
+  // Solo cambiamos si no hemos seleccionado nada todavía
+  activeImage.value = getImageUrl(imageName);
+};
+
+const productImages = {
+  '10L': '10L.webp', // Cambia estos nombres por los reales
+  '5L': '5L.webp',
+  '2.5L': '2.5L.webp',
+  '1L': '1L.webp'
+};
 // Función para enviar el producto armado al carrito
 const handleAddToCart = () => {
   // Determinamos el precio correcto según el formato seleccionado
@@ -86,8 +108,9 @@ const handleAddToCart = () => {
                 <button 
                   class="liter-btn"
                   :class="{ active: selectedSize === '10L' }"
-                  @mouseenter="activeImage = product.image10l || product.image"
-                  @click="selectedSize = '10L'"
+                  @mouseenter="activeImage = getImageUrl('10L.webp')"
+                  @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
+                  @click="selectSize('10L', '10L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">10L</span>
@@ -98,8 +121,9 @@ const handleAddToCart = () => {
                 <button 
                   class="liter-btn"
                   :class="{ active: selectedSize === '5L' }"
-                  @mouseenter="activeImage = product.image5l || product.image"
-                  @click="selectedSize = '5L'"
+                  @mouseenter="activeImage = getImageUrl('5L.webp')"
+                  @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
+                  @click="selectSize('5L', '5L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">5L</span>
@@ -110,8 +134,9 @@ const handleAddToCart = () => {
                 <button 
                   class="liter-btn"
                   :class="{ active: selectedSize === '2.5L' }"
-                  @mouseenter="activeImage = product.image25l || product.image"
-                  @click="selectedSize = '2.5L'"
+                  @mouseenter="activeImage = getImageUrl('2.5L.webp')"
+                  @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
+                  @click="selectSize('2.5L', '2.5L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">2.5L</span>
@@ -122,8 +147,9 @@ const handleAddToCart = () => {
                 <button 
                   class="liter-btn"
                   :class="{ active: selectedSize === '1L' }"
-                  @mouseenter="activeImage = product.image1l || product.image"
-                  @click="selectedSize = '1L'"
+                  @mouseenter="activeImage = getImageUrl('1L.webp')"
+                  @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
+                  @click="selectSize('1L', '1L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">1L</span>

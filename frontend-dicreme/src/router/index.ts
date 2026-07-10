@@ -42,6 +42,14 @@ const router = createRouter({
       component: ResetPasswordView,
       meta: { hideNavbar: true, useLoader: true}
     },
+
+    {
+      path: '/perfile',
+      name: 'perfile-distribuidor',
+      component: () => import('../views/Distributor/PerfileView.vue'),
+      meta: {useLoader: true, requiresAuth: true }
+
+    },
     {
       path: '/admin',
       name: 'admin-home',
@@ -120,7 +128,7 @@ const router = createRouter({
       component: () => import('../views/Admin/BatchesView.vue'),
       meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
 
-    }
+    },
   ]
 })
 

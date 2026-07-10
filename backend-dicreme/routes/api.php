@@ -96,7 +96,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::put('/roles/{id}', [RolController::class, 'update'])->middleware('role:1');
         Route::delete('/roles/{id}', [RolController::class, 'destroy'])->middleware('role:1');
         Route::put('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update'])->middleware('role:2', 'audit.pii');
-        Route::put('/usuarios_distribuidores/{id}/toggle-estado', [Usuario_distribuidoresController::class, 'toggleestadousuario'])->middleware('role:2', 'audit.pii');
+        Route::put('/usuarios_distribuidores/{id}/toggle-estado', [Usuario_distribuidoresController::class, 'toggleestadousuario'])->middleware('role:1,2', 'audit.pii');
         Route::delete('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'destroy'])->middleware('role:1', 'audit.pii');
         Route::put('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'update'])->middleware('role:1', 'audit.pii');
         Route::put('/usuarios_dicreme/{id}/toggle-estado', [Usuario_dicremeController::class, 'toggleestadousuario'])->middleware('role:1', 'audit.pii');

@@ -213,8 +213,7 @@ const handleConfirmQuotation = async () => {
 
 <template>
   <div class="quotation-page">
-    <div class="banner-dicreme"></div>
-
+    
     <Transition name="toast-fade">
       <div v-if="showToast" class="dc-toast-alert">
         <div class="toast-content">
