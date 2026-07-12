@@ -1,17 +1,17 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Services\Estado_pedidoServices;
+use App\Services\Estado_pagoServices;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class Estado_pedidoController extends Controller
+class Estado_pagoController extends Controller
 {
-    protected $Estado_pedidoServices;
+    protected $Estado_pagoServices;
 
-    public function __construct(Estado_pedidoServices $Estado_pedidoServices)
+    public function __construct(Estado_pagoServices $Estado_pagoServices)
     {
-        $this->Estado_pedidoServices = $Estado_pedidoServices;
+        $this->Estado_pagoServices = $Estado_pagoServices;
     }
 
     
@@ -21,12 +21,12 @@ class Estado_pedidoController extends Controller
         ]);
 
         try {
-            $Estado_pedido = $this->Estado_pedidoServices->createEstadoPedido($data);
+            $Estado_pedido = $this->Estado_pagoServices->createEstadoPago($data);
 
             return response()->json([
             'status' => 'success', 
             'data' =>  $Estado_pedido, 
-            'message' => "Estado de pedido correctamente creado"],
+            'message' => "Estado de pago orrectamente creado"],
             200); 
         } catch (\Exception $e) {
             return response()->json([
@@ -45,12 +45,12 @@ class Estado_pedidoController extends Controller
         ]);
 
         try {
-            $pedido_update = $this->Estado_pedidoServices->updateEstadoPedido($id, $data);
+            $pedido_update = $this->Estado_pagoServices->updateEstadoPago($id, $data);
 
             return response()->json([
             'status' => 'success', 
             'data' =>  $pedido_update,
-            'message' => "Estado de pedido  actualizado correctamente"], 
+            'message' => "Estado de pago actualizado correctamente"], 
             200); 
         } catch (\Exception $e) {
            return response()->json([
@@ -64,12 +64,12 @@ class Estado_pedidoController extends Controller
     public function destroy($id):JsonResponse
     {   
         try {
-            $pedido_delete = $this->Estado_pedidoServices->deleteEstadoPedido($id);
+            $pedido_delete = $this->Estado_pagoServices->deleteEstadoPago($id);
 
             return response()->json([
             'status' => 'success', 
             'data' =>  $pedido_delete,
-            'message' => "Estado de pedido eliminado correctamente"], 
+            'message' => "Estado de pago liminado correctamente"], 
             200); 
         } catch (\Exception $e) {
             return response()->json([
@@ -82,11 +82,11 @@ class Estado_pedidoController extends Controller
 
     public function index()
     {
-        return response()->json($this->Estado_pedidoServices->getAllEstadosPedido());
+        return response()->json($this->Estado_pagoServices->getAllEstadosPago());
     }
 
     public function show($id)
     {
-        return response()->json($this->Estado_pedidoServices->getAllEstadosPedido($id));
+        return response()->json($this->Estado_pagoServices->getEstadoPagoById($id));
     }
 }

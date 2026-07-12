@@ -88,6 +88,23 @@ const goBack = () => {
   router.back()
 }
 
+const formatRutInput = (rut: string) => {
+  // 1. Quitamos todo lo que no sea número o la letra k/K
+  let clean = rut.replace(/[^0-9kK]/gi, '');
+  
+  // 2. Limitamos el tamaño máximo a 9 caracteres (cuerpo de 8 + 1 dígito verificador)
+  if (clean.length > 9) {
+    clean = clean.substring(0, 9);
+  }
+
+  // 3. Si tiene más de un dígito, le agregamos el guion antes del último caracter
+  if (clean.length > 1) {
+    return clean.slice(0, -1) + '-' + clean.slice(-1).toUpperCase();
+  }
+  
+  return clean.toUpperCase();
+}
+
 const handleRegister = async () => {
   // 1. Validaciones básicas antes de enviar
   if (!form.value.rut_empresa || !form.value.nombre_empresa || !form.value.correo_electronico || !form.value.contrasena) {
@@ -104,9 +121,10 @@ const handleRegister = async () => {
   isLoading.value = true
 
   try {
-
+    const rutLimpio = form.value.rut_empresa.replace(/[^0-9kK]/gi, '').toUpperCase();
+    
     await authService.registerDistribuidor({
-      rut_empresa: form.value.rut_empresa,
+      rut_empresa: rutLimpio,
       nombre_empresa: form.value.nombre_empresa,
       correo_electronico: form.value.correo_electronico,
       telefono: form.value.telefono,
@@ -156,6 +174,7 @@ const goToLogin = () => {
           <div class="input-group">
             <input 
               v-model="form.rut_empresa" 
+              @input="form.rut_empresa = formatRutInput(form.rut_empresa)"
               type="text" 
               placeholder="RUT Empresa" 
               class="custom-input"

@@ -104,6 +104,8 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         
         Route::post('/pedidos', [PedidoController::class, 'store']);
         Route::put('/pedidos/{id_pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])->middleware('role:1,2');
+                Route::put('/pedidos/{id_pedido}/cambiar-estado-pago', [PedidoController::class, 'cambiarEstadoPago'])->middleware('role:1,2');
+
         Route::put('/pedidos/{id}', [PedidoController::class, 'update'])->middleware('role:1,2');
         Route::delete('/pedidos/{id}', [PedidoController::class, 'destroy'])->middleware('role:1');
         Route::post('/estado_pedido', [Estado_pedidoController::class, 'store'])->middleware('role:1');

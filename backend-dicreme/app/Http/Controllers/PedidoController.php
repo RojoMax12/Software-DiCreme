@@ -136,6 +136,28 @@ class PedidoController extends Controller
         }
     }
 
+    public function cambiarEstadoPago(Request $request, $id_pago)
+    {
+        try {
+            $id_estado = $request->input('id_estado_pago');
+            
+            // Ejecutamos la función secuencial interna
+            $pedidoActualizado = $this->pedidoService->actualizarEstadoPago($id_pago, $id_estado);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "El estado del pago se actualizó correctamente.",
+                'data'    => $pedidoActualizado
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
     public function getdetailpedido($id){
         
         $resultado = $this->pedidoService->getDetailPedido($id);

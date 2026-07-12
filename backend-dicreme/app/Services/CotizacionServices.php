@@ -116,6 +116,7 @@ public function transformarCotizacionEnPedido($idCotizacion)
         'id_cotizacion'           => $cotizacion->id,
         'id_usuario_dicreme'      => null,
         'id_usuario_distribuidor' => $cotizacion->id_distribuidor,
+        'id_estado_pago' =>1,
         'id_estado_pedido'        => 1,
         'fecha_creacion'          => now()->toDateString(),
         'hora_creacion'           => now()->toTimeString(),
@@ -156,7 +157,10 @@ public function transformarCotizacionEnPedido($idCotizacion)
 
         // Si después de revisar los lotes en memoria falta stock, cancelamos
         if ($cantidadPorDescontar > 0) {
-            throw new \Exception("Stock insuficiente en lotes para el producto ID: " . $item->id_producto);
+            $nombre = $item->producto?->nombre_producto ?? 'Desconocido';
+            $categoria = $item->producto?->categoria?->nombre_categoria ?? 'Sin categoría';
+            $formato = $item->producto?->formato?->nombre_formato ?? 'Sin categoría';
+            throw new \Exception("Stock insuficiente en lotes para el producto: {$nombre} (Categoría: {$categoria}) (Formato: {$formato})");
         }
     }
 

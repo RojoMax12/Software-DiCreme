@@ -154,7 +154,7 @@ class Usuario_distribuidoresController extends Controller
         
         $cleanPhone = preg_replace('/[^0-9]/', '', $data['telefono']);
         if (strpos($cleanPhone, '569') === 0 && strlen($cleanPhone) === 11) {
-            $cleanPhone = substr($cleanPhone, 3);
+            $cleanPhone = substr($cleanPhone, 2);
         }
         $data['telefono'] = $cleanPhone;
         

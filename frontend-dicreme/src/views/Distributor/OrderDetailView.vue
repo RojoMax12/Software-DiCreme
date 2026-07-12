@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ShieldCheck, IceCream } from 'lucide-vue-next'
 import orderService from '@/services/orderService' 
 import boxPlaceholderImage from '@/assets/caja_dicreme.jpg'
+const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 const route = useRoute()
 const router = useRouter()
@@ -25,6 +26,13 @@ const fallbackComuna = ref('Comuna Registrada')
 
 // Captura el ID del pedido directo desde los parámetros de la URL
 const pedidoId = computed(() => Number(route.params.id))
+
+const getDynamicImage = (flavorName: string) => {
+  if (!flavorName) return boxPlaceholderImage;
+  const formattedName = flavorName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+  const path = `/src/assets/FotoHelados/${formattedName}.webp`;
+  return heladoImages[path] || boxPlaceholderImage;
+};
 
 // CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1, 2, 3 o 4)
 const currentStep = computed(() => {
@@ -119,7 +127,8 @@ onMounted(async () => {
             name: prod.nombre_producto,
             id_categoria: prod.id_categoria,
             formato: formatos[prod.id_formato] || '10L',
-            precio: prod.precio_unitario_venta
+            precio: prod.precio_unitario_venta,
+            image: getDynamicImage(prod.nombre_producto)
           }
         }
       })
@@ -409,7 +418,7 @@ const handleGoBack = () => {
   align-items: center;
 }
 
-.item-thumb { width: 75px; height: 55px; object-fit: cover; border-radius: 10px; }
+.item-thumb { width: 75px; height: 55px; object-fit: contain; border-radius: 10px; }
 .item-info { flex: 1; display: flex; flex-direction: column; text-align: left; }
 .item-name { font-size: 0.95rem; font-weight: bold; color: #1a1624; }
 .item-tag { font-size: 0.75rem; font-weight: 700; margin-top: 1px; color: var(--DC-pink); }

@@ -61,7 +61,14 @@
           <div class="input-row">
             <div class="input-group">
               <label>RUT Empresa</label>
-              <input v-model="distributorForm.rut_empresa" @blur="formatRUT" type="text" placeholder="12.345.678-9" class="dc-input" :disabled="isDistributorSelected" />
+              <input 
+                v-model="distributorForm.rut_empresa" 
+                @input="distributorForm.rut_empresa = formatRutInput(distributorForm.rut_empresa)"
+                type="text" 
+                placeholder="12345678-9" 
+                class="dc-input" 
+                :disabled="isDistributorSelected" 
+              />
             </div>
             <div class="input-group">
               <label>Nombre Empresa</label>
@@ -182,6 +189,7 @@
               No hay productos
             </div>
             <div v-for="(item, idx) in cartItems" :key="item.id" class="cart-item-admin">
+              <img :src="item.image" :alt="item.name" class="cart-item-thumb" />
               <div class="item-main">
                 <span class="item-name">{{ item.name }} ({{ item.size }})</span>
                 <span class="item-price">{{ item.formattedPrice }}</span>
@@ -232,7 +240,10 @@
           <h4>Productos Seleccionados</h4>
           <div class="summary-card products-list-final">
             <div v-for="item in cartItems" :key="item.id" class="final-item">
-              <span>{{ item.quantity }}x {{ item.name }} ({{ item.size }})</span>
+              <div class="final-item-info">
+                <img :src="item.image" class="final-thumb" />
+                <span>{{ item.quantity }}x {{ item.name }} ({{ item.size }})</span>
+              </div>
               <span>{{ item.formattedPrice }} c/u</span>
             </div>
             <div class="final-total">
@@ -266,6 +277,8 @@ import quoteService from '@/services/quoteService';
 import { authService } from '@/services/authService';
 import fotoCaja from '@/assets/caja_dicreme.jpg';
 import { useNotification } from '@/composables/useNotification';
+const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
+
 
 const { notify } = useNotification();
 const router = useRouter();
@@ -324,14 +337,49 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
-// --- VALIDACIONES CHILENAS ---
-const formatRUT = () => {
-  if (isDistributorSelected.value) return; // No formatea si está bloqueado
-  let val = distributorForm.value.rut_empresa.replace(/[^0-9kK]/g, '');
-  if (val.length > 1) {
-    distributorForm.value.rut_empresa = val.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + val.slice(-1);
+const getDynamicImage = (flavorName: string) => {
+  if (!flavorName) return fotoCaja;
+  
+  const formattedName = flavorName
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes
+    .replace(/\s+/g, '-'); // Cambia espacios por guiones
+
+  const path = `/src/assets/FotoHelados/${formattedName}.webp`;
+
+  if (heladoImages[path]) {
+    return heladoImages[path];
+  } else {
+    return fotoCaja; // Caja por defecto si no hay foto
   }
 };
+
+
+// --- VALIDACIONES CHILENAS ---
+const formatRUT = () => {
+  distributorForm.value.rut_empresa = formatRutInput(distributorForm.value.rut_empresa);
+};
+
+const formatRutInput = (rut: string) => {
+  // Limpiamos todo excepto números y la letra K
+  let clean = rut.replace(/[^0-9kK]/gi, '');
+  if (clean.length > 9) clean = clean.substring(0, 9);
+  
+  if (clean.length > 1) {
+    return clean.slice(0, -1) + '-' + clean.slice(-1).toUpperCase();
+  }
+  return clean.toUpperCase();
+};
+
+const formatRutVisual = (rut: string) => {
+  if (!rut) return '';
+  let clean = rut.replace(/[^0-9kK]/gi, '');
+  if (clean.length > 9) clean = clean.substring(0, 9);
+  if (clean.length > 1) {
+    return clean.slice(0, -1) + '-' + clean.slice(-1).toUpperCase();
+  }
+  return clean.toUpperCase();
+}
 
 const validateRUT = (rut: string): boolean => {
   const cleanRut = rut.replace(/[^0-9kK]/g, '');
@@ -470,7 +518,8 @@ const addToCart = (product: any, format: any) => {
       price: format.price,
       formattedPrice: format.formattedPrice,
       category: product.category,
-      quantity: 1
+      quantity: 1,
+      image: product.image
     });
   }
 };
@@ -491,7 +540,7 @@ const totalQuote = computed(() => {
   return `$${total.toLocaleString('es-CL')}`;
 });
 
-// --- APIS ---
+
 const fetchDistributors = async () => {
   try {
     const response = await distributorService.getDistributors();
@@ -528,7 +577,7 @@ const fetchIceCreams = async () => {
         grouped[uniqueKey] = {
           name: flavorName,
           category: categoryName,
-          image: fotoCaja,
+          image: getDynamicImage(flavorName),
           formats: []
         };
       }
@@ -555,8 +604,16 @@ const confirmQuote = async () => {
 
     if (!distributorId) {
       const cleanPhone = distributorForm.value.telefono.replace(/\+56/g, '').trim();
+      const rutParaValidar = distributorForm.value.rut_empresa.replace(/[^0-9kK]/gi, '');
+      const rutLimpio = distributorForm.value.rut_empresa.replace(/[^0-9kK]/gi, '').toUpperCase();
+
+      if (!validateRUT(rutParaValidar)) {
+      notify('El RUT ingresado no es válido.', 'error');
+      return;
+      }
+
       const registerData = {
-        rut_empresa: distributorForm.value.rut_empresa,
+        rut_empresa: rutLimpio,
         nombre_empresa: distributorForm.value.nombre_empresa,
         correo_electronico: distributorForm.value.correo_electronico || `manual_${Date.now()}@dicreme.cl`,
         telefono: cleanPhone || '900000000', 
@@ -873,7 +930,10 @@ input:disabled, .dc-input:disabled {
 .product-card-admin img {
   width: 100%;
   height: 120px;
-  object-fit: cover;
+  object-fit: contain; /* Cambia cover por contain */
+  background-color: #fff; /* Fondo blanco para que se vea limpio */
+  padding: 5px; /* Un pequeño margen */
+  box-sizing: border-box;
 }
 
 .p-info {
@@ -949,6 +1009,16 @@ input:disabled, .dc-input:disabled {
   border-radius: 8px;
   margin-bottom: 0.8rem;
   border: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cart-item-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 .item-main {
@@ -1021,6 +1091,18 @@ input:disabled, .dc-input:disabled {
   border-bottom: 1px solid #eee;
   padding-bottom: 0.5rem;
   font-size: 0.95rem;
+}
+
+.final-item-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.final-thumb {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 .final-total {

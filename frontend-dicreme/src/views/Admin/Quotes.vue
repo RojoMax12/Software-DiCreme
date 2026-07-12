@@ -28,6 +28,10 @@
               <div class="dropdown-item" @click="selectStatus('Cancelado')">Cancelado</div>
             </div>
           </div>
+          <button class="btn-export" @click="exportarExcel" :disabled="isExporting">
+            <Download :size="18" />
+            <span>{{ isExporting ? 'Exportando...' : 'Exportar' }}</span>
+          </button>
         </div>
       </div>
 
@@ -179,29 +183,34 @@
             </td>
             <td>
               <div class="actions-content">
-                <button 
-                  v-if="order.managedBy?.id === currentUser.id"
-                  class="btn-action btn-leave" 
-                  @click="leaveQuote(order.id)"
-                >
-                  <UserMinus :size="18" />
-                  <span>Dejar</span>
-                </button>
-                <button 
-                  v-else
-                  class="btn-action btn-take" 
-                  :disabled="order.status !== 'Por Tomar'"
-                  @click="takeQuote(order.id)"
-                >
-                  <UserPlus :size="18" />
-                  <span>Tomar</span>
-                </button>
+                <!-- Solo mostramos Tomar/Dejar si la cotización está activa -->
+                <template v-if="order.status !== 'Completado' && order.status !== 'Cancelado'">
+                  <button 
+                    v-if="order.managedBy?.id === currentUser.id"
+                    class="btn-action btn-leave" 
+                    @click="leaveQuote(order.id)"
+                  >
+                    <UserMinus :size="18" />
+                    <span>Dejar</span>
+                  </button>
+                  <button 
+                    v-else
+                    class="btn-action btn-take" 
+                    :disabled="order.status !== 'Por Tomar'"
+                    @click="takeQuote(order.id)"
+                  >
+                    <UserPlus :size="18" />
+                    <span>Tomar</span>
+                  </button>
+                </template>
+
+                <!-- El botón de detalle siempre se muestra, pero el ícono cambia a "Ojo" si está completado -->
                 <button 
                   class="btn-action btn-detail" 
                   :class="{ 'btn-detail-managed': order.managedBy }"
                   @click="openModal(order.id)"
                 >
-                  <component :is="order.managedBy?.id === currentUser.id ? Pencil : Eye" :size="18" />
+                  <component :is="(order.managedBy?.id === currentUser.id && order.status !== 'Completado' && order.status !== 'Cancelado') ? Pencil : Eye" :size="18" />
                   <span>Detalle</span>
                 </button>
               </div>
@@ -284,15 +293,17 @@ import {
   ChevronDown,
   ClockAlert,
   FileSearch,
-  LayoutGrid
+  LayoutGrid,Download
 } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
+import * as XLSX from 'xlsx';
 
 
 // Pagination logic
 const itemsPerPage = 10;
 const currentPage = ref(1);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalResults.value / itemsPerPage)));
+const isExporting = ref(false);
 
 
 // Filter logic
@@ -307,6 +318,60 @@ const isModalOpen = ref(false);
 const selectedOrderId = ref<number | string>('');
 
 const { notify } = useNotification(); // Extraemos la función de notificación del composable
+
+const exportarExcel = () => {
+  // Validamos contra la lista total (orders), no la filtrada
+  if (orders.value.length === 0) {
+    notify('No hay datos para exportar', 'error');
+    return;
+  }
+
+  isExporting.value = true;
+  try {
+    // Función auxiliar para formatear las columnas del Excel
+    const formatForExcel = (dataList: any[]) => {
+      return dataList.map(o => ({
+        'ID Cotización': o.id,
+        'Distribuidor': o.distributor,
+        'Teléfono': o.distributorPhone || 'N/A',
+        'Gestionado Por': o.managedBy ? o.managedBy.name : 'Sin asignar',
+        'Estado': o.status,
+        'Fecha': o.date,
+        'Hora': o.time,
+        // Convertimos el string formateado "15.000" a número puro
+        'Total ($)': parseFloat(o.total.replace(/\./g, '')) || 0
+      }));
+    };
+
+    const workbook = XLSX.utils.book_new();
+
+    // 1. Hoja: Cotizaciones Actuales (Por tomar y En revisión)
+    const actuales = orders.value.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status));
+    const sheetActuales = XLSX.utils.json_to_sheet(formatForExcel(actuales));
+    XLSX.utils.book_append_sheet(workbook, sheetActuales, "Actuales");
+
+    // 2. Hoja: Cotizaciones Completadas
+    const completadas = orders.value.filter((o: any) => o.status === 'Completado');
+    const sheetCompletadas = XLSX.utils.json_to_sheet(formatForExcel(completadas));
+    XLSX.utils.book_append_sheet(workbook, sheetCompletadas, "Completadas");
+
+    // 3. Hoja: Cotizaciones Canceladas
+    const canceladas = orders.value.filter((o: any) => o.status === 'Cancelado');
+    const sheetCanceladas = XLSX.utils.json_to_sheet(formatForExcel(canceladas));
+    XLSX.utils.book_append_sheet(workbook, sheetCanceladas, "Canceladas");
+
+    // 4. Guardar archivo con nombre descriptivo
+    const dateStr = new Date().toLocaleDateString('es-CL').replace(/\//g, '-');
+    XLSX.writeFile(workbook, `Reporte_General_Cotizaciones_${dateStr}.xlsx`);
+    
+    notify('Excel generado correctamente con las 3 categorías', 'success');
+  } catch (error) {
+    console.error('Error al exportar:', error);
+    notify('Hubo un error al exportar los datos', 'error');
+  } finally {
+    isExporting.value = false;
+  }
+};
 
 
 const selectedOrder = computed(() => {
@@ -404,22 +469,21 @@ const formatDate = (dateString: string) => {
 const takeQuote = async (quoteId: number) => {
   try {
     const responseValidacion = await quoteService.takeQuote(quoteId, currentUser.value.id);
-    notify(responseValidacion.data.message, 'success');
-
+    notify(responseValidacion?.data?.message || 'Cotización tomada exitosamente', 'success');
 
     await fetchQuotes();
-  } catch (error) {
-    
-    notify(error.response?.data?.message || 'Error', 'error');
+  } catch (error: any) { // <--- Agregamos :any aquí
+    notify(error.response?.data?.message || 'Error al tomar la cotización', 'error');
   } 
 };
 
 const leaveQuote = async (quoteId: number) => {
   try {
     const response = await quoteService.leaveQuote(quoteId, currentUser.value.id);
-    notify(response.data.message, 'success');
+    notify(response?.data?.message || 'Cotización dejada exitosamente', 'success');
+    
     await fetchQuotes();
-  } catch (error) {
+  } catch (error: any) { // <--- Agregamos :any aquí
     notify(error.response?.data?.message || 'Error al dejar la cotización', 'error');
   }
 };
@@ -1088,6 +1152,36 @@ const getStatusClass = (status: string) => {
 .page-num.active {
   background-color: #e4869f;
   color: white;
+}
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #322c44; /* Color corporativo oscuro */
+  border: 1px solid #322c44;
+  border-radius: 10px;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-export:hover:not(:disabled) {
+  background-color: #4a445c;
+  border-color: #4a445c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(50, 44, 68, 0.15);
+}
+
+.btn-export:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #9793a0;
+  border-color: #9793a0;
 }
 
 

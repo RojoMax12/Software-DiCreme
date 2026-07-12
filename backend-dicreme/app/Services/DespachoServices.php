@@ -5,7 +5,6 @@ use App\Repositories\DespachoRepository;
 use App\Repositories\Usuario_dicremeRepository;
 use App\Repositories\Usuario_distribuidoresRepository;
 use App\Repositories\PedidoRepository;
-use App\Models\Despacho;
 use Illuminate\Support\Facades\Mail;
 
 class DespachoServices

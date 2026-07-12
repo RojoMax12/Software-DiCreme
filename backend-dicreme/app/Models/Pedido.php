@@ -16,6 +16,7 @@ class Pedido extends Model
     protected $fillable = [
         'id_cotizacion',
         'id_estado_pedido',
+        'id_estado_pago',
         'id_usuario_dicreme',
         'id_usuario_distribuidor',
         'fecha_creacion',
@@ -38,6 +39,11 @@ class Pedido extends Model
     public function estadoPedido(): HasOne
     {
         return $this->HasOne(Estado_pedido::class, 'id_estado_pedido');
+    }
+
+    public function estadoPago(): HasOne
+    {
+        return $this->HasOne(Estado_pago::class, 'id_estado_pago');
     }
 
     public function despacho(): HasOne
