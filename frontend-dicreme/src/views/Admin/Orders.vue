@@ -173,6 +173,11 @@
                 Total <ChevronsUpDown :size="16" class="sort-icon" :class="{ 'active-sort': sortConfig.key === 'total' }" />
               </div>
             </th>
+            <th v-if="activeTab === 'pagos'" @click="sortBy('pagoStatus')">
+              <div class="header-content">
+                Estado Pago <ChevronsUpDown :size="16" class="sort-icon" :class="{ 'active-sort': sortConfig.key === 'pagoStatus' }" />
+              </div>
+            </th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -212,6 +217,11 @@
               </div>
             </td>
             <td class="bold-text">${{ formatPrice(order.total) }}</td>
+            <td v-if="activeTab === 'pagos'">
+              <span class="status-badge" :class="getStatusClass(order.pagoStatus)">
+                {{ order.pagoStatus }}
+              </span>
+            </td>
             <td>
               <div class="actions-content">
                 <button class="btn-action btn-detail" @click="openModal(order.id)">
@@ -232,6 +242,8 @@
       :distributor-phone="selectedOrder?.distributorPhone"
       :status="selectedOrder?.status"
       :status-id="selectedOrder?.rawStatusId"
+      :pago="selectedOrder?.pagoStatus"
+      :pago-id="selectedOrder?.pagoId"
       :date="selectedOrder?.date"
       :time="selectedOrder?.time"
       :total="selectedOrder?.total"
@@ -268,9 +280,26 @@ const orders = ref<any[]>([]);
 const isLoading = ref(true);
 const activeTab = ref('pedidos');
 const isExporting = ref(false);
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
+
 
 // Mapa reactivo que se llenará EXCLUSIVAMENTE desde la BDD
 const statusMap = ref<Map<number, string>>(new Map());
+
+const extractTime = (timeString: string) => {
+  if (!timeString) return '';
+  
+  // Si viene con formato completo "2024-05-12 14:26:00" o con la T de ISO "2024-05-12T14:26:00.000Z"
+  if (timeString.length > 10) {
+    const timePart = timeString.includes('T') ? timeString.split('T')[1] : timeString.split(' ')[1];
+    return timePart ? timePart.substring(0, 5) : '';
+  }
+  
+  // Si el backend envía solamente "14:26:00"
+  return timeString.substring(0, 5);
+};
 
 const fetchOrders = async () => {
   isLoading.value = true;
@@ -294,13 +323,16 @@ const fetchOrders = async () => {
 
     const DEFAULT_NAMES: Record<number, string> = {
       1: 'En validación', 2: 'En preparación', 3: 'En despacho', 
-      4: 'Entregado', 5: 'Pendiente', 6: 'Por pagar', 7: 'Pagada', 8: 'Cancelado'
+      4: 'Entregado', 5: 'Pendiente', 6: 'Cancelado'
     };
 
     orders.value = rawOrders.map((o: any) => {
 
       const statusId = Number(o.id_estado_pedido || o.id_estado || 1);
       const distId = Number(o.id_usuario_distribuidor || o.id_distribuidor || 0);
+
+      const pagoId = Number(o.id_estado_pago || 1); 
+      const pagoStatus = pagoId === 2 ? 'Pagada' : 'Por pagar'; 
       
       
       return {
@@ -309,9 +341,11 @@ const fetchOrders = async () => {
         distributorPhone: distPhoneMap.get(distId) || o.telefono || o.distributorPhone || '',
         // Sincronización perfecta de strings:
         status: statusMap.value.get(statusId) || DEFAULT_NAMES[statusId] || `Estado #${statusId}`,
+        pagoId: pagoId,         
+        pagoStatus: pagoStatus, 
         total: Number(o.monto_final || o.total_pedido || o.total_cotizacion || 0),
         date: formatDate(o.fecha_creacion || o.fecha_pedido || o.created_at),
-        time: o.hora_creacion ? o.hora_creacion.substring(14, 19) : '',
+        time: extractTime(o.hora_creacion || o.created_at),
         rawStatusId: statusId
       };
     });
@@ -326,23 +360,53 @@ const fetchOrders = async () => {
 };
 
 const exportarExcel = () => {
-  isExporting.value = true;
-  const dataToExport = sortedOrders.value.map(o => ({
-    'ID Pedido': o.id,
-    'Distribuidor': o.distributor,
-    'Estado': o.status,
-    'Fecha': o.date,
-    'Hora': o.time,
-    'Total ($)': o.total
-  }));
+  if (orders.value.length === 0) {
+    notify('No hay datos para exportar', 'error');
+    return;
+  }
 
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Pedidos");
-  
-  // Generar archivo
-  XLSX.writeFile(workbook, `Reporte_Pedidos_${new Date().toLocaleDateString()}.xlsx`);
-  isExporting.value = false;
+  isExporting.value = true;
+  try {
+    // Función auxiliar para dar formato ordenado a las columnas en Excel
+    const formatForExcel = (dataList: any[]) => {
+      return dataList.map(o => ({
+        'ID Pedido': o.id,
+        'Distribuidor': o.distributor,
+        'Teléfono': o.distributorPhone || 'N/A',
+        'Estado Logístico': o.status,
+        'Estado de Pago': o.pagoStatus,
+        // Convertimos el string formateado "15.000" a un número puro para que Excel permita sumar la columna
+        'Total ($)': parseFloat(o.total.toString().replace(/\./g, '')) || 0,
+        'Fecha de Ingreso': o.date,
+        'Hora': o.time
+      }));
+    };
+
+    const workbook = XLSX.utils.book_new();
+
+    // 1. HOJA: PEDIDOS
+    // Usamos la misma lógica de tu pestaña "pedidos"
+    const pedidos = orders.value.filter((o: any) => [1, 2, 3, 4, 5, 6].includes(o.rawStatusId));
+    const sheetPedidos = XLSX.utils.json_to_sheet(formatForExcel(pedidos));
+    XLSX.utils.book_append_sheet(workbook, sheetPedidos, "Pedidos");
+
+    // 2. HOJA: PAGOS
+    // Usamos la misma lógica de tu pestaña "pagos"
+    const pagos = orders.value.filter((o: any) => [1, 2].includes(o.pagoId));
+    const sheetPagos = XLSX.utils.json_to_sheet(formatForExcel(pagos));
+    XLSX.utils.book_append_sheet(workbook, sheetPagos, "Pagos");
+
+    // Generar archivo con nombre y fecha
+    const dateStr = new Date().toLocaleDateString('es-CL').replace(/\//g, '-');
+    XLSX.writeFile(workbook, `Reporte_General_DiCreme_${dateStr}.xlsx`);
+    
+    notify('Excel generado correctamente con ambas hojas', 'success');
+  } catch (error) {
+    console.error('Error al exportar a Excel:', error);
+    notify('Hubo un error al exportar los datos', 'error');
+  } finally {
+    isExporting.value = false;
+  }
 };
 
 const formatDate = (dateString: string) => {
@@ -356,16 +420,16 @@ const formatDate = (dateString: string) => {
 
 const counts = computed(() => {
   // Pagos: Por pagar (6) y Pagada (7)
-  const pagos = orders.value.filter((o: any) => [6, 7].includes(o.rawStatusId)).length;
+  const pagos = orders.value.filter((o: any) => [1, 2].includes(o.pagoId)).length;
   // Pedidos: Todo lo demás + Pagada (7) para que no se pierda el rastro
-  const pedidos = orders.value.filter((o: any) => [1, 2, 3, 4, 5, 7, 8].includes(o.rawStatusId)).length;
+  const pedidos = orders.value.filter((o: any) => [1, 2, 3, 4, 6].includes(o.rawStatusId)).length;
   return { pagos, pedidos };
 });
 
 const stats = computed(() => {
   return {
-    unpaid: orders.value.filter((o: any) => o.rawStatusId === 6).length,
-    paid: orders.value.filter((o: any) => o.rawStatusId === 7).length,
+    unpaid: orders.value.filter((o: any) => o.pagoId === 1).length,
+    paid: orders.value.filter((o: any) => o.pagoId === 2).length,
     preparation: orders.value.filter((o: any) => o.rawStatusId === 2).length,
     shipping: orders.value.filter((o: any) => o.rawStatusId === 3).length,
     delivered: orders.value.filter((o: any) => o.rawStatusId === 4).length
@@ -459,10 +523,11 @@ const filteredOrders = computed(() => {
 
   // 1. Tab Filter
   if (activeTab.value === 'pagos') {
-    result = result.filter((o: any) => [6, 7].includes(o.rawStatusId));
+    result = result.filter((o: any) => [1, 2].includes(o.pagoId));
+    console.log(result)
   } else {
     // Pedidos incluye todo excepto "Por pagar" (6), pero incluye "Pagada" (7)
-    result = result.filter((o: any) => [1, 2, 3, 4, 5, 7, 8].includes(o.rawStatusId));
+    result = result.filter((o: any) => [1, 2, 3, 4, 5, 6].includes(o.rawStatusId));
   }
 
   // 2. Search Query (ID or Distributor)

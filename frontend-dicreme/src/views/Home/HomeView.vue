@@ -76,6 +76,7 @@ import Footer from '@/components/Footer.vue'
 import Carousel from '@/components/Carousel.vue';
 import imgBanner1 from '@/assets/banner1.webp'
 import imgBanner2 from '@/assets/banner2.webp'
+const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 
 const bannerImages = [
@@ -130,6 +131,23 @@ watch(() => router.currentRoute.value.path, () => {
 });
 
 
+const getDynamicImage = (flavorName: string) => {
+  // Transforma: "Limón al Agua" -> "limon-al-agua"
+  const formattedName = flavorName
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // <-- ¡IMPORTANTE! Quita las tildes para evitar errores
+    .replace(/\s+/g, '-');
+
+  // Construimos la ruta tal cual la lee Vite desde la raíz del proyecto
+  const path = `/src/assets/FotoHelados/${formattedName}.webp`;
+
+  // Comprueba si la imagen realmente existe en la carpeta
+  if (heladoImages[path]) {
+    return heladoImages[path]; // Devuelve la imagen del sabor
+  } else {
+    return fotoCaja; // Si no existe el archivo, devuelve la caja fuerte
+  }
+};
 
 const totalCartItems = computed(() => {
   return cartItems.value.reduce((total, item) => total + (item.quantity || 1), 0);
@@ -159,6 +177,8 @@ const filteredIceCreams = computed(() => {
   }
   return results;  
 });
+
+
 
 // Abrir el modal de detalles
 const openDetails = (iceCream: any) => {
@@ -291,7 +311,7 @@ const fetchIceCreams = async () => {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
-          image: fotoCaja,
+          image: getDynamicImage(flavorName),
           id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',

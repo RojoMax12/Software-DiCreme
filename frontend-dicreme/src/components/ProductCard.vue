@@ -46,12 +46,17 @@ defineEmits(['view-details']);
   width: 100%;
   height: 140px;
   overflow: hidden;
+  padding: 10px; 
+  box-sizing: border-box;
+  display: flex;  
+  align-items: center;
+  justify-content: center;
 }
 
 .card-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .card-content {

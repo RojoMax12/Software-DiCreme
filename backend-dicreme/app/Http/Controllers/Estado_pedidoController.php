@@ -1,17 +1,17 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Services\DespachoServices;
+use App\Services\Estado_pedidoServices;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class Estado_pedidoController extends Controller
 {
-    protected $despachoServices;
+    protected $Estado_pedidoServices;
 
-    public function __construct(DespachoServices $despachoServices)
+    public function __construct(Estado_pedidoServices $Estado_pedidoServices)
     {
-        $this->despachoServices = $despachoServices;
+        $this->Estado_pedidoServices = $Estado_pedidoServices;
     }
 
     
@@ -21,17 +21,17 @@ class Estado_pedidoController extends Controller
         ]);
 
         try {
-            $despacho = $this->despachoServices->createDespacho($data);
+            $Estado_pedido = $this->Estado_pedidoServices->createEstadoPedido($data);
 
             return response()->json([
             'status' => 'success', 
-            'data' =>  $despacho, 
-            'message' => "Despacho correctamente creado"],
+            'data' =>  $Estado_pedido, 
+            'message' => "Estado de pedido correctamente creado"],
             200); 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al crear el despacho' . $e->getMessage()
+                'message' => 'Error al crear el pedido' . $e->getMessage()
             ], 400);
         }
         
@@ -45,17 +45,17 @@ class Estado_pedidoController extends Controller
         ]);
 
         try {
-            $despacho_update = $this->despachoServices->updateDespacho($id, $data);
+            $pedido_update = $this->Estado_pedidoServices->updateEstadoPedido($id, $data);
 
             return response()->json([
             'status' => 'success', 
-            'data' =>  $despacho_update,
-            'message' => "Despacho  actualizado correctamente"], 
+            'data' =>  $pedido_update,
+            'message' => "Estado de pedido  actualizado correctamente"], 
             200); 
         } catch (\Exception $e) {
            return response()->json([
                 'status' => 'error',
-                'message' => 'Error al actualizar el despacho' . $e->getMessage()
+                'message' => 'Error al actualizar el estado del pedido' . $e->getMessage()
             ], 400);
         }
         
@@ -64,17 +64,17 @@ class Estado_pedidoController extends Controller
     public function destroy($id):JsonResponse
     {   
         try {
-            $despacho_delete = $this->despachoServices->deleteDespacho($id);
+            $pedido_delete = $this->Estado_pedidoServices->deleteEstadoPedido($id);
 
             return response()->json([
             'status' => 'success', 
-            'data' =>  $despacho_delete,
-            'message' => "Despacho  eliminado correctamente"], 
+            'data' =>  $pedido_delete,
+            'message' => "Estado de pedido eliminado correctamente"], 
             200); 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al eliminar el despacho' . $e->getMessage()
+                'message' => 'Error al eliminar el estado pedido' . $e->getMessage()
             ], 400);
         }
     }
@@ -82,11 +82,11 @@ class Estado_pedidoController extends Controller
 
     public function index()
     {
-        return response()->json($this->despachoServices->getAllDespachos());
+        return response()->json($this->Estado_pedidoServices->getAllEstadosPedido());
     }
 
     public function show($id)
     {
-        return response()->json($this->despachoServices->getDespachoById($id));
+        return response()->json($this->Estado_pedidoServices->getAllEstadosPedido($id));
     }
 }

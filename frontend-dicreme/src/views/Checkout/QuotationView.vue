@@ -46,6 +46,17 @@ const handleLastNameCacheSync = () => {
   localStorage.setItem('dicreme_temp_last_name', lastName.value.trim())
 }
 
+ const formatRutVisual = (rut: string) => {
+  if (!rut) return '';
+  let clean = rut.replace(/[^0-9kK]/gi, '');
+  if (clean.length > 9) clean = clean.substring(0, 9);
+  if (clean.length > 1) {
+    return clean.slice(0, -1) + '-' + clean.slice(-1).toUpperCase();
+  }
+  return clean.toUpperCase();
+}
+
+
 // Ciclo de vida para recuperar los datos del carrito y del distribuidor
 onMounted(() => {
   // 1. Cargar helados guardados en el almacenamiento temporal
@@ -69,7 +80,7 @@ onMounted(() => {
       
       userId.value = userObj.id || null
       company.value = userObj.nombre_empresa || ''
-      companyRut.value = userObj.rut_empresa || ''
+      companyRut.value = formatRutVisual(userObj.rut_empresa)|| ''
       address.value = userObj.direccion || ''
       email.value = userObj.email || userObj.correo_electronico || ''
       phone.value = userObj.telefono || ''
@@ -147,6 +158,7 @@ const handleConfirmQuotation = async () => {
       : Number(item.price)
     return sum + (cleanPrice * item.quantity)
   }, 0)
+
 
   // --- MAPEADO DE PAYLOAD ---
   const quotationPayload = {
@@ -233,7 +245,7 @@ const handleConfirmQuotation = async () => {
         <section class="forms-column">
           <h3 class="section-subtitle">Datos de contacto:</h3>
           <div class="input-group-full">
-            <input v-model="email" type="email" placeholder="Correo" class="dc-input" />
+            <input v-model="email" type="email" placeholder="Correo" class="dc-input disabled-input" readonly />
           </div>
           <div class="input-group-full">
             <input v-model="phone" type="text" placeholder="Teléfono" class="dc-input" />
@@ -257,13 +269,13 @@ const handleConfirmQuotation = async () => {
             />
           </div>
           <div class="input-group-full">
-            <input v-model="company" type="text" placeholder="Empresa" class="dc-input" />
+            <input v-model="company" type="text" placeholder="Empresa" class="dc-input disabled-input" readonly />
           </div>
           <div class="input-group-full">
-            <input v-model="companyRut" type="text" placeholder="Rut Empresa" class="dc-input" />
+            <input v-model="companyRut" type="text" placeholder="Rut Empresa" class="dc-input disabled-input" readonly />
           </div>
           <div class="input-group-full">
-            <input v-model="address" type="text" placeholder="Dirección" class="dc-input" />
+            <input v-model="address" type="text" placeholder="Dirección" class="dc-input " />
           </div>
           <div class="input-group-full">
             <input v-model="commune" type="text" placeholder="Comuna" class="dc-input" />
@@ -357,4 +369,11 @@ const handleConfirmQuotation = async () => {
 .action-row { display: flex; justify-content: flex-end; margin-top: 30px; }
 .btn-confirm-cotizacion { background-color: #322c44; color: white; border: none; padding: 14px 38px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 10px rgba(50, 44, 68, 0.2); }
 .btn-confirm-cotizacion:hover { background-color: #1a1624; }
+
+.disabled-input {
+  background-color: #f4f4f5 !important;
+  color: #9793a0 !important;
+  border-color: #e0dde0 !important;
+  cursor: not-allowed;
+}
 </style>

@@ -104,6 +104,8 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         
         Route::post('/pedidos', [PedidoController::class, 'store']);
         Route::put('/pedidos/{id_pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])->middleware('role:1,2');
+                Route::put('/pedidos/{id_pedido}/cambiar-estado-pago', [PedidoController::class, 'cambiarEstadoPago'])->middleware('role:1,2');
+
         Route::put('/pedidos/{id}', [PedidoController::class, 'update'])->middleware('role:1,2');
         Route::delete('/pedidos/{id}', [PedidoController::class, 'destroy'])->middleware('role:1');
         Route::post('/estado_pedido', [Estado_pedidoController::class, 'store'])->middleware('role:1');
@@ -113,6 +115,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::put('/despachos/{id}', [DespachoController::class, 'update'])->middleware('role:1');
         Route::put('/despachos/{id_despacho}/despacho/{id_despachador}/despachador', [DespachoController::class, 'asignardespachoadespachador'])->middleware('role:1,4');
         Route::delete('/despachos/{id}', [DespachoController::class, 'destroy'])->middleware('role:1');
+        Route::post('/despachos/{id_despacho}/enviar-correo', [DespachoController::class, 'enviarCorreoDistribuidor'])->middleware('role:1');
         Route::post('/bodegas', [BodegaController::class, 'store'])->middleware('role:1');
         Route::put('/bodegas/{id}', [BodegaController::class, 'update'])->middleware('role:1');
         Route::delete('/bodegas/{id}', [BodegaController::class, 'destroy'])->middleware('role:1');

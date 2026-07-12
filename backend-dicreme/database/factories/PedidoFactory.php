@@ -24,6 +24,7 @@ class PedidoFactory extends Factory
 
         'id_usuario_distribuidor' => \App\Models\Usuario_distribuidores::inRandomOrder()->first()?->id
                                 ?? \App\Models\Usuario_distribuidores::factory(),
+        'id_estado_pago' => \App\Models\Estado_pago::where('nombre_estado', 'Por pagar')->first()?->id,
 
         'id_cotizacion' => \App\Models\Cotizacion::inRandomOrder()->first()?->id
                                 ?? \App\Models\Cotizacion::factory(),

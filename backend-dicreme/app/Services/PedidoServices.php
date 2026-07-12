@@ -46,7 +46,8 @@ class PedidoServices
     }
 
     public function createPedido($data)
-    {
+    {   
+        $pedido['id_estado_pago'] = 1;
         return $this->pedidoRepository->createPedido($data);
     }
 
@@ -129,6 +130,27 @@ class PedidoServices
         ]);
     }
 
+    public function actualizarEstadoPago($id_pedido, $idNuevoEstado = null)
+    {   
+        // 1. Buscamos el pedido para saber en qué estado se encuentra hoy
+        $pedido = $this->pedidoRepository->getPedidoById($id_pedido);
+        if (!$pedido) {
+            return null; // El pedido no existe
+        }
+
+        $estadoActual = (int)$pedido->id_estado_pago;
+        
+        if ($idNuevoEstado === null) {
+            $idNuevoEstado = $estadoActual + 1;
+        }
+        
+        $idNuevoEstado = (int)$idNuevoEstado;
+
+        return $this->pedidoRepository->updatePedido($id_pedido, [
+            'id_estado_pago' => $idNuevoEstado
+        ]);
+    }
+
 
     public function getDetailPedido($id)
     {
@@ -171,6 +193,7 @@ class PedidoServices
             'total_cotizacion'     => $pedido->monto_final,
             'subtotal_cotizacion'  => $pedido->monto_estimado,
             'id_estado_pedido' => $pedido->id_estado_pedido,
+            'id_estado_pago' => $pedido->id_estado_pedido,
             'fecha_creacion'       => $pedido->fecha_creacion,
             'descuento_total'       => $cotizacion->descuento_general_aplicado + $cotizacion->descuento_productos_total,
 
@@ -181,6 +204,6 @@ class PedidoServices
             'productos'            => $listaProductosData
         ];
     }
-
+    
 
 }

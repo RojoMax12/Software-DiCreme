@@ -51,7 +51,6 @@ class Usuario_dicremeController extends Controller
         ]);
 
         try {
-            // ✨ Normalización del correo
             $data['correo_electronico'] = strtolower(trim($data['correo_electronico']));
             
             $usuario = $this->usuarioDicremeServices->createUsuarioDicreme($data);
