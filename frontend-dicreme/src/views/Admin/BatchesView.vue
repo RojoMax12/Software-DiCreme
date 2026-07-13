@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <button class="btn-add-batch">
+      <button class="btn-add-batch" @click="isAddBatchModalOpen = true">
         AGREGAR LOTE
       </button>
     </div>
@@ -78,7 +78,22 @@
       @close="isUpdateModalOpen = false"
       @update="handleUpdateBatch"
     />
+    <Transition name="toast">
+      <div v-if="showSuccessToast" class="success-toast">
+        <div class="toast-icon-square">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="check-svg">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <span class="toast-text">{{ toastMessage }}</span>
+      </div>
+    </Transition>
   </div>
+  <add-batch-modal 
+    :isOpen="isAddBatchModalOpen"  
+    @close="isAddBatchModalOpen = false"
+    @add="handleAddNewBatch"
+  />
 </template>
 
 <script setup lang="ts">
@@ -87,6 +102,7 @@ import { useRoute } from 'vue-router';
 import { Filter, Search, Warehouse } from 'lucide-vue-next';
 import batchService from '@/services/batchService';
 import UpdateBatchModal from '@/components/UpdateBatchModal.vue';
+import AddBatchModal from '@/components/AddBAtchModal.vue';
 
 const route = useRoute();
 
@@ -100,6 +116,20 @@ const selectedBatch = ref<any>(null);
 const searchQuery = ref('');
 const batchesData = ref<any[]>([]);
 const isLoading = ref(true);
+const isAddBatchModalOpen = ref(false);
+
+const showSuccessToast = ref(false);
+const toastMessage = ref('');
+
+const triggerToast = (message: string) => {
+  toastMessage.value = message;
+  showSuccessToast.value = true;
+  
+  // Se oculta automáticamente después de 3 segundos
+  setTimeout(() => {
+    showSuccessToast.value = false;
+  }, 3000);
+};
 
 const formatBatchNumber = (id: number) => {
   return `N°${id.toString()}`;
@@ -151,11 +181,45 @@ const handleUpdateBatch = async (newQuantity: number) => {
   }
 };
 
-onMounted(async () => {
+const handleAddNewBatch = async (batchData: any) => {
+  try {
+    // 1. Calculamos la fecha de emisión (HOY) en formato YYYY-MM-DD
+    const today = new Date();
+    const fechaEmision = today.toISOString().split('T')[0];
+
+    // 2. Calculamos la fecha de vencimiento (Ejemplo: 1 año desde hoy)
+    const vencimiento = new Date();
+    vencimiento.setFullYear(vencimiento.getFullYear() + 1); // Suma 1 año
+    const fechaVencimiento = vencimiento.toISOString().split('T')[0];
+
+    // 3. Armamos el objeto con todos los datos que exige Laravel
+    const newBatchData = {
+      id_producto: productId, // Asegúrate de usar la variable correcta de tu ID
+      cantidad_producida: batchData.cantidad_producida,
+      id_bodega: batchData.id_bodega,
+      fecha_emision: fechaEmision,       // ¡Nuevo!
+      fecha_vencimiento: fechaVencimiento // ¡Nuevo!
+    };
+
+    // 4. Enviamos a la API
+    await batchService.createBatch(newBatchData);
+
+    isAddBatchModalOpen.value = false;
+
+    triggerToast("Lote agregado exitosamente");
+    
+    await loadBatches();
+    
+  } catch (error) {
+    console.error("Error al crear el lote", error);
+  }
+};
+
+const loadBatches = async () => {
   try {
     isLoading.value = true;
     const response = await batchService.getBatchesByProductId(Number(productId));
-    const rawBatches = response.data.data|| response.data || [];
+    const rawBatches = response.data.data || response.data || [];
 
     batchesData.value = rawBatches.map((batch: any) => ({
       id: batch.id,
@@ -173,9 +237,12 @@ onMounted(async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+// 2. Llamamos a la función cuando se monta la vista
+onMounted(() => {
+  loadBatches();
 });
-
-
 
 // Lógica para el buscador
 const filteredBatches = computed(() => {
@@ -355,4 +422,55 @@ const filteredBatches = computed(() => {
   font-size: 0.8rem;
   cursor: not-allowed;
 }
+
+/* --- ESTILOS DEL TOAST --- */
+.success-toast {
+  position: fixed;
+  top: 80px; /* Un poco más abajo para no tapar el navbar, ajusta si es necesario */
+  right: 30px;
+  background-color: #f0fdf4; /* Fondo verde menta muy claro */
+  color: #166534; /* Texto verde oscuro */
+  padding: 16px 24px;
+  border-radius: 8px; /* Bordes menos redondeados, más cuadrados */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Sombra suave */
+  border: 1px solid #dcfce7; /* Borde sutil para darle forma */
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+}
+
+.toast-icon-square {
+  background-color: #22c55e; /* Verde brillante del cuadrado */
+  min-width: 20px;
+  height: 20px;
+  border-radius: 4px; /* Cuadrado con puntas ligeramente redondeadas */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.check-svg {
+  width: 12px;
+  height: 12px;
+}
+
+.toast-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* --- ANIMACIÓN VUE (Transition) --- */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-20px); /* En tu imagen parece que baja/sube sutilmente */
+}
+
 </style>
