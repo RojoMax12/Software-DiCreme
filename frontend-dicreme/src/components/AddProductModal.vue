@@ -22,10 +22,22 @@
 
         <div class="form-group">
           <label>Categoría del nuevo helado:</label>
-          <select v-model="formData.categoria" class="pink-input select-input">
-            <option value="" disabled selected>Categoría</option>
-            <option value="1">Crema</option>
-            <option value="2">Agua</option>
+          <select 
+            v-model="formData.categoria" 
+            class="pink-input select-input"
+            :disabled="isLoadingCategories"
+          >
+            <option value="" disabled selected>
+              {{ isLoadingCategories ? 'Cargando categorías...' : 'Categoría' }}
+            </option>
+            
+            <option 
+              v-for="categoria in categoriesList" 
+              :key="categoria.id" 
+              :value="categoria.id"
+            >
+              {{ categoria.nombre_categoria }} 
+            </option>
           </select>
         </div>
 
@@ -51,20 +63,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { X } from 'lucide-vue-next'
+import productCategoryService from '@/services/productCategoryService'
 
 const emit = defineEmits(['close', 'save'])
 
-// Estado local para los campos (cáscara)
+// Estado local para los campos
 const formData = ref({
   sabor: '',
   categoria: '',
   formato: ''
 })
 
+// 2. Estados reactivos para las categorías
+const categoriesList = ref<any[]>([])
+const isLoadingCategories = ref(true)
+
+// 3. Obtener las categorías al montar el componente (cuando se abre el modal)
+onMounted(async () => {
+  try {
+    isLoadingCategories.value = true;
+    
+    // Asumo que tu método para traer todas las categorías se llama getCategories() o getCategory()
+    const response = await productCategoryService.getCategory(); 
+    
+    // Mapeamos los datos (ajusta response.data.data si tu API Laravel lo envuelve en 'data')
+    categoriesList.value = response.data.data || response.data || [];
+    
+  } catch (error) {
+    console.error('Error al cargar las categorías:', error);
+  } finally {
+    isLoadingCategories.value = false;
+  }
+})
+
 const handleSave = () => {
-  // Emitimos los datos simulados hacia el componente padre
   emit('save', formData.value)
 }
 </script>

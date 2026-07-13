@@ -14,16 +14,23 @@
       <section class="table-column">
         
         <div class="toolbar">
-          <button class="btn-filter">
-            Filtrar
-            <Filter :size="16" />
-          </button>
+
+          <div class="filter-wrapper">
+            <select v-model="selectedFormat" class="btn-filter-select">
+              <option value="todos">Formato: Todos</option>
+              <option value="1L">1L</option>
+              <option value="2.5L">2.5L</option>
+              <option value="5L">5L</option>
+              <option value="10L">10L</option>
+            </select>
+          </div>
           
           <div class="search-input-wrapper">
             <input 
               type="text" 
               placeholder="Busca por helado" 
               class="search-input"
+              v-model="searchQuery"
             />
             <Search :size="18" class="search-icon" />
           </div>
@@ -50,7 +57,13 @@
             </tbody>
             
             <tbody v-else>
-              <tr v-for="item in productsInventory" :key="item.id">
+              <tr v-if="filteredInventory.length === 0">
+                <td colspan="5" style="padding: 30px; color: #9793a0; font-style: italic;">
+                  No se encontraron helados que coincidan con "{{ searchQuery }}".
+                </td>
+              </tr>
+
+              <tr v-else v-for="item in filteredInventory" :key="item.id">
                 <td style="text-align: left; padding-left: 20px;">{{ item.nombre_producto || '-' }}</td>
                 <td>{{ item.formato?.nombre_formato|| '-' }}</td>
                 <td>{{ item.cantidad_total }}</td>
@@ -136,15 +149,41 @@ const router = useRouter()
 const isAddModalOpen = ref(false)
 const isLoading = ref(true) 
 const productsInventory = ref<any[]>([])
+const searchQuery = ref('')
+
+const selectedFormat = ref('todos')
+
+const filteredInventory = computed(() => {
+  let result = productsInventory.value
+
+  // 1. Filtrar por texto del buscador
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.trim().toLowerCase()
+    result = result.filter(item => {
+      const productName = item.nombre_producto?.toLowerCase() || ''
+      return productName.includes(query)
+    })
+  }
+
+  // 2. Filtrar por Formato seleccionado
+  if (selectedFormat.value !== 'todos') {
+    result = result.filter(item => {
+      return item.formato?.nombre_formato === selectedFormat.value
+    })
+  }
+
+  return result
+})
 
 onMounted(async () => {
   try {
     isLoading.value = true
-    const response = await productService.getInventory()
-    // Guardamos los datos de la respuesta real
-    productsInventory.value = response.data.data || response.data
+    // 1. Cargar Inventario
+    const responseInv = await productService.getInventory()
+    productsInventory.value = responseInv.data.data || responseInv.data
+
   } catch (error) {
-    console.error('Error al cargar el inventario:', error)
+    console.error('Error al cargar datos:', error)
   } finally {
     isLoading.value = false
   }
@@ -289,20 +328,41 @@ const expiringbatchesAlerts = computed(() => {
   display: flex;
   gap: 15px;
   margin-bottom: 20px;
+  align-items: center;
 }
 
-.btn-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.filter-wrapper {
+  position: relative;
+}
+
+.btn-filter-select {
   background-color: white;
   border: 1px solid #e0dde0;
   border-radius: 20px;
-  padding: 8px 20px;
+  padding: 10px 35px 10px 20px; /* Más espacio a la derecha para el icono */
   font-weight: 700;
   font-size: 0.9rem;
   color: #322c44;
   cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* Icono de embudo/filtro SVG en formato data-uri */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23e4869f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polygon points='22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3'></polygon></svg>");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  transition: border-color 0.2s;
+}
+
+.btn-filter-select:hover {
+  border-color: #e4869f; /* Se ilumina en rosado de di Creme al pasar el mouse */
+}
+
+.btn-filter-select:disabled {
+  background-color: #f3f4f6;
+  color: #9793a0;
+  cursor: not-allowed;
 }
 
 .search-input-wrapper {
@@ -494,3 +554,4 @@ const expiringbatchesAlerts = computed(() => {
   margin-top: 15px;
 }
 </style>
+

@@ -124,9 +124,8 @@ const goToHome = () => {
         </div>
         <div class="ticker-wrapper">
           <div class="ticker-content">
-            <span>📢 Aviso: Horario de atención extendido hasta las 20:00 hrs.</span>
-            <span>❄️ Promoción: 10% de descuento en todos los helados de 10L.</span>
-            <span>🚛 Envíos gratuitos a todo Buin por compras sobre $50.000.</span>
+            <span>📢 Aviso: Horario de atención hasta las 17:00 hrs.</span>
+            <span>🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.</span>
           </div>
         </div>
     </nav>
@@ -304,7 +303,7 @@ const goToHome = () => {
 .ticker-content {
   display: flex;
   white-space: nowrap;
-  animation: ticker-move 25s linear infinite;
+  animation: ticker-move 38s linear infinite;
   gap: 50px;
 }
 
