@@ -37,7 +37,8 @@
         </div>
 
         <div class="table-container">
-          <table class="inventory-table">
+          <div class="table-scroll">
+            <table class="inventory-table">
             <thead>
               <tr>
                 <th style="text-align: left; padding-left: 20px; width: 25%;">Helado</th>
@@ -73,7 +74,8 @@
                 </td>
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -397,8 +399,33 @@ const expiringbatchesAlerts = computed(() => {
 .table-container {
   background-color: white;
   border-radius: 20px;
-  padding: 10px;
+  padding: 14px 28px 14px 14px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+
+.table-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+.table-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+  background: #f6f4f6;
+  border-radius: 10px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #e4869f;
+  border-radius: 10px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #c7718a;
 }
 
 .inventory-table {
@@ -413,6 +440,9 @@ const expiringbatchesAlerts = computed(() => {
   font-weight: 700;
   font-size: 0.9rem;
   padding: 16px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .inventory-table th:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
