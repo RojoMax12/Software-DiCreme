@@ -199,7 +199,7 @@
               </div>
             </td>
           </tr>
-          <tr v-else v-for="order in sortedOrders" :key="order.id">
+          <tr v-else v-for="order in paginatedOrders" :key="order.id">
             <td class="bold-text">#{{ order.id }}</td>
             <td class="bold-text">{{ order.distributor }}</td>
             <td>
@@ -224,19 +224,55 @@
             </td>
             <td>
               <div class="actions-content">
-                <button class="btn-action btn-detail" @click="openModal(order.id)">
-                  <Eye :size="18" />
-                  <span>Detalle</span>
+                <button 
+                  class="btn-action btn-detail" 
+                  :disabled="loadingOrderId === order.id"
+                  @click="openModal(order.id)"
+                >
+                  <component 
+                    :is="loadingOrderId === order.id ? Loader2 : Eye" 
+                    :size="18" 
+                    :class="{ 'spinner': loadingOrderId === order.id }" 
+                  />
+                  <span>{{ loadingOrderId === order.id ? 'Cargando...' : 'Detalle' }}</span>
                 </button>
               </div>
             </td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="7">
+              <div class="pagination-container">
+                <button 
+                  class="btn-page" 
+                  :disabled="currentPage === 1" 
+                  @click="changePage(currentPage - 1)"
+                >
+                  Anterior
+                </button>
+
+                <span class="page-info">
+                  Página {{ currentPage }} de {{ totalPages }}
+                </span>
+
+                <button 
+                  class="btn-page" 
+                  :disabled="currentPage >= totalPages" 
+                  @click="changePage(currentPage + 1)"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
     <OrdersDetailModal 
-      v-if="isModalOpen" 
+      v-if="selectedOrderId !== ''" 
+      v-show="isModalOpen" 
       :order-id="selectedOrderId" 
       :distributor="selectedOrder?.distributor"
       :distributor-phone="selectedOrder?.distributorPhone"
@@ -247,6 +283,7 @@
       :date="selectedOrder?.date"
       :time="selectedOrder?.time"
       :total="selectedOrder?.total"
+      @loaded="handleModalLoaded"
       @close="closeModal" 
       @status-changed="fetchOrders"
     />
@@ -254,7 +291,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import OrdersDetailModal from './OrdersDetailModal.vue';
 import orderService from '@/services/orderService';
 import distributorService from '@/services/distributorService';
@@ -300,6 +337,26 @@ const extractTime = (timeString: string) => {
   // Si el backend envía solamente "14:26:00"
   return timeString.substring(0, 5);
 };
+
+const itemsPerPage = ref(10);
+const currentPage = ref(1);
+
+// Paginación: Cálculos
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredOrders.value.length / itemsPerPage.value)));
+
+const paginatedOrders = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return sortedOrders.value.slice(start, end);
+});
+
+// Paginación: Acción
+const changePage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+};
+
 
 const fetchOrders = async () => {
   isLoading.value = true;
@@ -409,6 +466,7 @@ const exportarExcel = () => {
   }
 };
 
+
 const formatDate = (dateString: string) => {
   if (!dateString) return 'Sin fecha';
   // Si viene con T (ISO), tomamos solo la parte de la fecha
@@ -478,20 +536,27 @@ const isDateDropdownOpen = ref(false);
 
 const isModalOpen = ref(false);
 const selectedOrderId = ref<number | string>('');
+  const loadingOrderId = ref<number | string>(''); // Spinner del botón
 
 const selectedOrder = computed(() => {
   return orders.value.find((o: any) => o.id === selectedOrderId.value);
 });
 
 const openModal = (id: number | string) => {
-  selectedOrderId.value = id;
-  isModalOpen.value = true;
+  loadingOrderId.value = id; // Activa el spinner en el botón de la tabla
+  selectedOrderId.value = id; // Define cuál es el pedido, pero NO abre el modal aún
+};
+
+const handleModalLoaded = () => {
+  loadingOrderId.value = ''; // Detiene el spinner
+  isModalOpen.value = true;  // Abre el modal (v-show)
 };
 
 const closeModal = () => {
   isModalOpen.value = false;
+  // Pequeño timeout para limpiar el ID después de la animación de cierre
+  setTimeout(() => { selectedOrderId.value = ''; }, 300);
 };
-
 const toggleStatusDropdown = () => {
   isStatusDropdownOpen.value = !isStatusDropdownOpen.value;
   isDateDropdownOpen.value = false;
@@ -593,6 +658,12 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('click', closeDropdowns);
 });
+
+
+watch([searchQuery, statusFilter, activeTab], () => {
+  currentPage.value = 1;
+});
+
 </script>
 
 <style scoped>
@@ -1070,5 +1141,44 @@ onUnmounted(() => {
 .spinner {
   animation: spin 1.5s linear infinite;
   margin-bottom: 10px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-top: 1px solid #dee2e6;
+}
+
+.page-info {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.btn-page {
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #e4869f;
+  color: #e4869f;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background-color: #e4869f;
+  color: white;
+}
+
+.btn-page:disabled {
+  border-color: #dee2e6;
+  color: #adb5bd;
+  cursor: not-allowed;
+  background-color: #f8f9fa;
 }
 </style>

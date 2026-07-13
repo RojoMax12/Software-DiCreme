@@ -21,7 +21,7 @@
     </div>
 
     <div class="users-list">
-      <div v-for="user in getFilteredUsers()" :key="user.id" class="user-table-row">
+      <div v-for="user in paginatedUsers" :key="user.id" class="user-table-row">
         <div class="col-id">#{{ user.id }}</div>
         <div class="col-user-name">{{ user.nombre_usuario || user.nombre_empresa }}</div>
         <div class="col-email-text">{{ user.correo_electronico }}</div>
@@ -41,6 +41,16 @@
             <span v-else class="no-actions">Solo lectura</span>
         </div>
       </div>
+    </div>
+
+    <div class="pagination-container" v-if="totalPages > 1">
+        <button class="btn-pagination" :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
+            Anterior
+        </button>
+        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="btn-pagination" :disabled="currentPage >= totalPages" @click="changePage(currentPage + 1)">
+            Siguiente
+        </button>
     </div>
 
     <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
@@ -87,13 +97,15 @@ import userService from '@/services/userService';
 import { ref, onMounted, reactive } from 'vue';
 import { useNotification } from '@/composables/useNotification';
 import distributorService from '@/services/distributorService';
-
+import { watch, computed } from 'vue';
 
 const usersAdmin = ref<any[]>([]);
 const usersTrabajador = ref<any[]>([]);
 const usersDistribuidor = ref<any[]>([]);
 const isModalOpen = ref(false);
 const { notify } = useNotification();
+const itemsPerPage = 10; // Puedes ajustar este número
+const currentPage = ref(1);
 
 const activeFilter = ref('admin'); // 'admin', 'trabajador', 'distribuidor'
 const isEditing = ref(false);
@@ -187,6 +199,29 @@ const eliminarUsuario = async (id: number) => {
         }
     }
 };
+
+const paginatedUsers = computed(() => {
+    const list = getFilteredUsers(); // Usamos tu función existente
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return list.slice(start, end);
+});
+
+// 3. Cálculo de páginas totales
+const totalPages = computed(() => {
+    return Math.max(1, Math.ceil(getFilteredUsers().length / itemsPerPage));
+});
+
+// 4. Acción de cambio
+const changePage = (page: number) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+watch(activeFilter, () => {
+    currentPage.value = 1;
+});
 </script>
 
 <style scoped>  
@@ -484,6 +519,33 @@ const eliminarUsuario = async (id: number) => {
   color: white; border-radius: 8px; cursor: pointer; font-weight: 600;
 }
 .btn-save:hover { background: #d1758e; }
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-top: 1px solid #dee2e6;
+}
+
+.page-info {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.btn-pagination {
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #e4869f;
+  color: #e4869f;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95) translateY(10px); }

@@ -148,7 +148,7 @@
               </div>
             </td>
           </tr>
-          <tr v-for="order in sortedOrders" :key="order.id">
+          <tr v-for="order in paginatedOrders" :key="order.id">
             <td class="bold-text">#{{ order.id }}</td>
             <td class="bold-text">{{ order.distributor }}</td>
             <td>
@@ -208,10 +208,15 @@
                 <button 
                   class="btn-action btn-detail" 
                   :class="{ 'btn-detail-managed': order.managedBy }"
+                  :disabled="loadingOrderId === order.id" 
                   @click="openModal(order.id)"
                 >
-                  <component :is="(order.managedBy?.id === currentUser.id && order.status !== 'Completado' && order.status !== 'Cancelado') ? Pencil : Eye" :size="18" />
-                  <span>Detalle</span>
+                  <component 
+                    :is="loadingOrderId === order.id ? Loader2 : (order.managedBy?.id === currentUser.id && order.status !== 'Completado' && order.status !== 'Cancelado') ? Pencil : Eye" 
+                    :size="18" 
+                    :class="{ 'spinner': loadingOrderId === order.id }" 
+                  />
+                  <span>{{ loadingOrderId === order.id ? 'Cargando...' : 'Detalle' }}</span>
                 </button>
               </div>
             </td>
@@ -221,32 +226,27 @@
         <tfoot>
           <tr>
             <td colspan="7">
-              <div class="footer-content">
-                <div class="results-info">
-                  Mostrando {{ sortedOrders.length }} de {{ 
-                    activeFilter === 'actual' ? counts.actual : 
-                    activeFilter === 'completed' ? counts.completed : 
-                    counts.cancelled 
-                  }} resultados
-                </div>
                 <div class="pagination">
                   <button 
                     class="btn-pagination" 
                     :disabled="currentPage === 1"
+                    @click="changePage(currentPage - 1)"
                   >
-                    <ChevronLeft :size="18" />
+                    Anterior
                   </button>
-                  <div class="page-numbers">
-                    <span class="page-num active">1</span>
-                  </div>
+
+                  <span class="page-info">
+                  Página {{ currentPage }} de {{ totalPages }}
+                  </span>
+                
                   <button 
-                    class="btn-pagination" 
-                    :disabled="currentPage === totalPages"
-                  >
-                    <ChevronRight :size="18" />
-                  </button>
+                  class="btn-pagination" 
+                  :disabled="currentPage >= totalPages" 
+                  @click="changePage(currentPage + 1)"
+                >
+                  Siguiente
+                </button>
                 </div>
-              </div>
             </td>
           </tr>
         </tfoot>
@@ -254,7 +254,8 @@
     </div>
 
     <QuotesDetailModal 
-      v-if="isModalOpen" 
+      v-if="selectedOrderId !== ''" 
+      v-show="isModalOpen"
       :order-id="selectedOrderId" 
       :status="selectedOrder?.status"
       :distributor="selectedOrder?.distributor"
@@ -263,6 +264,7 @@
       :managed-by-id="selectedOrder?.managedBy?.id"
       :date="selectedOrder?.date"
       :time="selectedOrder?.time"
+      @loaded="handleModalLoaded"
       @close="closeModal" 
       @cancel="handleModalCancel"
       @complete="handleModalComplete"
@@ -271,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { IceCream } from 'lucide-vue-next'
 import QuotesDetailModal from './QuotesDetailModal.vue';
 import quoteService from '@/services/quoteService';
@@ -293,7 +295,8 @@ import {
   ChevronDown,
   ClockAlert,
   FileSearch,
-  LayoutGrid,Download
+  LayoutGrid,Download,
+  Loader2
 } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
 import * as XLSX from 'xlsx';
@@ -316,6 +319,7 @@ const isStatusDropdownOpen = ref(false);
 // Modal state
 const isModalOpen = ref(false);
 const selectedOrderId = ref<number | string>('');
+const loadingOrderId = ref<number | string>(''); // <--- Esta es clave para el botón
 
 const { notify } = useNotification(); // Extraemos la función de notificación del composable
 
@@ -378,13 +382,30 @@ const selectedOrder = computed(() => {
   return orders.value.find((o: any) => o.id === selectedOrderId.value);
 });
 
+const prefetchedData = ref(new Map());
+
+const prefetchOrder = (id: number | string) => {
+  if (prefetchedData.value.has(id)) return;
+  quoteService.getQuoteProducts(Number(id)).then(res => {
+    prefetchedData.value.set(id, res.data);
+  });
+};
+
 const openModal = (id: number | string) => {
+  loadingOrderId.value = id; // Activa el spinner en el botón presionado
   selectedOrderId.value = id;
-  isModalOpen.value = true;
+};
+
+const handleModalLoaded = () => {
+  loadingOrderId.value = ''; // Quita el spinner
+  isModalOpen.value = true;  // Abre el modal solo cuando está listo
 };
 
 const closeModal = () => {
   isModalOpen.value = false;
+  setTimeout(() => {
+    selectedOrderId.value = ''; 
+  }, 300);
 };
 
 const handleModalCancel = async () => {
@@ -569,7 +590,7 @@ const sortBy = (key: string) => {
 };
 
 const sortedOrders = computed(() => {
-  const dataToSort = filteredOrders.value;
+  const dataToSort = filteredOrders.value || [];
   if (!sortConfig.value.key) return dataToSort;
 
   return [...dataToSort].sort((a: any, b: any) => {
@@ -611,6 +632,24 @@ const getStatusClass = (status: string) => {
     default: return '';
   }
 };
+
+const paginatedOrders = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return sortedOrders.value.slice(start, end);
+});
+
+const changePage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+};
+
+watch([searchQuery, statusFilter, activeFilter], () => {
+  currentPage.value = 1;
+});
+
+
 </script>
 
 <style scoped>
@@ -1097,28 +1136,29 @@ const getStatusClass = (status: string) => {
 }
 
 .pagination {
-  display: flex;
+   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-top: 1px solid #dee2e6;
 }
 
 .btn-pagination {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 1px solid #ddd;
+  padding: 8px 16px;
   background-color: white;
-  color: #322c44;
+  border: 1px solid #e4869f;
+  color: #e4869f;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  transition: all 0.2s;
 }
 
 .btn-pagination:hover:not(:disabled) {
-  background-color: #f8f9fa;
-  border-color: #ccc;
+  background-color: #e4869f;
+  color: white;
 }
 
 .btn-pagination:disabled {
@@ -1209,4 +1249,17 @@ const getStatusClass = (status: string) => {
   color: #e4869f;
 }
 
-</style>
+.modal-fade-enter-active, .modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.modal-fade-enter-from, .modal-fade-leave-to {
+  opacity: 0;
+}
+
+.page-info {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+</style>  

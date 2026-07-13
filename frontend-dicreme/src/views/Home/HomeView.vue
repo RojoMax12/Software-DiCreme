@@ -76,12 +76,14 @@ import Footer from '@/components/Footer.vue'
 import Carousel from '@/components/Carousel.vue';
 import imgBanner1 from '@/assets/banner1.webp'
 import imgBanner2 from '@/assets/banner2.webp'
+import imgBanner3 from '@/assets/local_horario.webp'
 const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 
 const bannerImages = [
   imgBanner1,
-  imgBanner2
+  imgBanner2,
+  imgBanner3
 ];
 
 // Estados reactivos

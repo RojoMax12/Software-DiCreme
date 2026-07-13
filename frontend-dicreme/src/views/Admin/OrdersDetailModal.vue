@@ -238,7 +238,7 @@ const props = defineProps<{
   discount?: number;
 }>();
 
-const emit = defineEmits(['close', 'statusChanged']);
+const emit = defineEmits(['close', 'statusChanged', 'loaded']);
 const localStatus = ref(props.status);
 const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
 const localPago = ref(props.pago || 'Por pagar'); // Ajusta según el prop que recibas
@@ -434,8 +434,10 @@ const getproducts = async () => {
           };
         });
       }
+      emit('loaded');
     } else {
       console.warn('No se encontraron datos dentro de response.data.data:', orderData);
+      emit('loaded');
     }
 
     console.log('Resultado final del Proxy de Vue ya mapeado:', products.value);
@@ -470,7 +472,9 @@ onMounted(() => {
       role: userObj.id_rol || 0
     };
   }
-  getproducts();
+  getproducts().then(() => {
+    emit('loaded'); // <--- Emitir SÓLO cuando los productos cargaron
+  });
 });
 
 const getBase64FromUrl = async (url: string): Promise<string> => {
