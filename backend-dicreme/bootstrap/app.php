@@ -16,10 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth' => AuthenticateJwt::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'audit.pii' => \App\Http\Middleware\AuditPersonalDataAccess::class,
+            'purify.input' => \App\Http\Middleware\PurifyInput::class,
         ]);
 
         $middleware->api(append: [
             \App\Http\Middleware\PurifyInput::class,
+            \App\Http\Middleware\SecurityHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

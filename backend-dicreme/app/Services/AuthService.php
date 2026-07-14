@@ -29,38 +29,40 @@ class AuthService
      */
     public function enviarEnlaceRecuperacion($email)
     {   
-
+ 
         $usuario = $this->usuariodicremeRepository->getUsuarioDicremeByCorreo($email);
         
-
+ 
         if (!$usuario) {
             $usuario = $this->usuariodistribuidorRepository->getUsuarioDistribuidorByCorreo($email);
         }
-
-
+ 
+ 
         if (!$usuario) {
             return false; 
         }
-
+ 
+        // Token de reseteo con vida corta (15 minutos), independiente del TTL de sesión normal.
         $tokenPayload = $this->jwtService->issueForUser($usuario, [
             'purpose' => 'password_reset',
             'email' => $email
-        ]);
-
+        ], ttlSecondsOverride: 15 * 60);
+ 
         $token = $tokenPayload['access_token'];
-
-        // URL hacia tu Frontend en Vue.js pepito
-        $urlFrontend = "http://localhost:5173/reset-password?token=" . $token;
-
+ 
+        // URL del frontend tomada de configuración (FRONTEND_URL en .env), nunca hardcodeada.
+        $urlFrontend = rtrim(config('app.frontend_url'), '/') . '/reset-password?token=' . $token;
+ 
         $correoDestinatario = $usuario->correo_electronico; 
-
+ 
         Mail::send('emails.recuperar_password', ['url' => $urlFrontend], function($message) use ($correoDestinatario) {
             $message->to($correoDestinatario);
             $message->subject('Restablecer Contraseña - DiCreme');
         });
-
+ 
         return true;
     }
+
 
     /**
      * PASO 2: Validar el JWT de vuelta desde Vue y cambiar la contraseña en la BD
@@ -69,14 +71,14 @@ class AuthService
     {
   
         $tipoUsuario = null; 
-
+ 
         try {
             $claims = $this->jwtService->decode($token);
-
+ 
             if (!isset($claims->purpose) || $claims->purpose !== 'password_reset') {
                 throw new \Exception("El token provisto no es válido para esta operación.");
             }
-
+ 
             // Extracción limpia del correo (El bloque tolerante a fallos que armamos antes)
             $emailLimpio = '';
             if (isset($claims->email)) {
@@ -88,23 +90,23 @@ class AuthService
                     $emailLimpio = $claims->email->correo_electronico ?? $claims->email->correo ?? '';
                 }
             }
-
+ 
             // BÚSQUEDA
             $usuario = $this->usuariodicremeRepository->getUsuarioDicremeByCorreo($emailLimpio);
             $tipoUsuario = 'dicreme'; 
-
+ 
             if (!$usuario) {
                 $usuario = $this->usuariodistribuidorRepository->getUsuarioDistribuidorByCorreo($emailLimpio);
                 $tipoUsuario = 'distribuidor'; 
             }
-
+ 
             if (!$usuario) {
                 throw new \Exception("El usuario asociado a este correo ($emailLimpio) ya no existe en el sistema.");
             }
-
-
+ 
+ 
             $nuevaContrasenaHasheada = \Illuminate\Support\Facades\Hash::make($nuevaContrasena);
-
+ 
             if ($tipoUsuario === 'dicreme') {
                 $this->usuariodicremeRepository->updateUsuarioDicreme($usuario->id, [
                     'contrasena' => $nuevaContrasenaHasheada
@@ -114,14 +116,15 @@ class AuthService
                     'contrasena' => $nuevaContrasenaHasheada
                 ]);
             }
-
+ 
             $this->jwtService->blacklist($claims);
-
+ 
             return true;
-
+ 
         } catch (\Exception $e) {
-
+ 
             throw new \Exception("Error al procesar la solicitud: " . $e->getMessage());
         }
     }
+
 }

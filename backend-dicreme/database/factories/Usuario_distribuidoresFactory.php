@@ -26,6 +26,7 @@ class Usuario_distribuidoresFactory extends Factory
             'telefono' => $this->faker->phoneNumber(),
             'correo_electronico' => $this->faker->unique()->safeEmail(),
             'comuna' => $this->faker->city(),
+            'estado_usuario' => $this->faker->boolean(true), // 80% de probabilidad de ser true
         ];
     }
 }

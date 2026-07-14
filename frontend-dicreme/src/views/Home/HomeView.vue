@@ -22,7 +22,7 @@
       @confirm="router.push('/login')"
     />
 
-    <Banner />
+    <Carousel :images="bannerImages" :autoPlayInterval="5000"/>
     
     <main class="content-container">
       <SearchBar 
@@ -31,6 +31,10 @@
         :categories="categoriesList"
       />
       
+      <div v-if="isLoading" class="loading-state">
+        <IceCream class="spinner" :size="100" color="#e4869f" />
+      </div>
+
       <div class="products-grid">
         <ProductCard 
           v-for="item in filteredIceCreams" 
@@ -46,29 +50,42 @@
 
     <button class="floating-cart" @click="isCartOpen = true">
       <ShoppingCart :size="28" color="white" :stroke-width="2" />
+      <span v-if="totalCartItems > 0" class="cart-badge">
+        {{ totalCartItems }}
+      </span>
     </button>
   </div>
   <div>
-    <Footer />
+    <Footer class="main-footer"/>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import Banner from '@/components/Banner.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import ProductCard from '@/components/ProductCard.vue'
 import CartModal from '@/components/CartModal.vue'
 import ProductDetailModal from '@/components/ProductDetailModal.vue';
 import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
-import fotoCaja from '@/assets/caja_dicreme.jpg'
-import { ShoppingCart } from 'lucide-vue-next'
+import fotoCaja from '@/assets/caja_dicreme.webp'
+import { ShoppingCart, IceCream } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
 import Footer from '@/components/Footer.vue'
+import Carousel from '@/components/Carousel.vue';
+import imgBanner1 from '@/assets/banner1.webp'
+import imgBanner2 from '@/assets/banner2.webp'
+const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
+
+
+const bannerImages = [
+  imgBanner1,
+  imgBanner2
+];
 
 // Estados reactivos
+const isLoading = ref(true)
 const isCartOpen = ref(false);
 const isDetailOpen = ref(false);
 const isNoticeOpen = ref(false);
@@ -113,14 +130,28 @@ watch(() => router.currentRoute.value.path, () => {
   checkAuthStatus();
 });
 
-// Función para cerrar sesión
-const handleLogout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  isLoggedIn.value = false;
-  currentUser.value = null;
-  alert('Has cerrado sesión exitosamente.');
+
+const getDynamicImage = (flavorName: string) => {
+  // Transforma: "Limón al Agua" -> "limon-al-agua"
+  const formattedName = flavorName
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // <-- ¡IMPORTANTE! Quita las tildes para evitar errores
+    .replace(/\s+/g, '-');
+
+  // Construimos la ruta tal cual la lee Vite desde la raíz del proyecto
+  const path = `/src/assets/FotoHelados/${formattedName}.webp`;
+
+  // Comprueba si la imagen realmente existe en la carpeta
+  if (heladoImages[path]) {
+    return heladoImages[path]; // Devuelve la imagen del sabor
+  } else {
+    return fotoCaja; // Si no existe el archivo, devuelve la caja fuerte
+  }
 };
+
+const totalCartItems = computed(() => {
+  return cartItems.value.reduce((total, item) => total + (item.quantity || 1), 0);
+});
 
 // Computado para filtrar helados por categoría y búsqueda de texto
 const filteredIceCreams = computed(() => {
@@ -146,6 +177,8 @@ const filteredIceCreams = computed(() => {
   }
   return results;  
 });
+
+
 
 // Abrir el modal de detalles
 const openDetails = (iceCream: any) => {
@@ -222,89 +255,98 @@ const goToQuotation = () => {
   }
 };
 
-const handleGoToLogin = () => {
-  isNoticeOpen.value = false;
-  isCartOpen.value = false;
-  router.push('/login');
-};
+const fetchCategory = async () => {
+  try {
+    const response = await categoryService.getCategory();
+    
+    // Suponiendo que la respuesta es un array directo o tiene una propiedad data
+    // Si response.data es el array de categorías:
+    categoriesList.value = response.data; 
+
+    // O si la estructura es distinta (ej. si Laravel devuelve { categorias: [...] }):
+    // categoriesList.value = response.data.categorias;
+
+  } catch (error) {
+    console.error("Error al cargar las categorías:", error);
+    // Opcional: mostrar una notificación de error
+  }
+}
 
 // Función para cargar los productos desde la API
 const fetchIceCreams = async () => {
+  isLoading.value = true;
   try {
-    const [productsResponse, categoriesResponse] = await Promise.all([
-      productService.getProducts(),
-      categoryService.getCategory()
-    ]);
+    // 1. Una sola petición HTTP. Ya no dependemos de categoryService.getCategory()
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!productsResponse || !categoriesResponse) {
-      throw new Error('Error al obtener los datos');
+    const response = await productService.getProducts();
+
+    if (!response?.data) {
+      throw new Error('Error al obtener los datos del catálogo');
     }
 
-    const dbProducts = productsResponse.data;
-    const dbCategories = categoriesResponse.data;
-
-    categoriesList.value = dbCategories;
-
-    // Diccionario de categorías para mapear IDs a nombres legibles
-    const categoryMap: Record<number, string> = {};
-    dbCategories.forEach((cat: any) => {
-      const catId = cat.id || cat.ID;
-      if (catId){
-        categoryMap[catId] = cat.nombre_categoria;
-      }
+    const dbProducts = response.data;
+    
+    // Usamos Map porque es el mecanismo más rápido en JS para agrupar elementos dinámicos
+    const grouped = new Map<string, any>();
+    
+    // Instanciamos el formateador de pesos chilenos una sola vez fuera del bucle (ahorra CPU)
+    const clpFormatter = new Intl.NumberFormat('es-CL', { 
+      style: 'currency', 
+      currency: 'CLP', 
+      maximumFractionDigits: 0 
     });
 
-    // Auxiliar para agrupar los formatos individuales bajo el mismo nombre de sabor
-    const grouped: Record<string, any> = {};
-
-    dbProducts.forEach((prod: any) => {
+    // 2. Un único bucle lineal para agrupar los formatos por sabor
+    for (let i = 0; i < dbProducts.length; i++) {
+      const prod = dbProducts[i];
       const flavorName = prod.nombre_producto;
-      const catId = prod.id_categoria || prod.ID_categoria;
-      const categoryName = categoryMap[catId] || 'Sin categoría';
+      
+      // Accedemos al nombre directo que nos envía Laravel gracias al JOIN
+      const categoryName = prod.nombre_categoria || 'Sin categoría'; 
 
-      if (!grouped[flavorName]){
-        grouped[flavorName] = {
+      // Si es la primera vez que vemos este sabor de helado, creamos su base
+      if (!grouped.has(flavorName)) {
+        grouped.set(flavorName, {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
-          image: fotoCaja,
+          image: getDynamicImage(flavorName),
           id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',
           id1l: null, price1l: 'No disponible'
-        };
+        });
       }
 
-      const rawPrice = prod.precio_producto || 0;
-      const formattedPrice = `$${Number(rawPrice).toLocaleString('es-CL')}`;
-      console.log(`Producto: ${flavorName}, Formato ID: ${prod.id_formato || prod.ID_formato}, Precio: ${rawPrice}`);
+      // Obtenemos la referencia de la tarjeta que estamos armando
+      const item = grouped.get(flavorName);
+      const formattedPrice = clpFormatter.format(prod.precio_producto || 0);
+      const formatId = prod.id_formato;
+      const prodId = prod.id;
 
-      const formatId = prod.id_formato || prod.ID_formato;
-      
-      // Asignamos el ID único de la base de datos de cada helado concreto a su respectivo formato mapeado
-      if (formatId === 1) {
-        grouped[flavorName].id10l = prod.id || prod.ID;
-        grouped[flavorName].price10l = formattedPrice;
-      } else if (formatId === 2) {
-        grouped[flavorName].id5l = prod.id || prod.ID;
-        grouped[flavorName].price5l = formattedPrice;
-      } else if (formatId === 3) {
-        grouped[flavorName].id25l = prod.id || prod.ID;
-        grouped[flavorName].price25l = formattedPrice;
-      } else if (formatId === 4) {
-        grouped[flavorName].id1l = prod.id || prod.ID;
-        grouped[flavorName].price1l = formattedPrice;
+      // Asignamos el ID y precio al formato que corresponda
+      switch (formatId) {
+        case 1: item.id10l = prodId; item.price10l = formattedPrice; break;
+        case 2: item.id5l = prodId; item.price5l = formattedPrice; break;
+        case 3: item.id25l = prodId; item.price25l = formattedPrice; break;
+        case 4: item.id1l = prodId; item.price1l = formattedPrice; break;
       }
-    });
+    }
 
-    iceCreams.value = Object.values(grouped);
+    // 3. Convertimos el mapa de sabores en un arreglo limpio para la vista de Vue
+    iceCreams.value = Array.from(grouped.values());
+
   } catch (error) {
     console.error('Error al cargar los productos:', error);
-  }  
+  }  finally {
+    isLoading.value = false; 
+  }
 }
 
 onMounted(() => {
   fetchIceCreams();
+  fetchCategory();
   checkAuthStatus();
 
   // Recuperación segura del estado persistido del carrito temporal
@@ -365,5 +407,51 @@ watch(
 
 .floating-cart:active {
   transform: scale(0.9);
+}
+
+.cart-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background-color: white;
+  color: var(--DC-gray);
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 4px 6px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.main-footer {
+  margin-top: auto;
+  width: 100%;
+}
+
+
+
+.loading-state {
+  display: flex;
+  justify-content: center; /* Centra horizontalmente */
+  align-items: center;     /* Centra verticalmente */
+  min-height: 50vh;        /* Ocupa al menos la mitad de la pantalla para verse bien */
+  width: 100%;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
 }
 </style>

@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Cache; 
+use App\Repositories\ProductoRepository; 
 
 class Producto extends Model
 {
@@ -18,11 +20,28 @@ class Producto extends Model
         'id_formato',
         'nombre_producto',
         'precio_producto',
+        'estado_producto'
     ];
 
     protected $casts = [
         'precio_producto' => 'integer',
     ];
+
+    /**
+     * Eventos del modelo para limpiar el caché automáticamente
+     */
+    protected static function booted()
+    {
+        // Cuando un producto se crea o se edita
+        static::saved(function () {
+            Cache::forget(ProductoRepository::CACHE_KEY);
+        });
+
+        // Cuando un producto se elimina
+        static::deleted(function () {
+            Cache::forget(ProductoRepository::CACHE_KEY);
+        });
+    }
 
     public function categoria(): BelongsTo
     {
@@ -48,5 +67,4 @@ class Producto extends Model
     {
         return $this->hasMany(Cotizacion_producto::class, 'id_producto');
     }
-
 }

@@ -14,8 +14,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $roles = ['Admin', 'Dicreme', 'Distribuidor'];
-        $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado','Pendiente','Por pagar','Pagado', 'Cancelado'];
+        $roles = ['Admin', 'Dicreme', 'Distribuidor', 'Despachador'];
+        $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado','Pendiente', 'Cancelado'];
+        $estadosPago = ['Por pagar','Pagado'];
         $estadosCotizacion = ['Por Tomar','En Revision', 'Completado', 'Cancelado'];
         $categorias = ['Al agua', 'Leche de avena', 'Tradicional', 'Sin azúcar'];
         $formatos = ['10L', '5L', '2.5L', '1L'];
@@ -30,6 +31,10 @@ class DatabaseSeeder extends Seeder
 
         foreach ($estadosPedido as $estado) {
             \App\Models\Estado_pedido::firstOrCreate(['nombre_estado' => $estado]);
+        }
+        
+        foreach($estadosPago as $estado){
+            \App\Models\Estado_pago::firstOrCreate(['nombre_estado' => $estado]);
         }
 
         # Crear un usuario admin si no existe
@@ -58,7 +63,6 @@ class DatabaseSeeder extends Seeder
         }
 
         \App\Models\Bodega::factory(5)->create();
-        \App\Models\Stock::factory(10)->create();
         \App\Models\Producto::factory(132)->create();
         \App\Models\Lote::factory(25)->create();
 

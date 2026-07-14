@@ -16,7 +16,6 @@ export const authService = {
     const payload = {
       ...data,
       telefono: `+56${data.telefono}`, // Concatenamos el prefijo para la base de datos
-      id_rol: 3, // Asignamos el rol de distribuidor por defecto
     };
 
     try {
@@ -31,6 +30,20 @@ export const authService = {
     const response = await api.post('/auth/login', {
       correo_electronico: correo,
       contrasena: contrasena
+    });
+    return response.data;
+  },
+
+  async forgotPassword(email: string) {
+    const response = await api.post('/forgot-password', { email });
+    return response.data;
+  },
+
+  async resetPassword(token: string, password: string, passwordConfirmation: string) {
+    const response = await api.post('/reset-password', {
+      token,
+      password,
+      password_confirmation: passwordConfirmation,
     });
     return response.data;
   }

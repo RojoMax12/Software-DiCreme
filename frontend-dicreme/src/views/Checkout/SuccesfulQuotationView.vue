@@ -28,7 +28,7 @@ const horaCotizacion = route.query.hora || '--:--'
         </p>
         
         <p class="info-text sub-link">
-          Puedes revisar el detalle y el estado haciendo <a href="#" @click.prevent="router.push('/mis-cotizaciones')">click aquí.</a>
+          Puedes revisar el detalle y el estado haciendo <a href="#" @click.prevent="router.push(`/cotizacion/${idCotizacion}`)">click aquí.</a>
         </p>
 
         <!-- Bloque de datos dinámicos inyectados -->

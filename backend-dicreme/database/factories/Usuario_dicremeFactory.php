@@ -27,6 +27,7 @@ class Usuario_dicremeFactory extends Factory
             ->inRandomOrder()
             ->first()?->id
             ?? \App\Models\Rol::factory(),
+            'estado_usuario' => $this->faker->boolean(true), // 80% de probabilidad de ser true
             ];
 
     }

@@ -11,7 +11,7 @@
             </svg>
             <span>Contactar por WhatsApp</span>
           </button>
-          <button class="btn-export">
+          <button class="btn-export" @click="exportarPDF">
             <Upload :size="18" />
             <span>Exportar</span>
           </button>
@@ -300,6 +300,8 @@ import {
   Wheat
 } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ProductItem {
   id: number | null;          // ID de la tabla intermedia (null si es totalmente nuevo)
@@ -319,7 +321,8 @@ interface CatalogProduct {
   id: number;
   nombre_producto: string;
   id_formato: number;
-  id_categoria: number;
+  id_categoria?: number;
+  nombre_categoria?: string;
   precio_producto: number;
 }
 
@@ -391,11 +394,12 @@ const currentUser = ref(obtenerUsuarioInicial());
 // Carga inicial mapeando id_producto e inicializando copias de la cantidad original
 onMounted(async () => {
   try {
-    const [quoteProdsRes, allProdsRes, catsRes, formatsRes] = await Promise.all([
+    const [quoteProdsRes, allProdsRes, catsRes, formatsRes, quoteRes] = await Promise.all([
       quoteService.getQuoteProducts(props.orderId),
       productService.getProducts(),
       productCategoryService.getCategory(),
-      productFormatService.getFormats()
+      productFormatService.getFormats(),
+      quoteService.getQuoteById(props.orderId)
     ]);
 
     availableCatalog.value = allProdsRes.data;
@@ -404,22 +408,30 @@ onMounted(async () => {
     catsRes.data.forEach((c: any) => catMap.value.set(c.id, c.nombre_categoria));
     formatsRes.data.forEach((f: any) => formatMap.value.set(f.id, f.nombre_formato));
 
+    const generalDiscountType = quoteRes?.data?.tipo_descuento_general === 'fixed' ? 'fixed' : 'percentage';
+    const generalDiscountValue = Number(quoteRes?.data?.valor_descuento_general || 0);
+
+    discountType.value = generalDiscountType;
+    discountInput.value = generalDiscountValue;
+
     products.value = quoteProdsRes.data.map((qp: any) => {
       const p: any = prodMap.get(qp.id_producto);
       const subtotal = qp.cantidad * qp.precio_unitario_venta;
+      const productDiscountType = qp?.tipo_descuento === 'fixed' ? 'fixed' : qp?.tipo_descuento === 'percentage' ? 'percentage' : 'none';
+      const productDiscountValue = Number(qp?.valor_descuento || 0);
       
       return {
         id: qp.id,
         id_producto: qp.id_producto, 
         name: p ? p.nombre_producto : 'Producto desconocido',
         format: p ? formatMap.value.get(p.id_formato) : '-',
-        category: p ? catMap.value.get(p.id_categoria) : '-',
+        category: p ? (p.nombre_categoria || catMap.value.get(p.id_categoria) || '-') : '-',
         quantity: qp.cantidad,
         initialQuantity: qp.cantidad, 
         price: Number(qp.precio_unitario_venta),
         subtotal: subtotal,
-        discountType: 'none',
-        discountValue: 0
+        discountType: productDiscountType,
+        discountValue: productDiscountValue
       };
     });
   } catch (error) {
@@ -464,7 +476,7 @@ const addProductToTable = () => {
     id_producto: p.id,
     name: p.nombre_producto,
     format: formatMap.value.get(p.id_formato) || '-',
-    category: catMap.value.get(p.id_categoria) || '-',
+    category: p.nombre_categoria || catMap.value.get(p.id_categoria) || '-',
     quantity: 1,
     initialQuantity: 0, // Inicia en 0 porque no existe en la DB
     price: Number(p.precio_producto),
@@ -566,6 +578,110 @@ const handleComplete = async () => {
     notify(errorMsg, 'error');
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+const getBase64FromUrl = async (url: string): Promise<string> => {
+  const data = await fetch(url);
+  const blob = await data.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => resolve(reader.result as string);
+  });
+};
+
+const exportarPDF = async () => {
+  try {
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    
+    // 1. Logo
+    try {
+      const logoBase64 = await getBase64FromUrl('/src/assets/logo_dicreme.png');
+      doc.addImage(logoBase64, 'PNG', 15, 10, 19, 19); 
+    } catch (e) {
+      console.warn("No se pudo cargar el logo", e);
+    }
+
+    // 2. Encabezado
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(50, 44, 68); // Color corporativo
+    doc.text(`Cotización N° ${String(props.orderId).padStart(6, '0')}`, 195, 20, { align: 'right' });
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80); 
+    doc.text(`Distribuidor: ${props.distributor || 'N/A'}`, 15, 32);
+    doc.text(`Teléfono: ${props.distributorPhone || 'N/A'}`, 15, 37);
+    doc.text(`Gestionado por: ${props.managedBy || 'Sin asignar'}`, 15, 42);
+    
+    // Fecha alineada a la derecha
+    const fechaTexto = `${props.date || ''} ${props.time ? '- ' + props.time : ''}`;
+    doc.text(`Fecha: ${fechaTexto}`, 195, 32, { align: 'right' });
+    
+    doc.setDrawColor(228, 134, 159); // Línea rosada
+    doc.setLineWidth(0.5);
+    doc.line(15, 47, 195, 47); 
+
+    // 3. Tabla de Productos
+    autoTable(doc, {
+      startY: 55, 
+      head: [['Producto', 'Formato', 'Categoría', 'Cant.', 'Precio Unit.', 'Subtotal']],
+      body: products.value.map(p => [
+        p.name, 
+        p.format, 
+        p.category,
+        p.quantity, 
+        `$${formatNumber(p.price)}`, 
+        `$${formatNumber(p.subtotal)}`
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [50, 44, 68], textColor: 255, fontStyle: 'bold' },
+      styles: { cellPadding: 3, fontSize: 9 },
+      columnStyles: { 
+          3: { halign: 'center' },
+          4: { halign: 'right' },
+          5: { halign: 'right' }
+      }
+    });
+
+    // 4. Resumen de Totales
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('Subtotal:', 140, finalY);
+    doc.text(`$${formatNumber(subtotalSum.value)}`, 195, finalY, { align: 'right' });
+    
+    doc.text('Descuentos por producto:', 140, finalY + 6);
+    doc.text(`-$${formatNumber(totalProductDiscounts.value)}`, 195, finalY + 6, { align: 'right' });
+
+    doc.text('Descuento general:', 140, finalY + 12);
+    doc.text(`-$${formatNumber(appliedGeneralDiscount.value)}`, 195, finalY + 12, { align: 'right' });
+    
+    // Total final
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(50, 44, 68);
+    doc.text(`TOTAL FINAL:`, 140, finalY + 22);
+    doc.text(`$${formatNumber(finalTotal.value)}`, 195, finalY + 22, { align: 'right' });
+
+    // 5. Pie de página
+    doc.setLineWidth(0.2);
+    doc.line(15, 280, 195, 280);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(120);
+    doc.text("Documento generado automáticamente por DiCreme - Sistema de Gestión", 105, 285, { align: 'center' });
+
+    // 6. Descargar y notificar
+    doc.save(`Cotizacion_DiCreme_${props.orderId}.pdf`);
+    notify('PDF generado correctamente', 'success');
+
+  } catch (error) {
+    console.error("Error al generar el PDF:", error);
+    notify('Error al generar el PDF', 'error');
   }
 };
 

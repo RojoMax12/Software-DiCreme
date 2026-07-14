@@ -31,11 +31,8 @@ const handleLogin = async () => {
     localStorage.setItem('token', data.access_token || data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
 
-    if(data.user.id_rol == 1){
+    if(data.user.id_rol == 1 || data.user.id_rol == 2){
       router.push('/admin')
-    }
-    else if(data.user.id_rol == 2){
-
     }
     else{
       router.push('/')

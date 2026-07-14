@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 use App\Services\Cotizacion_productoServices;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+
 
 class Cotizacion_productoController extends Controller
 {
@@ -13,12 +15,8 @@ class Cotizacion_productoController extends Controller
         $this->cotizacionProductoServices = $cotizacionProductoServices;
     }
 
-    public function index()
-    {
-        return response()->json($this->cotizacionProductoServices->getAllCotizacionProductos());
-    }
 
-    public function store(Request $request)
+    public function store(Request $request):JsonResponse
     {
         $data = $request->validate([
             'id_cotizacion' => 'required|integer|exists:cotizaciones,id',
@@ -27,15 +25,27 @@ class Cotizacion_productoController extends Controller
             'precio_unitario_venta' => 'required|numeric',
         ]);
 
-        return response()->json($this->cotizacionProductoServices->createCotizacionProducto($data), 201);
+        try {
+            
+            $cotizacion_producto = $this->cotizacionProductoServices->createCotizacionProducto($data);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $cotizacion_producto,
+                'message' => 'La cotizacion se afilio correctamente con el producto'
+            ], 201);
+        } catch (\Exception $e) {
+            
+        return response()->json([
+                'status' => 'error',
+                'message' => 'La cotizacion no se pudo afiliar correctamente con el producto ' . $e->getMessage()
+            ], 400);
+        }
+
     }
 
-    public function show($id)
-    {
-        return response()->json($this->cotizacionProductoServices->getCotizacionProductoById($id));
-    }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id):JsonResponse
     {
         $data = $request->validate([
             'id_cotizacion' => 'sometimes|required|exists:cotizaciones,id',
@@ -44,12 +54,48 @@ class Cotizacion_productoController extends Controller
             'precio_unitario_venta' => 'sometimes|required|numeric',
         ]);
 
-        return response()->json($this->cotizacionProductoServices->updateCotizacionProducto($id, $data));
+        try {
+            
+            $cotizacion_producto_update = $this->cotizacionProductoServices->updateCotizacionProducto($id, $data);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $cotizacion_producto_update,
+                'message' => 'Se actualizo correctamente el producto asociado a la cotizacion'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se pudo actualizo correctamente el producto asociado a la cotizacion ' . $e->getMessage()
+            ], 400);
+        }
+
+
     }
 
-    public function destroy($id)
+
+    public function destroy($id):JsonResponse
+    {   
+        try {
+            $cotizacion_producto_eliminar = $this->cotizacionProductoServices->deleteCotizacionProducto($id);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $cotizacion_producto_eliminar,
+                'message' => 'Se elimino el producto asociado a la cotizacion'
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se pudo eliminar correctamente el producto asociado a la cotizacion ' . $e->getMessage()
+            ], 400);
+        }
+    }
+
+      public function show($id)
     {
-        return response()->json($this->cotizacionProductoServices->deleteCotizacionProducto($id));
+        return response()->json($this->cotizacionProductoServices->getCotizacionProductoById($id));
     }
 
     public function getByCotizacionId($idCotizacion)
@@ -60,6 +106,11 @@ class Cotizacion_productoController extends Controller
     public function getByProductoId($idProducto)
     {
         return response()->json($this->cotizacionProductoServices->getCotizacionProductosByProductoId($idProducto));
+    }
+
+    public function index()
+    {
+        return response()->json($this->cotizacionProductoServices->getAllCotizacionProductos());
     }
 
 }

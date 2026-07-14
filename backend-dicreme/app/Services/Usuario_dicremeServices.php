@@ -3,6 +3,7 @@
 namespace App\Services;
 use App\Models\Usuario_dicreme;
 use App\Repositories\Usuario_dicremeRepository;
+use Illuminate\Support\Facades\Hash;
 
 class Usuario_dicremeServices
 {
@@ -24,7 +25,10 @@ class Usuario_dicremeServices
     }
 
     public function createUsuarioDicreme($data)
-    {
+    {   
+        $data['estado_usuario'] = $data['estado_usuario'] ?? true;
+        $data['contrasena'] = Hash::make($data['contrasena']);
+        
         return $this->usuarioDicremeRepository->createUsuarioDicreme($data);
     }
 
@@ -36,6 +40,15 @@ class Usuario_dicremeServices
     public function deleteUsuarioDicreme($id)
     {
         return $this->usuarioDicremeRepository->deleteUsuarioDicreme($id);
+    }
+
+    public function getUsuariosDicremeDespachador(){
+        return $this->usuarioDicremeRepository->getUsuariosdespachadores();
+    }
+
+    public function activarydesactivar($id)
+    {
+        return $this->usuarioDicremeRepository->activarydesactivar($id);
     }
 }
 

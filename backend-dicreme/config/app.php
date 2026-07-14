@@ -28,6 +28,20 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | URL base del frontend (Vue) usada para construir enlaces enviados por
+    | correo, como el de recuperación de contraseña. Debe apuntar al dominio
+    | real de producción; nunca debe quedar hardcodeada en el código.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode

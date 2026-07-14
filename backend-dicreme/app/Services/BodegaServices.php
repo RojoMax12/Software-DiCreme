@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Repositories\BodegaRepository;
+use Illuminate\Support\Facades\DB;
+use Exception;
 
 class BodegaServices
 {
@@ -15,9 +17,12 @@ class BodegaServices
 	}
 
     # Creators
-	public function createBodega($data)
-	{
-		return $this->bodegaRepository->createBodega($data);
+	public function createBodega($data):mixed
+	{	
+		return DB::transaction(function () use ($data) {
+         
+            return $this->bodegaRepository->createBodega($data);
+        });
 	}
 
     # Geters 
@@ -46,15 +51,32 @@ class BodegaServices
 		return $this->bodegaRepository->getProductosByBodegaId($id);
 	}
 
-    # Seters
-	public function updateBodega($id, $data)
-	{
-		return $this->bodegaRepository->updateBodega($id, $data);
-	}
+    public function updateBodega($id, $data)
+    {
+        return DB::transaction(function () use ($id, $data) {
+            // Verificamos si existe antes de actualizar (opcional, dependiendo de tu repo)
+            $bodega = $this->bodegaRepository->getBodegaById($id);
+            if (!$bodega) {
+                throw new Exception("La bodega con ID {$id} no existe.");
+            }
+
+            return $this->bodegaRepository->updateBodega($id, $data);
+        });
+    }
 
     # Delete
-	public function deleteBodegaById($id)
-	{
-		return $this->bodegaRepository->deleteBodegaById($id);
-	}
+    public function deleteBodegaById($id)
+    {
+        return DB::transaction(function () use ($id) {
+            $bodega = $this->bodegaRepository->getBodegaById($id);
+            if (!$bodega) {
+                throw new Exception("No se puede eliminar: la bodega no existe.");
+            }
+
+            // Aquí podrías agregar lógica extra, como verificar si la bodega tiene productos
+            // antes de dejar que se elimine (para evitar dejar productos huérfanos).
+
+            return $this->bodegaRepository->deleteBodegaById($id);
+        });
+    }
 }

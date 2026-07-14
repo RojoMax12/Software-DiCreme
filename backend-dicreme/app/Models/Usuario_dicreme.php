@@ -16,7 +16,8 @@ class Usuario_dicreme extends Authenticatable
         'nombre_usuario',
         'correo_electronico',
         'contrasena',
-        'id_rol'
+        'id_rol',
+        'estado_usuario'
     ];
 
     protected $hidden = [
@@ -27,6 +28,7 @@ class Usuario_dicreme extends Authenticatable
     {
         return [
             'contrasena' => 'hashed',
+            'estado_usuario' => 'boolean',
         ];
     }
 

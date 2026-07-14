@@ -15,16 +15,6 @@ class RolController extends Controller
         $this->rolServices = $rolServices;
     }
 
-    public function index()
-    {
-        return response()->json($this->rolServices->getAllRoles());
-    }
-
-    public function show($id)
-    {
-        return response()->json($this->rolServices->getRoleById($id));
-    }
-
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -47,4 +37,17 @@ class RolController extends Controller
     {
         return response()->json($this->rolServices->deleteRole($id), 204);
     }
+
+
+    
+    public function index()
+    {
+        return response()->json($this->rolServices->getAllRoles());
+    }
+
+    public function show($id)
+    {
+        return response()->json($this->rolServices->getRoleById($id));
+    }
+
 }

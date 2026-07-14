@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Home, FileText, ShoppingBag, X } from 'lucide-vue-next'
+import { Home, FileText, ShoppingBag, X, User } from 'lucide-vue-next'
 import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps<{
@@ -69,6 +69,15 @@ const isActive = (path: string) => {
             >
               <ShoppingBag :size="20" />
               <span>Mis Pedidos</span>
+            </button>
+
+            <button 
+              class="nav-item" 
+              :class="{ active: isActive('/perfile') }"
+              @click="navigateTo('/perfile')"
+            >
+              <User :size="20" />
+              <span>Mi perfil</span>
             </button>
           </div>
         </nav>

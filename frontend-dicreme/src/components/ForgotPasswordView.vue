@@ -2,17 +2,37 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Mail, ArrowLeft } from 'lucide-vue-next'
+import { authService } from '../services/authService'
 
 const router = useRouter()
 const email = ref('')
+const isLoading = ref(false)
+const feedbackMessage = ref('')
 
 const goBack = () => {
   router.back()
 }
 
-const handleResetPassword = () => {
-  console.log('Reset password request for:', email.value)
-  // Falta la lógica para enviar el correo de restablecimiento de contraseña :)
+const handleResetPassword = async () => {
+  if (!email.value) {
+    feedbackMessage.value = 'Ingresa tu correo electrónico.'
+    return
+  }
+
+  isLoading.value = true
+  feedbackMessage.value = ''
+
+  try {
+    const data = await authService.forgotPassword(email.value)
+    // El backend siempre responde el mismo mensaje genérico, exista o no el
+    // correo, para no revelar qué cuentas existen en el sistema.
+    feedbackMessage.value = data.message
+  } catch (error: any) {
+    // Aun si hay un error de red, no distinguimos si el correo existe o no.
+    feedbackMessage.value = 'Si el correo está registrado, te enviaremos un enlace de recuperación en unos minutos.'
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -47,7 +67,11 @@ const handleResetPassword = () => {
             <Mail class="input-icon" :size="20" color="#322c44" />
           </div>
 
-          <button @click="handleResetPassword" class="btn btn-primary">ENVIAR INSTRUCCIONES</button>
+          <button @click="handleResetPassword" class="btn btn-primary" :disabled="isLoading">
+            {{ isLoading ? 'ENVIANDO...' : 'ENVIAR INSTRUCCIONES' }}
+          </button>
+
+          <p v-if="feedbackMessage" class="feedback-message">{{ feedbackMessage }}</p>
         </div>
       </div>
     </div>
@@ -193,5 +217,18 @@ const handleResetPassword = () => {
 .btn-primary {
   background-color: #e4869f;
   color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.feedback-message {
+  text-align: center;
+  color: #322c44;
+  font-size: 0.9rem;
+  margin: 0;
 }
 </style>

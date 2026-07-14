@@ -45,4 +45,21 @@ class DespachoRepository
         return Despacho::where("id_pedido", $id)->first();
 
     }
+
+    public function getDespachoByIdUsuarioDiCreme($id){
+
+        return Despacho::where("id_usuario_dicreme", $id)->get();
+    }
+
+    public function asignardespachoundespachador($id_despacho, $id_despachador){
+
+        $despacho = Despacho::find($id_despacho);
+        if($despacho){
+            $despacho->id_usuario_dicreme = $id_despachador;
+            $despacho->save();
+            return $despacho;
+
+        }
+        return null;
+    }
 }

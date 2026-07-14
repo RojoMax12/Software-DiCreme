@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\BodegaServices;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class BodegaController extends Controller
 {
@@ -14,17 +15,8 @@ class BodegaController extends Controller
         $this->bodegaServices = $bodegaServices;
     }
 
-    public function index()
-    {
-        return response()->json($this->bodegaServices->getAllBodegas());
-    }
 
-    public function show($id)
-    {
-        return response()->json($this->bodegaServices->getBodegaById($id));
-    }
-
-    public function store(Request $request)
+    public function store(Request $request):JsonResponse
     {
         $data = $request->validate([
             'nombre_bodega' => 'required|string|max:255',
@@ -32,10 +24,24 @@ class BodegaController extends Controller
             'cantidad_productos' => 'required|integer|min:0',
         ]);
 
-        return response()->json($this->bodegaServices->createBodega($data), 201);
+        try{
+            $bodega_creada = $this->bodegaServices->createBodega($data);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $bodega_creada,
+                'message' => 'bodega creada correctamente'
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al procesar al crear la bodega ' . $e->getMessage()
+            ], 400);
+        }
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id):JsonResponse
     {
         $data = $request->validate([
             'nombre_bodega' => 'sometimes|required|string|max:255',
@@ -43,11 +49,84 @@ class BodegaController extends Controller
             'cantidad_productos' => 'sometimes|required|integer|min:0',
         ]);
 
-        return response()->json($this->bodegaServices->updateBodega($id, $data));
+        try {
+            $bodega_updateada =  $this->bodegaServices->updateBodega($id, $data);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $bodega_updateada,
+                'message' => 'bodega actualizada correctamente'
+            ], 201);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al actualizar la bodega' . $e->getMessage()
+            ], 400);
+  
+        }
+
+        
     }
 
-    public function destroy($id)
-    {
-        return response()->json($this->bodegaServices->deleteBodegaById($id));
+    public function destroy($id):JsonResponse
+    {   
+        try {
+            
+            $bodega_destruida = $this->bodegaServices->deleteBodegaById($id);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $bodega_destruida,
+                'message' => 'bodega eliminada correctamente'
+            ], 201);
+
+        } catch (\Exception $e) {
+
+        return response()->json([
+                'status' => 'error',
+                'message' => 'Error al eliminar la bodega' . $e->getMessage()
+            ], 400);
+
+        }
+  
+    }
+
+
+    public function index():JsonResponse
+    {   
+        try {
+
+            $bodegas = $this->bodegaServices->getAllBodegas();
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $bodegas], 
+            200); 
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener las bodegas' . $e->getMessage()
+            ], 400);
+        }
+       
+    }
+
+    public function show($id):JsonResponse
+    {   
+        try {
+
+            $bodega = $this->bodegaServices->getBodegaById($id);
+            return response()->json([
+            'status' => 'success', 
+            'data' =>  $bodega], 
+            200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener las bodega' . $e->getMessage()
+            ], 400);
+        }
     }
 }

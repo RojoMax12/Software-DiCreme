@@ -11,7 +11,7 @@
             </svg>
             <span>WhatsApp</span>
           </button>
-          <button class="btn-export">
+          <button class="btn-export" @click="exportarPDF">
             <Upload :size="18" />
             <span>Exportar</span>
           </button>
@@ -77,7 +77,7 @@
                 </div>
                 <div class="meta-text">
                   <span class="meta-label">Fecha de ingreso</span>
-                  <span class="meta-value">{{ date }} {{ time ? '- ' + time : '' }}</span>
+                  <span class="meta-value">{{ date }}</span>
                 </div>
               </div>
 
@@ -91,6 +91,24 @@
                     {{ localStatus }}
                   </span>
                 </div>
+              </div>
+
+              <div class="meta-item">
+                  <div class="meta-icon-box"><CircleDollarSign :size="20" /></div>
+                  <div class="meta-text">
+                      <span class="meta-label">Estado de Pago</span>
+                      <!-- NUEVO CONTENEDOR FLEX -->
+                      <div class="switch-wrapper">
+                          <label class="switch">
+                              <input type="checkbox" :checked="localPago === 'Pagada'" @change="togglePago">
+                              <span class="slider round"></span>
+                          </label>
+                          <!-- EL TEXTO AHORA ESTÁ AFUERA DEL LABEL DEL SWITCH -->
+                          <span class="status-label" :class="localPago === 'Pagada' ? 'text-paid' : 'text-unpaid'">
+                              {{ localPago }}
+                          </span>
+                      </div>
+                  </div>
               </div>
             </div>
 
@@ -139,8 +157,7 @@
                 <div class="step-dot">
                   <Check v-if="index < currentStepIndex" :size="18" :stroke-width="3" />
                   <template v-else>
-                    <Banknote v-if="step.id === 6" :size="18" :stroke-width="2" />
-                    <Receipt v-else-if="step.id === 7" :size="18" :stroke-width="2" />
+                    <Banknote v-if="step.id === 1" :size="18" :stroke-width="2" />
                     <Package v-else-if="step.id === 2" :size="18" :stroke-width="2" />
                     <Truck v-else-if="step.id === 3" :size="18" :stroke-width="2" />
                     <Home v-else-if="step.id === 4" :size="18" :stroke-width="2" />
@@ -187,15 +204,19 @@
 </template>
 
 <script setup lang="ts">
+
+import jsPDF from 'jspdf'; //npm install jspdf jspdf-autotable
+import autoTable from 'jspdf-autotable'; // Importa la función directamente
 import { ref, computed, onMounted } from 'vue';
 import { 
   X, Upload, Building2, Calendar, 
   ClipboardList, LayoutGrid,
   ChevronLeft, ChevronRight, Check,
-  Banknote, Receipt, Package, Truck, Home
+  Banknote, Receipt, Package, Truck, Home, CircleDollarSign
 } from 'lucide-vue-next';
 import orderService from '@/services/orderService';
 import { useNotification } from '@/composables/useNotification';
+
 
 const { notify } = useNotification();
 const backendSubtotal = ref(0);
@@ -209,6 +230,8 @@ const props = defineProps<{
   distributorPhone?: string;
   status?: string;
   statusId?: number;
+  pago?: string;    // <-- NUEVO
+  pagoId?: number;
   date?: string;
   time?: string;
   total?: number;
@@ -218,15 +241,36 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'statusChanged']);
 const localStatus = ref(props.status);
 const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
+const localPago = ref(props.pago || 'Por pagar'); // Ajusta según el prop que recibas
+const localPagoId = ref(props.pagoId || 1);
 
 // Lógica de la línea de tiempo
 const timelineSteps = [
-  { id: 6, label: 'Por pagar' },
-  { id: 7, label: 'Pagado' },
+  { id: 1, label: 'En validación' },
   { id: 2, label: 'Preparación' },
   { id: 3, label: 'En despacho' },
   { id: 4, label: 'Entregado' }
 ];
+
+const togglePago = async (event: Event) => {
+  const isChecked = (event.target as HTMLInputElement).checked;
+  const newPagoId = isChecked ? 2 : 1; // 7 = Pagada, 6 = Por pagar (ajusta estos ID si tu DB usa otros)
+  
+  try {
+    // Deberás tener/crear un endpoint en tu orderService exclusivo para cambiar el pago
+    const result = await orderService.changeOrderStatusPay(Number(props.orderId), newPagoId);
+    
+    localPago.value = isChecked ? 'Pagada' : 'Por pagar';
+    localPagoId.value = newPagoId;
+    
+    notify('Estado de pago actualizado', 'success');
+    emit('statusChanged'); // Refresca la tabla de fondo
+  } catch (error: any) {
+    // Si falla, devolvemos el switch visualmente a su estado anterior
+    (event.target as HTMLInputElement).checked = !isChecked;
+    notify(error.response?.data?.message || 'Error al actualizar el pago', 'error');
+  }
+};
 
 const currentStepIndex = computed(() => {
   return timelineSteps.findIndex(s => s.id === localStatusId.value);
@@ -235,14 +279,23 @@ const currentStepIndex = computed(() => {
 // El estado que el usuario está SELECCIONANDO en la línea de tiempo (por defecto el actual)
 const selectedTimelineId = ref(localStatusId.value);
 
+const currentUser = ref({ id: 0, name: '', role: 0 });
+
 const canGoBack = computed(() => {
-  const currentIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
-  return currentIndex > 0;
+  const selectedIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  // Los administradores (rol 1) pueden retroceder a cualquier estado anterior.
+  if (currentUser.value.role === 1) {
+    return selectedIndex > 0;
+  }
+  // Los no administradores solo pueden retroceder si avanzaron visualmente más allá de su estado real actual.
+  return selectedIndex > currentStepIndex.value;
 });
 
 const canGoForward = computed(() => {
-  const currentIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
-  return currentIndex < timelineSteps.length - 1;
+  const selectedIndex = timelineSteps.findIndex(s => s.id === selectedTimelineId.value);
+  // Nadie puede saltarse un estado. El máximo estado seleccionable es el inmediatamente siguiente al estado actual (currentStepIndex + 1).
+  const maxAllowedIndex = currentStepIndex.value + 1;
+  return selectedIndex < maxAllowedIndex && selectedIndex < timelineSteps.length - 1;
 });
 
 const moveTimeline = (direction: 'next' | 'prev') => {
@@ -262,6 +315,7 @@ const updateStatus = async () => {
   isUpdatingStatus.value = true;
   try {
     const result = await orderService.changeOrderStatus(Number(props.orderId), selectedTimelineId.value);
+    console.log("estado",result)
     notify(result.data.message, 'success');
 
     localStatusId.value = selectedTimelineId.value;
@@ -351,7 +405,8 @@ const category = (CategoryId: number) =>
 const getproducts = async () => {
   try {
     const response = await orderService.getOrderDetails(Number(props.orderId));
-    const orderData = response.data?.data; 
+    console.log("datos",response.data)
+    const orderData = response.data; 
 
     console.log('Objeto interno de la cotización/pedido:', orderData);
 
@@ -406,8 +461,119 @@ const getStatusClass = (status: string | undefined) => {
 };
 
 onMounted(() => {
+  const userStored = localStorage.getItem('user');
+  if (userStored) {
+    const userObj = JSON.parse(userStored);
+    currentUser.value = {
+      id: userObj.id,
+      name: userObj.nombre_usuario || userObj.name,
+      role: userObj.id_rol || 0
+    };
+  }
   getproducts();
 });
+
+const getBase64FromUrl = async (url: string): Promise<string> => {
+  const data = await fetch(url);
+  const blob = await data.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => resolve(reader.result as string);
+  });
+};
+
+const exportarPDF = async () => {
+  try {
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    
+    // 1. Logo
+    try {
+      const logoBase64 = await getBase64FromUrl('/src/assets/logo_dicreme.png');
+      doc.addImage(logoBase64, 'PNG', 15, 10, 19, 19); 
+    } catch (e) {
+      console.warn("No se pudo cargar el logo", e);
+    }
+
+    // 2. Encabezado
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(50, 44, 68); // Color corporativo
+    doc.text(`Pedido N° ${String(props.orderId).padStart(6, '0')}`, 195, 20, { align: 'right' });
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80); 
+    doc.text(`Distribuidor: ${props.distributor || 'N/A'}`, 15, 32);
+    doc.text(`Teléfono: ${props.distributorPhone || 'N/A'}`, 15, 37);
+    doc.text(`Estado de Pago: ${localPago.value}`, 15, 42);
+    
+    // Fecha alineada a la derecha
+    const fechaTexto = `${props.date || ''} ${props.time ? '- ' + props.time : ''}`;
+    doc.text(`Fecha de ingreso: ${fechaTexto}`, 195, 32, { align: 'right' });
+    
+    doc.setDrawColor(228, 134, 159); // Línea rosada
+    doc.setLineWidth(0.5);
+    doc.line(15, 47, 195, 47); 
+
+    // 3. Tabla de Productos
+    autoTable(doc, {
+      startY: 55, 
+      head: [['Producto', 'Formato', 'Categoría', 'Cant.', 'Precio Unit.', 'Subtotal']],
+      body: products.value.map(p => [
+        p.name, 
+        formato(p.format), 
+        category(p.category),
+        p.quantity, 
+        `$${formatNumber(p.price)}`, 
+        `$${formatNumber(p.subtotal)}`
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [50, 44, 68], textColor: 255, fontStyle: 'bold' },
+      styles: { cellPadding: 3, fontSize: 9 },
+      columnStyles: { 
+          3: { halign: 'center' },
+          4: { halign: 'right' },
+          5: { halign: 'right' }
+      }
+    });
+
+    // 4. Resumen de Totales
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('Subtotal:', 140, finalY);
+    doc.text(`$${formatNumber(subtotalAmount.value)}`, 195, finalY, { align: 'right' });
+    
+    doc.text('Descuento aplicado:', 140, finalY + 6);
+    doc.text(`-$${formatNumber(currentDiscount.value || 0)}`, 195, finalY + 6, { align: 'right' });
+    
+    // Total final
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(50, 44, 68);
+    doc.text(`TOTAL FINAL:`, 140, finalY + 18);
+    doc.text(`$${formatNumber(totalAmount.value)}`, 195, finalY + 18, { align: 'right' });
+
+    // 5. Pie de página
+    doc.setLineWidth(0.2);
+    doc.line(15, 280, 195, 280);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(120);
+    doc.text("Documento generado automáticamente por DiCreme - Sistema de Gestión de Pedidos", 105, 285, { align: 'center' });
+
+    // 6. Descargar y notificar
+    doc.save(`Pedido_DiCreme_${props.orderId}.pdf`);
+    notify('PDF generado correctamente', 'success');
+
+  } catch (error) {
+    console.error("Error al generar el PDF:", error);
+    notify('Error al generar el PDF', 'error');
+  }
+};
+
 </script>
 
 <style scoped>
@@ -954,4 +1120,54 @@ onMounted(() => {
   color: #adb5bd;
   cursor: not-allowed;
 }
+
+
+.switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.switch { 
+  position: relative; 
+  display: inline-block; 
+  width: 50px; 
+  height: 24px; 
+  flex-shrink: 0; /* Evita que el switch se aplaste */
+}
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #e4869f; /* Color por defecto (Por pagar) */
+    transition: .4s; 
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px;
+    background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: #37b24d; } /* Color Pagada */
+input:checked + .slider:before { transform: translateX(26px); }
+
+.status-label { 
+  font-size: 0.85rem; 
+  font-weight: 700; 
+}
+
+/* Colores para el texto que acompañan al switch */
+.text-paid { color: #37b24d; }
+.text-unpaid { color: #e4869f; }
+
+/* Botón Exportar */
+.btn-export {
+    display: flex; align-items: center; gap: 8px; padding: 10px 20px;
+    background-color: #322c44; color: white; border: none; border-radius: 12px;
+    font-weight: 700; cursor: pointer; transition: 0.2s;
+}
+.btn-export:hover { background-color: #4a445c; }
+
 </style>

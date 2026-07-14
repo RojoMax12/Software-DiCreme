@@ -31,5 +31,10 @@ export default {
 
     changeOrderStatus(id_pedido: number, id_estado_pedido?: number) {
         return api.put(`/pedidos/${id_pedido}/cambiar-estado`, { id_estado_pedido });
+    },
+
+    changeOrderStatusPay(id_pedido: number, id_estado_pago?: number) {
+        return api.put(`/pedidos/${id_pedido}/cambiar-estado-pago`, { id_estado_pago });
     }
+
 }

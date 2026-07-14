@@ -26,6 +26,15 @@ class ProductoServices
         return $this->productoRepository->getAllProductos();
     }
 
+    public function getCantidadTotalProductoFromAllLotes($id){
+        return $this->productoRepository->getCantidadTotalProductoFromAllLotes($id);
+    }
+
+    public function getResumenTodosLosProductos()
+    {
+        return $this->productoRepository->getResumenTodosLosProductos();
+    }
+
     public function getProductoById($id)
     {
         return $this->productoRepository->getProductoById($id);
@@ -57,4 +66,12 @@ class ProductoServices
     {
         return $this->productoRepository->deleteProducto($id);
     }
+
+    public function activarydesactivar($name)
+    {
+        // Retorna el objeto Producto o null directamente hacia el controlador
+        return $this->productoRepository->activarydesactivar($name);
+    }
+
+
 }

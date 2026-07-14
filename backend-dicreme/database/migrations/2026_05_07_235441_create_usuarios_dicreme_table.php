@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('correo_electronico')->unique();
             $table->string('contrasena');
             $table->unsignedBigInteger('id_rol');
+            $table->boolean('estado_usuario')->default(true);
             $table->timestamps();
         });
     }

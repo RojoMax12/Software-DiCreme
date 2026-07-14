@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stocks', function (Blueprint $table) {
+        Schema::create('estados_pago', function (Blueprint $table) {
             $table->id();
-            $table->integer('cantidad_stock')->default(0);
+            $table->string('nombre_estado')->unique();
             $table->timestamps();
         });
     }
@@ -23,6 +23,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stocks');
+        Schema::table('estados_pago', function (Blueprint $table) {
+            //
+        });
     }
 };

@@ -9,9 +9,11 @@ import quoteProductService from '@/services/quoteProductService'
 import productService from '@/services/productService'
 import productCategoryService from '@/services/productCategoryService' 
 import boxPlaceholderImage from '@/assets/caja_dicreme.jpg'
+const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 const route = useRoute()
 const router = useRouter()
+
 
 // --- ESTADOS REACTIVOS ---
 const quotationData = ref<any>(null)
@@ -54,6 +56,34 @@ const abrirWhatsappConDatos = (quotationId) => {
   const url = `https://wa.me/56995838926?text=${encodeURIComponent(mensaje)}`;
   
   window.open(url, '_blank');
+};
+
+const formatRutVisual = (rut: string) => {
+  if (!rut) return '';
+  let clean = rut.replace(/[^0-9kK]/gi, '');
+  if (clean.length > 9) clean = clean.substring(0, 9);
+  if (clean.length > 1) {
+    return clean.slice(0, -1) + '-' + clean.slice(-1).toUpperCase();
+  }
+  return clean.toUpperCase();
+}
+
+// NUEVO: Función para buscar la foto según el nombre del helado
+const getDynamicImage = (flavorName: string) => {
+  if (!flavorName) return boxPlaceholderImage;
+  
+  const formattedName = flavorName
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes
+    .replace(/\s+/g, '-'); // Cambia espacios por guiones
+
+  const path = `/src/assets/FotoHelados/${formattedName}.webp`;
+
+  if (heladoImages[path]) {
+    return heladoImages[path];
+  } else {
+    return boxPlaceholderImage; // Caja por defecto si no hay foto
+  }
 };
 
 // --- CARGA DE DATOS EN CADENA Y PARALELO ---
@@ -109,7 +139,8 @@ onMounted(async () => {
             id_categoria: prod.id_categoria,
             // Aquí asignamos el texto usando el diccionario, si no lo encuentra usa '10L'
             formato: formatos[prod.id_formato] || '10L',
-            precio: prod.precio_unitario_venta
+            precio: prod.precio_unitario_venta,
+            image: getDynamicImage(prod.nombre_producto)
           }
         }
       })
@@ -171,7 +202,7 @@ const handleGoBack = () => {
           <div class="info-card-block">
             <p class="info-text"><strong>Nombre y Apellido:</strong> {{ quotationData?.persona_recibe || fallbackName }}</p>
             <p class="info-text"><strong>Empresa:</strong> {{ distributorData?.nombre_empresa || fallbackCompany }}</p>
-            <p class="info-text"><strong>Rut empresa:</strong> {{ distributorData?.rut_empresa || distributorData?.rut || 'N/A' }}</p>
+            <p class="info-text"><strong>Rut empresa:</strong> {{ formatRutVisual(distributorData?.rut_empresa) || distributorData?.rut || 'N/A' }}</p>
             <p class="info-text"><strong>Dirección:</strong> {{ distributorData?.direccion || fallbackAddress }}</p>
             <p class="info-text"><strong>Comuna:</strong> {{ distributorData?.comuna || fallbackComuna }}</p>
           </div>
