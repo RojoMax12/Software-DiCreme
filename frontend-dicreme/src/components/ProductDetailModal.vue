@@ -54,8 +54,14 @@ const decreaseQuantity = () => {
 
 const getImageUrl = (imageName: string) => {
   if (!imageName) return '';
+  if (imageName.startsWith('http')) return imageName;
+  if (imageName.startsWith('/storage/')) {
+    const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
+    return `${baseUrl}${imageName}`;
+  }
   return new URL(`../assets/${imageName}`, import.meta.url).href;
 };
+
 const selectSize = (size: '10L' | '5L' | '2.5L' | '1L', imageName: string) => {
   selectedSize.value = size;
   activeImage.value = getImageUrl(imageName); 
@@ -67,10 +73,10 @@ const setTempImage = (imageName: string) => {
 };
 
 const productImages = {
-  '10L': '10L.webp', // Cambia estos nombres por los reales
-  '5L': '5L.webp',
-  '2.5L': '2.5L.webp',
-  '1L': '1L.webp'
+  '10L': '/storage/formatos/10L.webp',
+  '5L': '/storage/formatos/5L.webp',
+  '2.5L': '/storage/formatos/2.5L.webp',
+  '1L': '/storage/formatos/1L.webp'
 };
 // Función para enviar el producto armado al carrito
 const handleAddToCart = () => {

@@ -76,12 +76,14 @@ import Footer from '@/components/Footer.vue'
 import Carousel from '@/components/Carousel.vue';
 import imgBanner1 from '@/assets/banner1.webp'
 import imgBanner2 from '@/assets/banner2.webp'
+import imgBanner3 from '@/assets/local_horario.webp'
 const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 
 const bannerImages = [
   imgBanner1,
-  imgBanner2
+  imgBanner2,
+  imgBanner3
 ];
 
 // Estados reactivos
@@ -130,6 +132,13 @@ watch(() => router.currentRoute.value.path, () => {
   checkAuthStatus();
 });
 
+
+const getImageUrl = (path: string | null | undefined) => {
+  if (!path) return fotoCaja;
+  if (path.startsWith('http')) return path;
+  const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
 
 const getDynamicImage = (flavorName: string) => {
   // Transforma: "Limón al Agua" -> "limon-al-agua"
@@ -311,7 +320,7 @@ const fetchIceCreams = async () => {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
-          image: getDynamicImage(flavorName),
+          image: prod.foto_producto ? getImageUrl(prod.foto_producto) : getDynamicImage(flavorName),
           id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',

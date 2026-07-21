@@ -5,6 +5,7 @@
         <div class="switch-slider" :class="`pos-${activeFilter}`"></div>
         <button class="switch-btn" :class="{ active: activeFilter === 'admin' }" @click="activeFilter = 'admin'">Admins</button>
         <button class="switch-btn" :class="{ active: activeFilter === 'trabajador' }" @click="activeFilter = 'trabajador'">Trabajadores</button>
+        <button class="switch-btn" :class="{ active: activeFilter === 'despachador' }" @click="activeFilter = 'despachador'">Despachadores</button>
         <button class="switch-btn" :class="{ active: activeFilter === 'distribuidor' }" @click="activeFilter = 'distribuidor'">Distribuidores</button>
       </div>
       <button class="btn-primary" @click="openModal()">+ Añadir Usuario</button>
@@ -21,7 +22,7 @@
     </div>
 
     <div class="users-list">
-      <div v-for="user in getFilteredUsers()" :key="user.id" class="user-table-row">
+      <div v-for="user in paginatedUsers" :key="user.id" class="user-table-row">
         <div class="col-id">#{{ user.id }}</div>
         <div class="col-user-name">{{ user.nombre_usuario || user.nombre_empresa }}</div>
         <div class="col-email-text">{{ user.correo_electronico }}</div>
@@ -43,6 +44,16 @@
       </div>
     </div>
 
+    <div class="pagination-container" v-if="totalPages > 1">
+        <button class="btn-pagination" :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
+            Anterior
+        </button>
+        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="btn-pagination" :disabled="currentPage >= totalPages" @click="changePage(currentPage + 1)">
+            Siguiente
+        </button>
+    </div>
+
     <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
       <div class="modal-card">
         <div class="modal-header">
@@ -53,22 +64,23 @@
           <div class="modal-body">
             <div class="form-group">
                 <label>Nombre</label>
-                <input v-model="form.nombre_usuario" required />
+                <input v-model="form.nombre_usuario" required placeholder="Ingrese el nombre" />
             </div>
             <div class="form-group">
                 <label>Correo</label>
-                <input v-model="form.correo_electronico" type="email" required />
+                <input v-model="form.correo_electronico" type="email" required placeholder="Ingrese el correo" />
             </div>
             <div class="form-group" v-if="!isEditing">
                 <label>Contraseña</label>
-                <input v-model="form.contrasena" type="password" required />
+                <input v-model="form.contrasena" type="password" required placeholder="Debe tener 8 caracteres" />
             </div>
             <div class="form-group">
                 <label>Rol</label>
                 <select v-model="form.id_rol" required>
+                    <option value="">Seleccione el rol</option>
                     <option value="1">Administrador</option>
                     <option value="2">Trabajador</option>
-                    <option value="3">Distribuidor</option>
+                    <option value="4">Despachador</option>
                 </select>
             </div>
           </div>
@@ -87,15 +99,18 @@ import userService from '@/services/userService';
 import { ref, onMounted, reactive } from 'vue';
 import { useNotification } from '@/composables/useNotification';
 import distributorService from '@/services/distributorService';
-
+import { watch, computed } from 'vue';
 
 const usersAdmin = ref<any[]>([]);
 const usersTrabajador = ref<any[]>([]);
+const usersDespachador = ref<any[]>([]);
 const usersDistribuidor = ref<any[]>([]);
 const isModalOpen = ref(false);
 const { notify } = useNotification();
+const itemsPerPage = 10; // Puedes ajustar este número
+const currentPage = ref(1);
 
-const activeFilter = ref('admin'); // 'admin', 'trabajador', 'distribuidor'
+const activeFilter = ref('admin'); // 'admin', 'trabajador', 'despachador', 'distribuidor'
 const isEditing = ref(false);
 const editingId = ref<number | null>(null);
 const isUserActive = (user: any) => user.estado_usuario === 'Activo' || user.estado_usuario == 1 || user.estado_usuario === true;
@@ -110,6 +125,7 @@ const form = reactive({
 const getFilteredUsers = () => {
     if (activeFilter.value === 'admin') return usersAdmin.value;
     if (activeFilter.value === 'trabajador') return usersTrabajador.value;
+    if (activeFilter.value === 'despachador') return usersDespachador.value;
     return usersDistribuidor.value;
 };
 
@@ -144,6 +160,7 @@ const fetchUsers = async () => {
         usersAdmin.value = uRes.data.filter((u: any) => u.id_rol == 1);
         usersTrabajador.value = uRes.data.filter((u: any) => u.id_rol == 2);
         usersDistribuidor.value = dRes.data.filter((u: any) => u.id_rol == 3);
+        usersDespachador.value = uRes.data.filter((u: any) => u.id_rol == 4);
     } catch (e) { notify("Error cargando usuarios", "error"); }
 };
 
@@ -187,6 +204,29 @@ const eliminarUsuario = async (id: number) => {
         }
     }
 };
+
+const paginatedUsers = computed(() => {
+    const list = getFilteredUsers(); // Usamos tu función existente
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return list.slice(start, end);
+});
+
+// 3. Cálculo de páginas totales
+const totalPages = computed(() => {
+    return Math.max(1, Math.ceil(getFilteredUsers().length / itemsPerPage));
+});
+
+// 4. Acción de cambio
+const changePage = (page: number) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+watch(activeFilter, () => {
+    currentPage.value = 1;
+});
 </script>
 
 <style scoped>  
@@ -256,42 +296,50 @@ const eliminarUsuario = async (id: number) => {
 .col-id { flex: 0 0 10%; font-weight: 600; color: #adb5bd; }
 .col-user, .col-user-name { flex: 0 0 25%; font-weight: 500; }
 .col-email, .col-email-text { flex: 0 0 30%; color: #495057; word-break: break-all; }
-.col-status { flex: 0 0 15%; display: flex; align-items: center; } /* 🌟 Añadido para que cuadre el Toggle */
+.col-status { flex: 0 0 15%; display: flex; align-items: center; }
 .col-actions, .col-actions-btns { flex: 0 0 20%; text-align: right; display: flex; justify-content: flex-end; }
 
 /* --- REFACTORIZACIÓN DEL SWITCH FILTRO --- */
 .switch-container {
     display: flex;
-    background-color: #f1f3f5;
+    background-color: #eeedee;
     padding: 4px;
-    border-radius: 10px;
+    border-radius: 12px;
     position: relative;
     width: 100%;
-    max-width: 360px;
+    max-width: 520px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e0e2;
 }
 
-.btn-edit { background-color: #f0f7ff; color: #007bff; border: 1px solid #cce5ff; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px; }
+.btn-edit { background-color: #f0f7ff; color: #007bff; border: 1px solid #cce5ff; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px; font-weight: 600; }
+.btn-edit:hover { background-color: #e0effe; }
 .no-actions { font-size: 0.8rem; color: #adb5bd; font-style: italic; }
 
 .switch-slider {
     position: absolute;
-    top: 4px; bottom: 4px;
-    width: calc(33.33% - 4px);
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(25% - 2px);
     background-color: #ffffff;
-    border-radius: 7px;
-    transition: transform 0.3s ease;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(50, 44, 68, 0.12);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
 }
 
-.switch-slider.slide-right { 
-    transform: translateX(calc(100% + 4px)); 
-}
+.switch-slider.pos-admin { transform: translateX(0%); }
+.switch-slider.pos-trabajador { transform: translateX(100%); }
+.switch-slider.pos-despachador { transform: translateX(200%); }
+.switch-slider.pos-distribuidor { transform: translateX(300%); }
 
 .switch-btn {
     flex: 1; 
     display: flex; 
     align-items: center; 
     justify-content: center;
-    padding: 10px 16px; 
+    padding: 10px 12px; 
     border: none; 
     background: transparent !important;
     cursor: pointer; 
@@ -299,13 +347,14 @@ const eliminarUsuario = async (id: number) => {
     font-weight: 600; 
     color: #6c757d; 
     position: relative; 
-    z-index: 1;
+    z-index: 2;
     transition: color 0.2s ease;
+    white-space: nowrap;
 }
 
 .switch-btn.active { 
     color: #e4869f; 
-    font-weight: 700;
+    font-weight: 800;
 }
 
 /* --- ACCIONES Y BOTONES --- */
@@ -465,7 +514,8 @@ const eliminarUsuario = async (id: number) => {
 
 .pos-admin { transform: translateX(0); }
 .pos-trabajador { transform: translateX(100%); }
-.pos-distribuidor { transform: translateX(200%); }
+.pos-despachador { transform: translateX(200%); }
+.pos-distribuidor { transform: translateX(300%); }
 
 .btn-secondary { background: none; border: 1px solid #dee2e6; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; color: #495057; }
 .btn-secondary:hover { background-color: #f1f3f5; }
@@ -484,6 +534,33 @@ const eliminarUsuario = async (id: number) => {
   color: white; border-radius: 8px; cursor: pointer; font-weight: 600;
 }
 .btn-save:hover { background: #d1758e; }
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-top: 1px solid #dee2e6;
+}
+
+.page-info {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.btn-pagination {
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #e4869f;
+  color: #e4869f;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95) translateY(10px); }

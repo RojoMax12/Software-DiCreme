@@ -23,7 +23,9 @@ class PurifyInput
             'contrasena', 
             'password', 
             'password_confirmation', 
-            'contrasena_confirmation'
+            'contrasena_confirmation',
+            'foto_producto',
+            'foto'
         ];
 
         // 4. Limpieza manual y segura del mapa de datos

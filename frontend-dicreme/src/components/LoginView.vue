@@ -12,7 +12,7 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 const goBack = () => {
-  router.back()
+  router.push('/')
 }
 
 const handleLogin = async () => {
@@ -31,10 +31,11 @@ const handleLogin = async () => {
     localStorage.setItem('token', data.access_token || data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
 
-    if(data.user.id_rol == 1 || data.user.id_rol == 2){
+    if (data.user.id_rol == 1 || data.user.id_rol == 2) {
       router.push('/admin')
-    }
-    else{
+    } else if (data.user.id_rol == 4) {
+      router.push('/despachador')
+    } else {
       router.push('/')
     }
     
@@ -50,12 +51,12 @@ const handleLogin = async () => {
 <template>
   <div class="login-container">
     <div class="login-wrapper">
-      <div class="back-button" @click="goBack">
-        <ArrowLeft :size="24" color="#e4869f" />
-        <span>Volver</span>
-      </div>
+      
 
       <div class="login-card">
+        <div class="back-button" @click="goBack">
+          <ArrowLeft :size="24" color="#e4869f" />
+        </div>
         <div class="logo-section">
           <img src="../assets/logo_dicreme.png" alt="DiCreme Logo" class="logo" />
         </div>
@@ -136,8 +137,8 @@ const handleLogin = async () => {
 
 .back-button {
   position: absolute;
-  left: -6.5rem;
-  top: 0;
+  left: 1.2rem;
+  top: -1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -145,6 +146,7 @@ const handleLogin = async () => {
   color: #e4869f;
   font-weight: bold;
   transition: all 0.2s ease;
+  z-index: 1000;
 }
 
 .back-button:hover {

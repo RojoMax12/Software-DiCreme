@@ -13,6 +13,12 @@ class Formato extends Model
 
     protected $fillable = [
         'nombre_formato',
+        'precio_formato',
+        'imagen_formato',
+    ];
+
+    protected $casts = [
+        'precio_formato' => 'integer',
     ];
 
     public function productos(): HasMany

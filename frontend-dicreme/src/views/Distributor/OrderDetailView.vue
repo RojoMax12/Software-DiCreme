@@ -34,15 +34,14 @@ const getDynamicImage = (flavorName: string) => {
   return heladoImages[path] || boxPlaceholderImage;
 };
 
-// CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1, 2, 3 o 4)
+// CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1, 2, 3, 4 o 5)
 const currentStep = computed(() => {
   if (!orderData.value) return 1
   
   const rawStatus = orderData.value.id_estado_pedido || orderData.value.estado_id;
   const statusId = Number(rawStatus);
   
-  // Asumiendo que los estados en base de datos son 1, 2, 3 y 4
-  if (statusId >= 1 && statusId <= 4) return statusId
+  if (statusId >= 1 && statusId <= 5) return statusId
   return 1
 })
 
@@ -147,8 +146,11 @@ const getPedidoStatusLabel = (statusId: number): string => {
   const safeId = Number(statusId)
   if (safeId === 1) return 'Validación'
   if (safeId === 2) return 'Preparación'
-  if (safeId === 3) return 'Despachado'
-  if (safeId === 4) return 'Entregado'
+  if (safeId === 3) return 'Listo para despacho'
+  if (safeId === 4) return 'En despacho'
+  if (safeId === 5) return 'Entregado'
+  if (safeId === 6) return 'Pendiente'
+  if (safeId === 7) return 'Cancelado'
   return 'En proceso'
 }
 
@@ -274,9 +276,13 @@ const handleGoBack = () => {
               </div>
               <div class="timeline-node" :class="{ active: currentStep >= 3 }">
                 <div class="node-dot"></div>
-                <span class="node-text">Despachado</span>
+                <span class="node-text">Listo para despacho</span>
               </div>
-              <div class="timeline-node" :class="{ active: currentStep === 4 }">
+              <div class="timeline-node" :class="{ active: currentStep >= 4 }">
+                <div class="node-dot"></div>
+                <span class="node-text">En despacho</span>
+              </div>
+              <div class="timeline-node" :class="{ active: currentStep >= 5 }">
                 <div class="node-dot"></div>
                 <span class="node-text">Entregado</span>
               </div>
@@ -449,11 +455,12 @@ const handleGoBack = () => {
   transition: width 0.4s ease;
 }
 
-/* Divisiones en tercios para 4 puntos (0%, 33.3%, 66.6%, 100%) */
+/* Divisiones en cuartos para 5 puntos (0%, 25%, 50%, 75%, 100%) */
 .progress-fill-1 { width: 0%; }
-.progress-fill-2 { width: 33.33%; }
-.progress-fill-3 { width: 66.66%; }
-.progress-fill-4 { width: 100%; }
+.progress-fill-2 { width: 25%; }
+.progress-fill-3 { width: 50%; }
+.progress-fill-4 { width: 75%; }
+.progress-fill-5 { width: 100%; }
 
 .timeline-nodes-row {
   display: flex;
@@ -504,9 +511,10 @@ const handleGoBack = () => {
 
 /* Posiciones exactas sobre los centros de cada nodo */
 .step-active-1 { left: 35px; }
-.step-active-2 { left: calc(35px + ((100% - 70px) * 0.3333)); }
-.step-active-3 { left: calc(35px + ((100% - 70px) * 0.6666)); }
-.step-active-4 { left: calc(100% - 35px); }
+.step-active-2 { left: calc(35px + ((100% - 70px) * 0.25)); }
+.step-active-3 { left: calc(35px + ((100% - 70px) * 0.50)); }
+.step-active-4 { left: calc(35px + ((100% - 70px) * 0.75)); }
+.step-active-5 { left: calc(100% - 35px); }
 
 .icon-bubble {
   background-color: var(--DC-pink);

@@ -8,7 +8,10 @@ export default {
         return api.get(`/usuarios_distribuidores/${id}`);
     },
 
+    updateDistributor(id: number, data: any) {
+        return api.put(`/usuarios_distribuidores/${id}`, data);
+    },
     toggledistristatus(id: number) {
-        return api.put(`/usuarios_distribuidores/${id}/toggle-estado`)
+        return api.put(`/usuarios_distribuidores/${id}/toggle-estado`);
     }
-}
+};

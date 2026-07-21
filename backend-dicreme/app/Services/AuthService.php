@@ -55,10 +55,15 @@ class AuthService
  
         $correoDestinatario = $usuario->correo_electronico; 
  
-        Mail::send('emails.recuperar_password', ['url' => $urlFrontend], function($message) use ($correoDestinatario) {
-            $message->to($correoDestinatario);
-            $message->subject('Restablecer Contraseña - DiCreme');
-        });
+        try {
+            Mail::send('emails.recuperar_password', ['url' => $urlFrontend], function($message) use ($correoDestinatario) {
+                $message->to($correoDestinatario);
+                $message->subject('Restablecer Contraseña - DiCreme');
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando correo de recuperación: ' . $e->getMessage());
+            return false;
+        }
  
         return true;
     }

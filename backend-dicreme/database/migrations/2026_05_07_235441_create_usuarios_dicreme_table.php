@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('contrasena');
             $table->unsignedBigInteger('id_rol');
             $table->boolean('estado_usuario')->default(true);
+            $table->string('foto_perfil')->nullable();
             $table->timestamps();
         });
     }

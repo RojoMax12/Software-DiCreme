@@ -302,6 +302,7 @@ import {
 import { useNotification } from '@/composables/useNotification';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+const isDataLoading = ref(true);
 
 interface ProductItem {
   id: number | null;          // ID de la tabla intermedia (null si es totalmente nuevo)
@@ -341,7 +342,7 @@ const isReadOnly = computed(() => {
   return ['Completado', 'Cancelado'].includes(props.status || '') || props.managedById !== currentUser.value.id;
 });
 
-const emit = defineEmits(['close', 'cancel', 'complete', 'notificar']);
+const emit = defineEmits(['close', 'cancel', 'complete', 'notificar', 'loaded']);
 
 const showCancelConfirm = ref(false);
 const isCancelSuccess = ref(false);
@@ -394,6 +395,9 @@ const currentUser = ref(obtenerUsuarioInicial());
 // Carga inicial mapeando id_producto e inicializando copias de la cantidad original
 onMounted(async () => {
   try {
+
+    isDataLoading.value = true;
+    
     const [quoteProdsRes, allProdsRes, catsRes, formatsRes, quoteRes] = await Promise.all([
       quoteService.getQuoteProducts(props.orderId),
       productService.getProducts(),
@@ -434,8 +438,11 @@ onMounted(async () => {
         discountValue: productDiscountValue
       };
     });
+    isDataLoading.value = false;
+    emit('loaded'); // <--- Verifica que esta línea se ejecute
   } catch (error) {
     console.error('Error fetching quote details:', error);
+    emit('loaded');
   }
 });
 
@@ -1446,4 +1453,9 @@ const formatNumber = (num: number) => new Intl.NumberFormat('es-CL').format(Math
   display: inline-block;
   flex-shrink: 0;
 }
+
+.modal-overlay {
+  transition: background-color 0.3s ease;
+}
+
 </style>

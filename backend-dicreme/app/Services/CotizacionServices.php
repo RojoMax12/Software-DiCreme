@@ -99,7 +99,7 @@ public function transformarCotizacionEnPedido($idCotizacion)
         throw new \Exception("La cotización no existe.");
     }
     
-    if ($cotizacion->id_estado_cotizacion !== 3) {
+    if (!in_array($cotizacion->id_estado_cotizacion, [2, 3])) {
         return false;
     }
 
@@ -171,10 +171,14 @@ public function transformarCotizacionEnPedido($idCotizacion)
         'comuna' => $usuario->comuna,
         'fecha_entrega' => null,
         'persona_recibe' => $cotizacion->persona_recibe,
-        'estado_despacho' => null,
+        'id_estado_despacho' => 1,
         'id_usuario_dicreme' => null
     ]);
 
+
+    // Solo marcar como "Completado" DESPUÉS de que todo fue exitoso
+    $cotizacion->id_estado_cotizacion = 3;
+    $cotizacion->save();
 
     return $pedido;
     });
@@ -380,7 +384,7 @@ public function transformarCotizacionEnPedido($idCotizacion)
         $cotizacion->update([
             // Lógica original de tu negocio para validar:
             'id_usuario_dicreme'          => $id_usuario_dicreme, // Registra qué administrador la tomó / validó
-            'id_estado_cotizacion'        => 3, // O el ID real que tenga el estado "Completado" en tu sistema
+            'id_estado_cotizacion'        => 2, // Se mantiene en "En Revisión"; solo pasa a 3 ("Completado") cuando el pedido se crea exitosamente en transformarCotizacionEnPedido
 
             // Nuevas columnas matemáticas de descuentos:
             'subtotal_cotizacion'         => (int)$subtotalGeneral,

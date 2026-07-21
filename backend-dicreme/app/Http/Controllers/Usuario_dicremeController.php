@@ -55,6 +55,14 @@ class Usuario_dicremeController extends Controller
             
             $usuario = $this->usuarioDicremeServices->createUsuarioDicreme($data);
             
+            \App\Models\HistorialMovimiento::registrar(
+                'usuario',
+                $usuario->id,
+                'creacion_usuario',
+                "Se creó el usuario de sistema '{$usuario->nombre_usuario}' ({$usuario->correo_electronico})",
+                null
+            );
+
             return response()->json([
                 'status' => 'success', 
                 'data' => $usuario,
@@ -70,22 +78,30 @@ class Usuario_dicremeController extends Controller
         $data = $request->validate([
             'nombre_usuario'     => 'sometimes|required|string|max:255',
             'correo_electronico' => 'sometimes|required|string|email|max:255|unique:usuarios_dicreme,correo_electronico,' . $id,
-            'contrasena'         => [
-                'required',
-                'string',
-                'min:8',              // Mínimo 8 caracteres
-                'confirmed',          // Requiere un campo 'contrasena_confirmation'
-                'regex:/[a-z]/',      // Al menos una minúscula
-                'regex:/[A-Z]/',      // Al menos una mayúscula
-                'regex:/[0-9]/',      // Al menos un número
-                'regex:/[@$!%*#?&]/', // Al menos un carácter especial
-            ],
-            'id_rol'             => 'sometimes|required|integer|exists:rol,id',
+            'contrasena'         => 'sometimes|nullable|string|min:8',
+            'id_rol'             => 'sometimes|nullable|integer|exists:rol,id',
+            'foto_perfil'        => 'sometimes|nullable',
         ]);
 
         try {
+            if ($request->hasFile('foto_perfil')) {
+                $file = $request->file('foto_perfil');
+                $path = $file->store('avatars', 'public');
+                $data['foto_perfil'] = '/storage/' . $path;
+            } else if ($request->filled('foto_perfil') && str_starts_with($request->foto_perfil, 'data:image')) {
+                $base64Image = $request->foto_perfil;
+                @list($type, $file_data) = explode(';', $base64Image);
+                @list(, $file_data) = explode(',', $file_data);
+                if ($file_data) {
+                    $fileName = 'avatars/avatar_dicreme_' . $id . '_' . time() . '.webp';
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($file_data));
+                    $data['foto_perfil'] = '/storage/' . $fileName;
+                }
+            }
 
-            unset($data['contrasena_confirmation']);
+            if (empty($data['contrasena'])) {
+                unset($data['contrasena']);
+            }
             
             if (isset($data['correo_electronico'])) {
                 $data['correo_electronico'] = strtolower(trim($data['correo_electronico']));
@@ -93,6 +109,14 @@ class Usuario_dicremeController extends Controller
             
             $usuario = $this->usuarioDicremeServices->updateUsuarioDicreme($id, $data);
             
+            \App\Models\HistorialMovimiento::registrar(
+                'usuario',
+                $id,
+                'modificacion_usuario',
+                "Se actualizó el usuario de sistema '{$usuario->nombre_usuario}'",
+                null
+            );
+
             return response()->json([
                 'status' => 'success', 
                 'data' => $usuario,
@@ -107,6 +131,14 @@ class Usuario_dicremeController extends Controller
     {   
         try {
             $usuario_destroy = $this->usuarioDicremeServices->deleteUsuarioDicreme($id);
+
+            \App\Models\HistorialMovimiento::registrar(
+                'usuario',
+                $id,
+                'eliminacion_usuario',
+                "Se eliminó el usuario de sistema #{$id}",
+                null
+            );
 
             return response()->json([
             'status' => 'success', 
@@ -143,6 +175,16 @@ class Usuario_dicremeController extends Controller
                 'message' => 'No se pudo encontrar el usuario.',
             ], 404);
         }
+
+        $isActivo = (bool)$resultado->estado_usuario;
+
+        \App\Models\HistorialMovimiento::registrar(
+            'usuario',
+            $id,
+            $isActivo ? 'activacion_usuario' : 'desactivacion_usuario',
+            "Se cambió el estado del usuario '{$resultado->nombre_usuario}' a " . ($isActivo ? 'Activo' : 'Inactivo'),
+            null
+        );
 
         return response()->json([
             'status' => 'success',

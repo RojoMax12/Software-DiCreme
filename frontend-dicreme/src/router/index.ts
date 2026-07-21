@@ -75,6 +75,12 @@ const router = createRouter({
       meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
     },
     {
+      path: '/admin/catalogo',
+      name: 'admin-catalogo',
+      component: () => import('../views/Admin/AdminCatalogView.vue'),
+      meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
+    },
+    {
       path: '/cotizacion',
       name: 'quotation',
       component: () => import('../views/Checkout/QuotationView.vue'),
@@ -127,8 +133,19 @@ const router = createRouter({
       name: 'admin-batches-detail',
       component: () => import('../views/Admin/BatchesView.vue'),
       meta: {useLoader: true, requiresAuth: true, roles: [1, 2] }
-
     },
+    {
+      path: '/despachador',
+      name: 'dispatcher-home',
+      component: () => import('../views/Distpacher/DispatcherHomeView.vue'),
+      meta: { useLoader: true, requiresAuth: true, roles: [4], hideNavbar: true }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('../views/NotFoundView.vue'),
+      meta: { hideNavbar: false }
+    }
   ]
 })
 
@@ -159,6 +176,8 @@ router.beforeEach((to, from, next) => {
       // Redirigir a su panel correspondiente
       if (userRole === 1 || userRole === 2) {
         next('/admin')
+      } else if (userRole === 4) {
+        next('/despachador')
       } else {
         next('/') 
       }

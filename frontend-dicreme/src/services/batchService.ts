@@ -40,5 +40,13 @@ export default {
 
     deleteBatch(batchId: number) {
         return api.delete(`/lotes/${batchId}`);
+    },
+
+    getExpiringBatches(days: number = 30) {
+        return api.get(`/lotes/por-vencer?dias=${days}`);
+    },
+
+    verifyStockAvailability(items: { id_producto: number; cantidad: number }[]) {
+        return api.post('/lotes/verificar-disponibilidad', { items });
     }
 }
