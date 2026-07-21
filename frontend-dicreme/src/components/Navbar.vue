@@ -15,6 +15,14 @@ const isLoggedIn = ref(false)
 const isSideMenuOpen = ref(false) // Controla la barra lateral
 const userAvatar = ref<string | null>(null);
 
+const formatAvatarUrl = (path: string | null | undefined) => {
+  if (!path || path === 'null' || path === 'undefined') return null;
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('/storage/')) return `http://localhost:8000${path}`;
+  if (path.startsWith('storage/')) return `http://localhost:8000/${path}`;
+  return `http://localhost:8000/storage/${path}`;
+};
+
 // Carga el nombre real del usuario logueado
 const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
@@ -26,9 +34,8 @@ const checkAuth = () => {
       username.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Distribuidor'
       isLoggedIn.value = true
 
-      if (userObj.avatar_url) {
-      userAvatar.value = `http://localhost:8000/storage/${userObj.avatar_url}`;
-    }
+      const rawAvatar = userObj.foto_perfil || userObj.avatar_url || userObj.foto || null;
+      userAvatar.value = formatAvatarUrl(rawAvatar);
     
     } catch (e) {
       console.error('Error parsing user session inside Navbar:', e)
@@ -37,6 +44,7 @@ const checkAuth = () => {
   } else {
     isLoggedIn.value = false
     username.value = ''
+    userAvatar.value = null
   }
 }
 
@@ -123,9 +131,17 @@ const goToHome = () => {
         </div>
         </div>
         <div class="ticker-wrapper">
-          <div class="ticker-content">
-            <span>📢 Aviso: Horario de atención hasta las 17:00 hrs.</span>
-            <span>🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.</span>
+          <div class="ticker-track">
+            <div class="ticker-content">
+              <span>📢 Aviso: Horario de atención hasta las 17:00 hrs.</span>
+              <span>🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.</span>
+              <span>🍦 Descuentos especiales para distribuidores registrados.</span>
+            </div>
+            <div class="ticker-content" aria-hidden="true">
+              <span>📢 Aviso: Horario de atención hasta las 17:00 hrs.</span>
+              <span>🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.</span>
+              <span>🍦 Descuentos especiales para distribuidores registrados.</span>
+            </div>
           </div>
         </div>
     </nav>
@@ -291,20 +307,30 @@ const goToHome = () => {
 .ticker-wrapper {
   background-color: #e4869f; /* Color rosa corporativo */
   color: white;
-  height: 30px;
+  height: 32px;
+  width: 100%;
   overflow: hidden;
   position: relative;
   display: flex;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  box-sizing: border-box;
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-move 28s linear infinite;
 }
 
 .ticker-content {
   display: flex;
+  align-items: center;
+  gap: 40px;
+  padding-right: 40px;
   white-space: nowrap;
-  animation: ticker-move 38s linear infinite;
-  gap: 50px;
+  flex-shrink: 0;
 }
 
 .avatar-img {
@@ -320,21 +346,52 @@ const goToHome = () => {
 }
 
 @keyframes ticker-move {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
-/* Opcional: Pausar al pasar el mouse */
-.ticker-wrapper:hover .ticker-content {
+/* Pausar marquesina al pasar el mouse */
+.ticker-wrapper:hover .ticker-track {
   animation-play-state: paused;
 }
 
+@media (max-width: 992px) {
+  .navbar-main {
+    padding: 0 24px;
+    height: 72px;
+  }
+}
+
 @media (max-width: 768px) {
-  .dc-navbar {
-    padding: 0 20px;
+  .navbar-main {
+    padding: 0 16px;
+    height: 64px;
+  }
+  .brand-logo {
+    height: 44px;
+  }
+  .brand-text {
+    font-size: 1.15rem;
   }
   .user-details {
     display: none;
+  }
+  .session-display {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .ticker-wrapper {
+    height: 28px;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-text {
+    display: none; /* Oculta el texto del nombre para no apretar los botones en móviles */
+  }
+  .nav-left {
+    gap: 10px;
   }
 }
 </style>

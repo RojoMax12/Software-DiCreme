@@ -117,14 +117,14 @@ class PedidoController extends Controller
     public function cambiarEstado(Request $request, $id_pedido)
     {
         try {
-            $id_estado = $request->input('id_estado_pedido');
+            $id_estado = $request->input('id_estado_pedido') ?? $request->input('id_estado');
             
             // Ejecutamos la función secuencial interna
             $pedidoActualizado = $this->pedidoService->actualizarEstadoPedido($id_pedido, $id_estado);
 
             return response()->json([
                 'status'  => 'success',
-                'message' => "El estado del pedido se actualizó correctamente.",
+                'message' => "El estado del pedido #{$id_pedido} se actualizó correctamente.",
                 'data'    => $pedidoActualizado
             ], 200);
 

@@ -7,7 +7,7 @@
 
     <div class="avatar-section">
       <div class="avatar-wrapper" @click="triggerFileInput">
-        <img v-if="previewUrl || form.avatar_url" :src="previewUrl || getImageUrl(form.avatar_url)" alt="Avatar" class="avatar-img" />
+        <img v-if="previewUrl || hasAvatar" :src="previewUrl || getImageUrl(form.avatar_url)" alt="Avatar" class="avatar-img" />
         <div v-else class="avatar-placeholder">
           {{ form.nombre_empresa ? form.nombre_empresa.charAt(0).toUpperCase() : 'U' }}
         </div>
@@ -67,10 +67,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
-import axios from 'axios';
-import { Camera } from 'lucide-vue-next'; // Ícono para la foto
+import { Camera } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification';
 import { globalLoading } from '@/composables/useLoading';
+import distributorService from '@/services/distributorService';
+import api from '@/services/api';
 
 const { notify } = useNotification();
 const loading = globalLoading; 
@@ -80,7 +81,6 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
 const previewUrl = ref<string | null>(null);
 
-// Función para abrir el selector de archivos oculto
 const triggerFileInput = () => {
   if (fileInput.value) fileInput.value.click();
 };
@@ -94,24 +94,114 @@ const formatRUT = (rut: string) => {
   return cleanRut;
 };
 
-const handleFileChange = (event: Event) => {
+const isCompressingPhoto = ref(false);
+
+const processAndCompressAvatar = (file: File): Promise<{ file: File; dataUrl: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('No canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/webp', 0.85);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const webpFile = new File([blob], `avatar_${Date.now()}.webp`, {
+              type: 'image/webp'
+            });
+            resolve({ file: webpFile, dataUrl });
+          } else {
+            reject(new Error('Error al generar blob'));
+          }
+        }, 'image/webp', 0.85);
+      };
+      img.onerror = () => reject(new Error('Error al cargar la imagen'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Error al leer el archivo'));
+    reader.readAsDataURL(file);
+  });
+};
+
+const handleFileChange = async (event: Event) => {
   const input = event.target as HTMLInputElement;
-  if (input.files && input.files[0]) {
-    selectedFile.value = input.files[0];
-    previewUrl.value = URL.createObjectURL(input.files[0]); 
+  if (!input.files || !input.files[0]) return;
+
+  const file = input.files[0];
+
+  // 1. Validar tipo
+  if (!file.type.startsWith('image/')) {
+    notify('El archivo seleccionado debe ser una imagen válida (JPG, PNG, WebP).', 'error');
+    input.value = '';
+    return;
+  }
+
+  // 2. Validar tamaño máximo previo (15MB max input)
+  if (file.size > 15 * 1024 * 1024) {
+    notify('La foto seleccionada es demasiado pesada (máximo 15 MB).', 'error');
+    input.value = '';
+    return;
+  }
+
+  isCompressingPhoto.value = true;
+  try {
+    const { file: compressedFile, dataUrl } = await processAndCompressAvatar(file);
+    selectedFile.value = compressedFile;
+    previewUrl.value = dataUrl;
+    notify('Foto de perfil optimizada y lista para guardar.', 'success');
+  } catch (err) {
+    console.error('Error al comprimir foto:', err);
+    notify('No se pudo procesar la foto seleccionada. Intenta con otra imagen.', 'error');
+    input.value = '';
+  } finally {
+    isCompressingPhoto.value = false;
   }
 };
 
-// Formatear la URL de la imagen si viene del backend
-const getImageUrl = (path: string) => {
-  if (!path) return '';
-  return path.startsWith('http') ? path : `http://tu-backend-url.com/storage/${path}`;
-  // ⚠️ Cambia 'http://tu-backend-url.com' por la URL real de tu API en Laravel
+const getImageUrl = (path: string | null | undefined) => {
+  if (!path || path === 'undefined' || path === 'null') return '';
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('/storage/')) return `http://localhost:8000${path}`;
+  if (path.startsWith('storage/')) return `http://localhost:8000/${path}`;
+  return `http://localhost:8000/storage/${path}`;
 };
+
+const hasAvatar = computed(() => {
+  return !!form.avatar_url && form.avatar_url !== 'null' && form.avatar_url !== 'undefined';
+});
 
 const formattedRut = computed(() => formatRUT(form.rut_empresa));
 
 // --- LÓGICA DEL FORMULARIO ---
+const userId = ref<number | null>(null);
 const form = reactive({
   nombre_empresa: '',
   rut_empresa: '',
@@ -120,98 +210,107 @@ const form = reactive({
   telefono: '',
   comuna: '',
   nueva_contrasena: '',
-  avatar_url: '' // Agregamos este campo para recibir la foto actual del backend
+  avatar_url: ''
 });
 
 onMounted(async () => {
-  // 1. Carga Rápida (Caché del LocalStorage)
   const cachedUser = localStorage.getItem('user');
   if (cachedUser) {
     try {
-      Object.assign(form, JSON.parse(cachedUser));
+      const parsed = JSON.parse(cachedUser);
+      Object.assign(form, parsed);
+      if (parsed.id) userId.value = parsed.id;
     } catch (e) {
       console.warn("Caché corrupto, se limpiará automáticamente.");
       localStorage.removeItem('user');
     }
   }
-  
+
+  // Intentar sincronizar con el backend
   try {
-    const token = localStorage.getItem('token'); 
-    
-    const { data } = await axios.get('http://localhost:8000/api/distribuidor/perfil', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    Object.assign(form, data);
-    localStorage.setItem('user', JSON.stringify(data));
+    let res: any;
+    if (userId.value) {
+      res = await distributorService.getDistributorById(userId.value);
+    } else {
+      res = await api.get('/usuarios_distribuidores/me');
+    }
+    const freshData = res.data?.data || res.data;
+    if (freshData) {
+      Object.assign(form, freshData);
+      form.avatar_url = freshData.foto_perfil || freshData.avatar_url || '';
+      if (freshData.id) userId.value = freshData.id;
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      localStorage.setItem('user', JSON.stringify({ ...currentUser, ...freshData }));
+    }
   } catch (error) {
-    console.error("Error obteniendo perfil fresco:", error);
-    notify('No se pudieron actualizar los datos del servidor', 'error');
+    console.log("Cargado con datos del almacenamiento local.");
   }
 });
 
 const updateProfile = async () => {
   loading.value = true;
-  
-  // 1. Preparamos el contenedor FormData para los textos y la foto
-  const formData = new FormData();
-  formData.append('nombre_empresa', form.nombre_empresa);
-  formData.append('correo_electronico', form.correo_electronico);
-  if (form.direccion) formData.append('direccion', form.direccion);
-  if (form.comuna) formData.append('comuna', form.comuna);
-  if (form.telefono) formData.append('telefono', form.telefono);
-  if (form.nueva_contrasena) formData.append('nueva_contrasena', form.nueva_contrasena);
-  
-  if (selectedFile.value) {
-    formData.append('avatar', selectedFile.value);
-  }
-
-  // Simulación de PUT para compatibilidad de archivos en Laravel
-  formData.append('_method', 'PUT');
 
   try {
-    const token = localStorage.getItem('token');
-    
+    let updatedUser: any = null;
 
-    // 1. Subimos los datos y la foto
-    await axios.post('http://localhost:8000/api/distribuidor/perfil', formData, {
-      headers: { 
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    // 2. Recuperamos tu usuario actual (para no perder el ID ni el Rol)
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    // 3. Obtenemos los datos frescos del perfil (usando tu endpoint GET que ya funciona)
-    const { data: freshData } = await axios.get('http://localhost:8000/api/distribuidor/perfil', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    // 4. Mezclamos ambos para asegurar que el usuario quede 100% completo
-    // (dentro de try { ... } en updateProfile)
-    const finalUser = { ...currentUser, ...freshData };
-    localStorage.setItem('user', JSON.stringify(finalUser));
+    if (selectedFile.value && userId.value) {
+      const formData = new FormData();
+      formData.append('nombre_empresa', form.nombre_empresa);
+      formData.append('correo_electronico', form.correo_electronico);
+      if (form.direccion) formData.append('direccion', form.direccion);
+      if (form.comuna) formData.append('comuna', form.comuna);
+      if (form.telefono) formData.append('telefono', form.telefono);
+      if (form.rut_empresa) formData.append('rut_empresa', form.rut_empresa);
+      if (form.nueva_contrasena) formData.append('contrasena', form.nueva_contrasena);
+      formData.append('avatar', selectedFile.value);
+      formData.append('_method', 'PUT');
 
-    // 1. Emite un evento global para avisarle al Navbar
-    window.dispatchEvent(new Event('perfil-actualizado'));
+      const res = await api.post(`/usuarios_distribuidores/${userId.value}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      updatedUser = res.data?.data || res.data;
+    } else if (userId.value) {
+      const payload: any = {
+        nombre_empresa: form.nombre_empresa,
+        correo_electronico: form.correo_electronico,
+        direccion: form.direccion,
+        comuna: form.comuna,
+        telefono: form.telefono,
+        rut_empresa: form.rut_empresa
+      };
+      if (form.nueva_contrasena) payload.contrasena = form.nueva_contrasena;
 
-    notify('Perfil actualizado exitosamente', 'success');
+      const res = await distributorService.updateDistributor(userId.value, payload);
+      updatedUser = res.data?.data || res.data;
+    }
     
-    // Opcional: Actualizamos la vista previa del avatar con la nueva URL
-    if (freshData.avatar_url) {
-      form.avatar_url = freshData.avatar_url;
+    if (updatedUser?.foto_perfil) {
+      form.avatar_url = updatedUser.foto_perfil;
     }
 
-  } catch (error) {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const finalUser = { ...currentUser, ...form, ...(updatedUser || {}) };
+    localStorage.setItem('user', JSON.stringify(finalUser));
+
+    window.dispatchEvent(new Event('perfil-actualizado'));
+    notify('Perfil actualizado exitosamente', 'success');
+  } catch (error: any) {
     console.error(error);
-    notify('Error al guardar cambios', 'error');
+    const errRes = error.response?.data;
+    let errorMessage = errRes?.message || 'Error al guardar cambios del perfil';
+
+    if (errRes?.errors && typeof errRes.errors === 'object') {
+      const firstField = Object.keys(errRes.errors)[0];
+      if (firstField && Array.isArray(errRes.errors[firstField]) && errRes.errors[firstField][0]) {
+        errorMessage = errRes.errors[firstField][0];
+      }
+    }
+
+    notify(errorMessage, 'error');
   } finally {
     loading.value = false;
   }
 };
-
 </script>
 
 <style scoped>

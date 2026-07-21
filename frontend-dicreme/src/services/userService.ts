@@ -8,7 +8,7 @@ export default {
         return api.get(`/usuarios_dicreme/${id}`);
     }
     ,
-    createUser(userData: { nombre: string; email: string; password: string; rol: string }) {
+    createUser(userData: any) {
         return api.post('/usuarios_dicreme', userData);
     },
 
@@ -16,11 +16,20 @@ export default {
         return api.delete(`/usuarios_dicreme/${id}`);
     },
 
-    toggleUserStatus(id:number){
-        return api.put(`/usuarios_dicreme/${id}/toggle-estado`)
+    toggleUserStatus(id: number) {
+        return api.put(`/usuarios_dicreme/${id}/toggle-estado`);
     },
 
-    updateuser(id: number, userData: { nombre: string; email: string; password: string; rol: string }){
-        return api.put(`/usuarios_dicreme/${id}`, userData)
+    updateuser(id: number, userData: any) {
+        return api.put(`/usuarios_dicreme/${id}`, userData);
+    },
+
+    updateUserProfile(id: number, data: any) {
+        if (data instanceof FormData) {
+            return api.post(`/usuarios_dicreme/${id}`, data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+        }
+        return api.put(`/usuarios_dicreme/${id}`, data);
     }
 }

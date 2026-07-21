@@ -126,6 +126,18 @@ class DespachoController extends Controller
         }
     }
 
+    public function getdespachosdisponibles(): JsonResponse
+    {
+        try {
+            return response()->json([
+                'status' => 'success',
+                'data'   => $this->despachoServices->getDespachosDisponibles()
+            ], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al listar despachos disponibles', $e);
+        }
+    }
+
     public function asignardespachoadespachador($id_despacho, $id_despachador): JsonResponse
     {
         try {
@@ -141,6 +153,54 @@ class DespachoController extends Controller
             return response()->json(['status' => 'success', 'message' => 'Asignado correctamente', 'data' => $despacho], 200);
         } catch (Exception $e) {
             return $this->errorResponse('Error en la asignación', $e);
+        }
+    }
+
+    public function iniciarRuta($id_despacho): JsonResponse
+    {
+        try {
+            $despacho = $this->despachoServices->iniciarRuta($id_despacho);
+            if (!$despacho) {
+                return response()->json(['status' => 'error', 'message' => 'El despacho no existe'], 404);
+            }
+            return response()->json(['status' => 'success', 'message' => 'Ruta iniciada correctamente', 'data' => $despacho], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al iniciar ruta', $e);
+        }
+    }
+
+    public function finalizarEntrega(Request $request, $id_despacho): JsonResponse
+    {
+        try {
+            $request->validate([
+                'foto_comprobante' => 'nullable|file|image|max:10240',
+                'notas_entrega'    => 'nullable|string'
+            ]);
+
+            $fotoFile = $request->file('foto_comprobante');
+            $notas = $request->input('notas_entrega');
+
+            $despacho = $this->despachoServices->finalizarEntrega($id_despacho, $notas, $fotoFile);
+            if (!$despacho) {
+                return response()->json(['status' => 'error', 'message' => 'El despacho no existe'], 404);
+            }
+            return response()->json(['status' => 'success', 'message' => 'Entrega finalizada con éxito', 'data' => $despacho], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al finalizar entrega', $e);
+        }
+    }
+
+    public function liberarDespacho($id_despacho): JsonResponse
+    {
+        try {
+            $res = $this->despachoServices->liberarDespacho($id_despacho);
+            if ($res['status'] === 'error') {
+                return response()->json(['status' => 'error', 'message' => $res['message']], $res['code'] ?? 400);
+            }
+
+            return response()->json(['status' => 'success', 'message' => 'Despacho liberado correctamente', 'data' => $res['data']], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al liberar el despacho', $e);
         }
     }
 

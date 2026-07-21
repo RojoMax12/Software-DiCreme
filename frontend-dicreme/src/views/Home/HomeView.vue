@@ -133,6 +133,13 @@ watch(() => router.currentRoute.value.path, () => {
 });
 
 
+const getImageUrl = (path: string | null | undefined) => {
+  if (!path) return fotoCaja;
+  if (path.startsWith('http')) return path;
+  const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 const getDynamicImage = (flavorName: string) => {
   // Transforma: "Limón al Agua" -> "limon-al-agua"
   const formattedName = flavorName
@@ -313,7 +320,7 @@ const fetchIceCreams = async () => {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
-          image: getDynamicImage(flavorName),
+          image: prod.foto_producto ? getImageUrl(prod.foto_producto) : getDynamicImage(flavorName),
           id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',

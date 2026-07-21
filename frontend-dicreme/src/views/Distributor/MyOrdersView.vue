@@ -52,8 +52,11 @@ const fetchDistributorOrders = async () => {
 const getOrderStatusLabel = (statusId: number): string => {
   if (statusId === 1) return 'Validación'
   if (statusId === 2) return 'En preparación'
-  if (statusId === 3) return 'En despacho'
-  if (statusId === 4) return 'Entregado'
+  if (statusId === 3) return 'Listo para despacho'
+  if (statusId === 4) return 'En despacho'
+  if (statusId === 5) return 'Entregado'
+  if (statusId === 6) return 'Pendiente'
+  if (statusId === 7) return 'Cancelado'
   return 'Pendiente'
 }
 

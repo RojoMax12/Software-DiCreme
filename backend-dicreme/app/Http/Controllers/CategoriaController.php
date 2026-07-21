@@ -25,6 +25,14 @@ class CategoriaController extends Controller
         try {
             $Categoria_creada = $this->categoriaServices->createCategoria($data);
 
+            \App\Models\HistorialMovimiento::registrar(
+                'producto',
+                $Categoria_creada->id,
+                'creacion_categoria',
+                "Se creó la categoría '{$Categoria_creada->nombre_categoria}'",
+                null
+            );
+
             return response()->json([
                 'status' => 'success',
                 'data' => $Categoria_creada,
@@ -47,14 +55,22 @@ class CategoriaController extends Controller
         ]);
 
         try {
-            $categoria_updateada =  $this->categoriaServices->updateCategoria($id, $data);
+            $categoria_updateada = $this->categoriaServices->updateCategoria($id, $data);
             
+            \App\Models\HistorialMovimiento::registrar(
+                'producto',
+                $categoria_updateada->id,
+                'modificacion_categoria',
+                "Se actualizó la categoría '{$categoria_updateada->nombre_categoria}'",
+                null
+            );
+
             return response()->json([
                 'status' => 'success',
                 'data' => $categoria_updateada,
                 'message' => 'categoria actualizada correctamente'
                 
-            ], 201);
+            ], 200);
         } catch (\Exception $e) {
             
         return response()->json([
@@ -68,13 +84,24 @@ class CategoriaController extends Controller
     {   
 
         try {
-            
+            $categoria = $this->categoriaServices->getCategoriaById($id);
             $categoria_destruida = $this->categoriaServices->deleteCategoria($id);
-             return response()->json([
+
+            if ($categoria) {
+                \App\Models\HistorialMovimiento::registrar(
+                    'producto',
+                    $id,
+                    'eliminacion_categoria',
+                    "Se eliminó la categoría '{$categoria->nombre_categoria}'",
+                    null
+                );
+            }
+
+            return response()->json([
                 'status' => 'success',
                 'data' => $categoria_destruida,
                 'message' => 'categoria eliminada correctamente'
-            ], 201);
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([

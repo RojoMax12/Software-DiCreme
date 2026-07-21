@@ -12,7 +12,7 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 const goBack = () => {
-  router.back()
+  router.push('/')
 }
 
 const handleLogin = async () => {
@@ -31,10 +31,11 @@ const handleLogin = async () => {
     localStorage.setItem('token', data.access_token || data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
 
-    if(data.user.id_rol == 1 || data.user.id_rol == 2){
+    if (data.user.id_rol == 1 || data.user.id_rol == 2) {
       router.push('/admin')
-    }
-    else{
+    } else if (data.user.id_rol == 4) {
+      router.push('/despachador')
+    } else {
       router.push('/')
     }
     
@@ -145,6 +146,7 @@ const handleLogin = async () => {
   color: #e4869f;
   font-weight: bold;
   transition: all 0.2s ease;
+  z-index: 1000;
 }
 
 .back-button:hover {

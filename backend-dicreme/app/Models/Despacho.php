@@ -18,17 +18,19 @@ class Despacho extends Model
         'comuna',
         'fecha_entrega',
         'persona_recibe',
-        'estado_despacho',
-        'id_usuario_dicreme'
+        'id_estado_despacho',
+        'id_usuario_dicreme',
+        'foto_comprobante',
+        'notas_entrega'
     ];
 
     protected $casts = [
-        'fecha_entrega' => 'date',
+        'fecha_entrega' => 'datetime',
     ];
 
-    public function pedido(): HasOne
+    public function pedido(): BelongsTo
     {
-        return $this->hasOne(Pedido::class, 'id_pedido');
+        return $this->belongsTo(Pedido::class, 'id_pedido');
     }
 
     public function usuario(): BelongsTo
@@ -36,6 +38,10 @@ class Despacho extends Model
         return $this->belongsTo(Usuario_dicreme::class, 'id_usuario_dicreme');
     }
 
+    public function estado_despacho(): BelongsTo
+    {
+        return $this->belongsTo(Estado_despacho::class, 'id_estado_despacho');
+    }
 }
 
 

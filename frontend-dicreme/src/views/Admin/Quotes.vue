@@ -425,6 +425,16 @@ const toggleStatusDropdown = () => {
 const selectStatus = (status: string) => {
   statusFilter.value = status;
   isStatusDropdownOpen.value = false;
+
+  if (status === 'all') {
+    activeFilter.value = 'all';
+  } else if (status === 'Completado') {
+    activeFilter.value = 'completed';
+  } else if (status === 'Cancelado') {
+    activeFilter.value = 'cancelled';
+  } else if (['Por Tomar', 'En Revision'].includes(status)) {
+    activeFilter.value = 'actual';
+  }
 };
 
 // Close dropdown on click outside
@@ -545,27 +555,26 @@ const stats = computed(() => {
 const filteredOrders = computed(() => {
   let result = orders.value;
 
-  // 1. Category Filter (Actual vs Completed vs Cancelled)
-  if (activeFilter.value === 'actual') {
-    result = result.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status));
-  } else if (activeFilter.value === 'completed') {
-    result = result.filter((o: any) => o.status === 'Completado');
-  } else if (activeFilter.value === 'cancelled') {
-    result = result.filter((o: any) => o.status === 'Cancelado');
-  }
-
-  // 2. Search Query (ID or Distributor)
+  // 1. Search Query (ID or Distributor)
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
+    const query = searchQuery.value.toLowerCase().trim();
     result = result.filter((o: any) => 
       o.id.toString().includes(query) || 
-      o.distributor.toLowerCase().includes(query)
+      (o.distributor && o.distributor.toLowerCase().includes(query))
     );
   }
 
-  // 3. Status Dropdown Filter
+  // 2. Status Dropdown Filter vs Tab Filter
   if (statusFilter.value !== 'all') {
     result = result.filter((o: any) => o.status === statusFilter.value);
+  } else if (activeFilter.value !== 'all') {
+    if (activeFilter.value === 'actual') {
+      result = result.filter((o: any) => ['Por Tomar', 'En Revision'].includes(o.status));
+    } else if (activeFilter.value === 'completed') {
+      result = result.filter((o: any) => o.status === 'Completado');
+    } else if (activeFilter.value === 'cancelled') {
+      result = result.filter((o: any) => o.status === 'Cancelado');
+    }
   }
 
   return result;
@@ -609,8 +618,14 @@ const sortedOrders = computed(() => {
 
     if (sortConfig.value.key === 'date') {
       const parseDate = (d: string, t: string) => {
-        const [day, month, year] = d.split('/').map(Number);
-        const [hours, minutes] = t.split(':').map(Number);
+        if (!d) return 0;
+        const parts = d.split('/').map(Number);
+        const day = parts[0] || 1;
+        const month = parts[1] || 1;
+        const year = parts[2] || 1970;
+        const timeParts = (t || '00:00').split(':').map(Number);
+        const hours = timeParts[0] || 0;
+        const minutes = timeParts[1] || 0;
         return new Date(year, month - 1, day, hours, minutes).getTime();
       };
       aValue = parseDate(a.date, a.time);

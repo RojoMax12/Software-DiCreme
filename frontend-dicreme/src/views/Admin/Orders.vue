@@ -113,11 +113,16 @@
             <div class="dropdown-menu" v-if="isStatusDropdownOpen">
               <div class="dropdown-item" @click="selectStatus('all')">Todos los estados</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="selectStatus('Por pagar')">Por pagar</div>
-              <div class="dropdown-item" @click="selectStatus('Pagada')">Pagada</div>
+              <div class="dropdown-item" @click="selectStatus('Validación')">Validación</div>
               <div class="dropdown-item" @click="selectStatus('En preparación')">En preparación</div>
+              <div class="dropdown-item" @click="selectStatus('Listo para despacho')">Listo para despacho</div>
               <div class="dropdown-item" @click="selectStatus('En despacho')">En despacho</div>
               <div class="dropdown-item" @click="selectStatus('Entregado')">Entregado</div>
+              <div class="dropdown-item" @click="selectStatus('Pendiente')">Pendiente</div>
+              <div class="dropdown-item" @click="selectStatus('Cancelado')">Cancelado</div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" @click="selectStatus('Por pagar')">Por pagar</div>
+              <div class="dropdown-item" @click="selectStatus('Pagada')">Pagada</div>
             </div>
           </div>
 
@@ -129,10 +134,10 @@
             </button>
             
             <div class="dropdown-menu" v-if="isDateDropdownOpen">
-              <div class="dropdown-item" @click="selectDateFilter('last30', 'Fecha: Últimos 30 días')">Últimos 30 días</div>
-              <div class="dropdown-item" @click="selectDateFilter('last3months', 'Fecha: Últimos 3 meses')">Últimos 3 meses</div>
+              <div class="dropdown-item" @click="selectDateFilter('all', 'Todas las fechas')">Todas las fechas</div>
               <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="selectDateFilter('custom', 'Rango personalizado')">Rango personalizado</div>
+              <div class="dropdown-item" @click="selectDateFilter('last30', 'Últimos 30 días')">Últimos 30 días</div>
+              <div class="dropdown-item" @click="selectDateFilter('last3months', 'Últimos 3 meses')">Últimos 3 meses</div>
             </div>
           </div>
         </div>
@@ -308,7 +313,8 @@ import {
   Calendar as CalendarIcon,
   Download,
   Eye,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Loader2
 } from 'lucide-vue-next';
 import { IceCream } from 'lucide-vue-next'
 import * as XLSX from 'xlsx';
@@ -379,8 +385,13 @@ const fetchOrders = async () => {
 
 
     const DEFAULT_NAMES: Record<number, string> = {
-      1: 'En validación', 2: 'En preparación', 3: 'En despacho', 
-      4: 'Entregado', 5: 'Pendiente', 6: 'Cancelado'
+      1: 'Validación', 
+      2: 'En preparación', 
+      3: 'Listo para despacho', 
+      4: 'En despacho', 
+      5: 'Entregado', 
+      6: 'Pendiente', 
+      7: 'Cancelado'
     };
 
     orders.value = rawOrders.map((o: any) => {
@@ -469,8 +480,8 @@ const exportarExcel = () => {
 
 const formatDate = (dateString: string) => {
   if (!dateString) return 'Sin fecha';
-  // Si viene con T (ISO), tomamos solo la parte de la fecha
   const cleanDate = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+  if (!cleanDate) return 'Sin fecha';
   const parts = cleanDate.split('-');
   if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
   return cleanDate;
@@ -489,8 +500,8 @@ const stats = computed(() => {
     unpaid: orders.value.filter((o: any) => o.pagoId === 1).length,
     paid: orders.value.filter((o: any) => o.pagoId === 2).length,
     preparation: orders.value.filter((o: any) => o.rawStatusId === 2).length,
-    shipping: orders.value.filter((o: any) => o.rawStatusId === 3).length,
-    delivered: orders.value.filter((o: any) => o.rawStatusId === 4).length
+    shipping: orders.value.filter((o: any) => [3, 4].includes(o.rawStatusId)).length,
+    delivered: orders.value.filter((o: any) => o.rawStatusId === 5).length
   };
 });
 
@@ -502,14 +513,13 @@ const getStatusClass = (status: string, statusId?: number) => {
   // Si viene el ID numérico directo de PostgreSQL, es mucho más rápido y seguro validar por número:
   if (statusId) {
     switch (Number(statusId)) {
-      case 1: return 'status-validation';  // En validación
-      case 2: return 'status-preparation'; // En preparación
-      case 3: return 'status-shipping';    // En despacho
-      case 4: return 'status-completed';   // Entregado
-      case 5: return 'status-pending';     // Pendiente
-      case 6: return 'status-unpaid';      // Por pagar
-      case 7: return 'status-paid';        // Pagada
-      case 8: return 'status-cancelled';   // Cancelado
+      case 1: return 'status-validation';  // Validacion
+      case 2: return 'status-preparation'; // Preparacion
+      case 3: return 'status-ready';       // Listo para Despacho
+      case 4: return 'status-shipping';    // En Despacho
+      case 5: return 'status-completed';   // Entregado
+      case 6: return 'status-pending';     // Pendiente
+      case 7: return 'status-cancelled';   // Cancelado
     }
   }
 
@@ -517,10 +527,11 @@ const getStatusClass = (status: string, statusId?: number) => {
   switch (status) {
     case 'Por pagar': return 'status-unpaid';
     case 'Pagada': return 'status-paid';
-    case 'En preparación': return 'status-preparation';
-    case 'En despacho': return 'status-shipping';
+    case 'Validación': case 'En validación': return 'status-validation';
+    case 'Preparación': case 'En preparación': return 'status-preparation';
+    case 'Listo para despacho': case 'Listo para Despacho': return 'status-ready';
+    case 'En despacho': case 'En Despacho': return 'status-shipping';
     case 'Entregado': return 'status-completed';
-    case 'En validación': return 'status-validation';
     case 'Pendiente': return 'status-pending';
     case 'Cancelado': return 'status-cancelled';
     default: return 'status-generic';
@@ -567,12 +578,24 @@ const toggleDateDropdown = () => {
   isStatusDropdownOpen.value = false;
 };
 
+const normalizeStr = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
 const selectStatus = (status: string) => {
   statusFilter.value = status;
   isStatusDropdownOpen.value = false;
+
+  if (status === 'all') {
+    activeTab.value = 'pedidos';
+  }
 };
 
+const dateFilterType = ref('all');
+
 const selectDateFilter = (type: string, label: string) => {
+  dateFilterType.value = type;
   dateFilterLabel.value = label;
   isDateDropdownOpen.value = false;
 };
@@ -589,24 +612,44 @@ const filteredOrders = computed(() => {
   // 1. Tab Filter
   if (activeTab.value === 'pagos') {
     result = result.filter((o: any) => [1, 2].includes(o.pagoId));
-    console.log(result)
   } else {
-    // Pedidos incluye todo excepto "Por pagar" (6), pero incluye "Pagada" (7)
-    result = result.filter((o: any) => [1, 2, 3, 4, 5, 6].includes(o.rawStatusId));
+    // Pedidos incluye todos los pedidos (1-7)
+    result = result.filter((o: any) => [1, 2, 3, 4, 5, 6, 7].includes(o.rawStatusId));
   }
 
   // 2. Search Query (ID or Distributor)
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
+    const query = normalizeStr(searchQuery.value);
     result = result.filter((o: any) => 
       o.id.toString().includes(query) || 
-      o.distributor.toLowerCase().includes(query)
+      normalizeStr(o.distributor).includes(query)
     );
   }
 
-  // 3. Status Filter
+  // 3. Status Filter (accent-insensitive)
   if (statusFilter.value !== 'all') {
-    result = result.filter((o: any) => o.status === statusFilter.value);
+    const targetStatus = normalizeStr(statusFilter.value);
+    result = result.filter((o: any) => {
+      const s = normalizeStr(o.status);
+      const p = normalizeStr(o.pagoStatus);
+      return s === targetStatus || p === targetStatus || s.includes(targetStatus) || targetStatus.includes(s);
+    });
+  }
+
+  // 4. Date Filter
+  if (dateFilterType.value !== 'all') {
+    const now = new Date();
+    result = result.filter((o: any) => {
+      if (!o.date) return true;
+      const parts = o.date.split('/');
+      if (parts.length === 3) {
+        const oDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        const diffDays = (now.getTime() - oDate.getTime()) / (1000 * 3600 * 24);
+        if (dateFilterType.value === 'last30') return diffDays <= 30;
+        if (dateFilterType.value === 'last3months') return diffDays <= 90;
+      }
+      return true;
+    });
   }
 
   return result;
@@ -636,8 +679,14 @@ const sortedOrders = computed(() => {
 
     if (sortConfig.value.key === 'date') {
       const parseDate = (d: string, t: string) => {
-        const [day, month, year] = d.split('/').map(Number);
-        const [hours, minutes] = t.split(':').map(Number);
+        if (!d) return 0;
+        const parts = d.split('/').map(Number);
+        const day = parts[0] || 1;
+        const month = parts[1] || 1;
+        const year = parts[2] || 1970;
+        const timeParts = (t || '00:00').split(':').map(Number);
+        const hours = timeParts[0] || 0;
+        const minutes = timeParts[1] || 0;
         return new Date(year, month - 1, day, hours, minutes).getTime();
       };
       aValue = parseDate(a.date, a.time);
@@ -991,22 +1040,27 @@ watch([searchQuery, statusFilter, activeTab], () => {
 }
 
 .status-badge {
-  padding: 6px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.2;
 }
 
-.status-unpaid { background-color: #fff0f3; color: #e4869f; border: 1px solid #e4869f; }
-.status-paid { background-color: #ebfbee; color: #37b24d; border: 1px solid #37b24d; }
-.status-preparation { background-color: #e7f5ff; color: #1c7ed6; border: 1px solid #1c7ed6; }
-.status-shipping { background-color: #dcd5ff; color: #6741d9; border: 1px solid #6741d9; }
-.status-completed { background-color: #e6fffa; color: #087f5b; border: 1px solid #087f5b; }
-.status-validation { background-color: #fff4e6; color: #fd7e14; border: 1px solid #fd7e14; }
-.status-pending { background-color: #f8f9fa; color: #495057; border: 1px solid #ced4da; }
-.status-cancelled { background-color: #f8d7da; color: #fa5252; border: 1px solid #fa5252; }
-.status-generic { background-color: #f1f3f5; color: #868e96; border: 1px solid #ced4da; }
+.status-unpaid { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+.status-paid { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.status-validation { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+.status-preparation { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.status-ready { background-color: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.status-shipping { background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.status-completed { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.status-pending { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.status-cancelled { background-color: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+.status-generic { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 .date-content {
   display: flex;

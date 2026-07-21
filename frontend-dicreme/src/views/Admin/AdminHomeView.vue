@@ -45,6 +45,15 @@
         <h2>Inventario</h2>
         <p>Administra el inventario de los productos y sus lotes</p>
       </router-link>
+
+      <router-link v-role="[1,2]" to="/admin/catalogo" class="admin-option-card">
+        <div class="icon-container">
+          <Package2 :size="48" />
+        </div>
+        <h2>Catálogo</h2>
+        <p>Administrar el catálogo de los productos y sus precios</p>
+      </router-link>
+
     </div>
   </div>
 </template>

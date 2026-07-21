@@ -18,8 +18,10 @@ return new class extends Migration
             $table->string('comuna');
             $table->date('fecha_entrega')->nullable();
             $table->string('persona_recibe');
-            $table->string('estado_despacho')->nullable();
+            $table->unsignedBigInteger('id_estado_despacho')->nullable();
             $table->unsignedBigInteger('id_usuario_dicreme')->nullable();
+            $table->string('foto_comprobante')->nullable();
+            $table->text('notas_entrega')->nullable();
             $table->timestamps();
         });
     }

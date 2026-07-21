@@ -11,11 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('formatos', function (Blueprint $table) {
+        Schema::create('estados_despacho', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre_formato');
-            $table->integer('precio_formato');
-            $table->string('imagen_formato');
+            $table->string('nombre_estado', 50)->nullable(false);
             $table->timestamps();
         });
     }
@@ -25,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('formatos');
+        Schema::dropIfExists('estados_despacho');
     }
 };

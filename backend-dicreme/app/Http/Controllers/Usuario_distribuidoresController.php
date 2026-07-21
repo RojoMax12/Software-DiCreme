@@ -50,6 +50,14 @@ class Usuario_distribuidoresController extends Controller
 
             $usuario = $this->usuarioDistribuidoresService->createUsuarioDistribuidor($data);
 
+            \App\Models\HistorialMovimiento::registrar(
+                'distribuidor',
+                $usuario->id,
+                'creacion_distribuidor',
+                "Se registró el distribuidor '{$usuario->nombre_empresa}' (RUT: {$usuario->rut_empresa})",
+                null
+            );
+
             return response()->json(['status' => 'success', 'data' => $usuario, 'message' => 'Usuario creado'], 201);
         } catch (Exception $e) {
             return $this->errorResponse('Error al crear usuario', $e);
@@ -59,20 +67,36 @@ class Usuario_distribuidoresController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $data = $request->validate([
-            'correo_electronico' => ['required', 'email:rfc,dns', Rule::unique('usuarios_distribuidores', 'correo_electronico')->ignore($id)],
-            'telefono'           => ['required', new TelefonoChilenoRule],
-            'direccion'          => 'required|string|max:255',
-            'comuna'             => 'required|string|max:255',
-            'id_rol'             => 'required|integer|exists:rol,id',
-            'contrasena'         => 'required|string|min:6',
-            'rut_empresa'        => ['required', new RutChilenoRule, Rule::unique('usuarios_distribuidores', 'rut_empresa')->ignore($id)],
-            'nombre_empresa'     => 'required|string|max:255',
+            'correo_electronico' => ['sometimes', 'required', 'email:rfc,dns', Rule::unique('usuarios_distribuidores', 'correo_electronico')->ignore($id)],
+            'telefono'           => ['sometimes', 'required', new TelefonoChilenoRule],
+            'direccion'          => 'sometimes|required|string|max:255',
+            'comuna'             => 'sometimes|required|string|max:255',
+            'id_rol'             => 'nullable|integer|exists:rol,id',
+            'contrasena'         => 'nullable|string|min:6',
+            'rut_empresa'        => ['sometimes', 'required', new RutChilenoRule, Rule::unique('usuarios_distribuidores', 'rut_empresa')->ignore($id)],
+            'nombre_empresa'     => 'sometimes|required|string|max:255',
+            'foto_perfil'        => 'nullable|file|mimes:jpeg,jpg,png,webp,svg|max:10240',
+            'avatar'             => 'nullable|file|mimes:jpeg,jpg,png,webp,svg|max:10240',
         ]);
+
+        if ($request->hasFile('foto_perfil') || $request->hasFile('avatar')) {
+            $file = $request->file('foto_perfil') ?? $request->file('avatar');
+            $path = $file->store('avatars', 'public');
+            $data['foto_perfil'] = '/storage/' . $path;
+        }
 
         try {
             $data = $this->normalizeUserData($data);
             $usuario = $this->usuarioDistribuidoresService->updateUsuarioDistribuidor($id, $data);
             
+            \App\Models\HistorialMovimiento::registrar(
+                'distribuidor',
+                $id,
+                'modificacion_distribuidor',
+                "Se actualizó el distribuidor '{$usuario->nombre_empresa}'",
+                null
+            );
+
             return response()->json(['status' => 'success', 'data' => $usuario, 'message' => 'Usuario actualizado'], 200);
         } catch (Exception $e) {
             return $this->errorResponse('Error al actualizar usuario', $e);
@@ -83,6 +107,14 @@ class Usuario_distribuidoresController extends Controller
     {   
         try {
             $usuario_destroy = $this->usuarioDistribuidoresService->deleteUsuarioDistribuidor($id);
+
+            \App\Models\HistorialMovimiento::registrar(
+                'distribuidor',
+                $id,
+                'eliminacion_distribuidor',
+                "Se eliminó el distribuidor #{$id}",
+                null
+            );
 
             return response()->json([
             'status' => 'success', 
@@ -135,6 +167,16 @@ class Usuario_distribuidoresController extends Controller
             ], 404);
         }
 
+        $isActivo = (bool) $resultado->estado_usuario;
+
+        \App\Models\HistorialMovimiento::registrar(
+            'distribuidor',
+            $id,
+            $isActivo ? 'activacion_distribuidor' : 'desactivacion_distribuidor',
+            "Se cambió el estado del distribuidor '{$resultado->nombre_empresa}' a " . ($isActivo ? 'Activo' : 'Inactivo'),
+            null
+        );
+
         return response()->json([
             'status' => 'success',
             'message' => 'Estado del usuario distribuidor cambiado correctamente.',
@@ -143,22 +185,28 @@ class Usuario_distribuidoresController extends Controller
                 'nombre_empresa' => $resultado->nombre_empresa,
                 'rut_empresa' => $resultado->rut_empresa,
                 'correo_electronico' => $resultado->correo_electronico,
-                'estado_usuario' => (bool) $resultado->estado_usuario
+                'estado_usuario' => $isActivo
             ]
         ], 200);
     }
 
     private function normalizeUserData(array $data): array
     {
-        $data['rut_empresa'] = strtoupper(preg_replace('/[^kK0-9]/', '', $data['rut_empresa']));
-        
-        $cleanPhone = preg_replace('/[^0-9]/', '', $data['telefono']);
-        if (strpos($cleanPhone, '569') === 0 && strlen($cleanPhone) === 11) {
-            $cleanPhone = substr($cleanPhone, 2);
+        if (isset($data['rut_empresa'])) {
+            $data['rut_empresa'] = strtoupper(preg_replace('/[^kK0-9]/', '', $data['rut_empresa']));
         }
-        $data['telefono'] = $cleanPhone;
         
-        $data['correo_electronico'] = strtolower(trim($data['correo_electronico']));
+        if (isset($data['telefono'])) {
+            $cleanPhone = preg_replace('/[^0-9]/', '', $data['telefono']);
+            if (strpos($cleanPhone, '569') === 0 && strlen($cleanPhone) === 11) {
+                $cleanPhone = substr($cleanPhone, 2);
+            }
+            $data['telefono'] = $cleanPhone;
+        }
+        
+        if (isset($data['correo_electronico'])) {
+            $data['correo_electronico'] = strtolower(trim($data['correo_electronico']));
+        }
         
         return $data;
     }

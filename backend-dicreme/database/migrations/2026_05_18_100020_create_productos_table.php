@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('nombre_producto');
             $table->integer('precio_producto')->default(0);
             $table->boolean('estado_producto')->default(true);
+            $table->string('foto_producto')->nullable();
             $table->timestamps();
         });
     }

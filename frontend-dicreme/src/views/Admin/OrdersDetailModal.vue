@@ -159,8 +159,9 @@
                   <template v-else>
                     <Banknote v-if="step.id === 1" :size="18" :stroke-width="2" />
                     <Package v-else-if="step.id === 2" :size="18" :stroke-width="2" />
-                    <Truck v-else-if="step.id === 3" :size="18" :stroke-width="2" />
-                    <Home v-else-if="step.id === 4" :size="18" :stroke-width="2" />
+                    <ClipboardList v-else-if="step.id === 3" :size="18" :stroke-width="2" />
+                    <Truck v-else-if="step.id === 4" :size="18" :stroke-width="2" />
+                    <Home v-else-if="step.id === 5" :size="18" :stroke-width="2" />
                   </template>
                 </div>
                 <span class="step-label">{{ step.label }}</span>
@@ -198,6 +199,50 @@
           </div>
         </div>
 
+        <!-- SECCIÓN DE COMPROBANTE DE ENTREGA -->
+        <div class="delivery-proof-section" v-if="despachoData && (despachoData.foto_comprobante || despachoData.notas_entrega)">
+          <div class="section-title-box">
+            <Camera :size="22" class="text-pink" />
+            <h3 class="section-title">Comprobante de Entrega del Despachador</h3>
+          </div>
+
+          <div class="proof-card-container">
+            <div class="proof-photo-wrapper" v-if="despachoData.foto_comprobante" @click="isProofZoomOpen = true">
+              <img :src="getProofUrl(despachoData.foto_comprobante)" alt="Comprobante de Entrega" class="proof-image" />
+              <div class="zoom-badge">
+                <Maximize2 :size="14" />
+                <span>Ampliar foto</span>
+              </div>
+            </div>
+
+            <div class="proof-info-wrapper">
+              <div class="proof-info-item" v-if="despachoData.despachador_nombre">
+                <span class="proof-label">Despachador responsable:</span>
+                <span class="proof-val">{{ despachoData.despachador_nombre }}</span>
+              </div>
+              <div class="proof-info-item" v-if="despachoData.fecha_entrega">
+                <span class="proof-label">Fecha y hora de entrega:</span>
+                <span class="proof-val">{{ formatDate(despachoData.fecha_entrega) }}</span>
+              </div>
+              <div class="proof-info-item" v-if="despachoData.notas_entrega">
+                <span class="proof-label">Notas / Observaciones de entrega:</span>
+                <p class="proof-notes">{{ despachoData.notas_entrega }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL DE ZOOM DE FOTO DE COMPROBANTE -->
+    <div class="zoom-modal-overlay" v-if="isProofZoomOpen" @click="isProofZoomOpen = false">
+      <div class="zoom-modal-content" @click.stop>
+        <button class="zoom-close-btn" @click="isProofZoomOpen = false">
+          <X :size="24" />
+        </button>
+        <img :src="getProofUrl(despachoData?.foto_comprobante)" alt="Foto Comprobante Ampliada" class="full-proof-img" />
+        <p class="zoom-caption" v-if="despachoData?.notas_entrega">"{{ despachoData.notas_entrega }}"</p>
       </div>
     </div>
   </div>
@@ -207,12 +252,13 @@
 
 import jsPDF from 'jspdf'; //npm install jspdf jspdf-autotable
 import autoTable from 'jspdf-autotable'; // Importa la función directamente
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { 
   X, Upload, Building2, Calendar, 
   ClipboardList, LayoutGrid,
   ChevronLeft, ChevronRight, Check,
-  Banknote, Receipt, Package, Truck, Home, CircleDollarSign
+  Banknote, Receipt, Package, Truck, Home, CircleDollarSign,
+  Camera, Maximize2
 } from 'lucide-vue-next';
 import orderService from '@/services/orderService';
 import { useNotification } from '@/composables/useNotification';
@@ -230,7 +276,7 @@ const props = defineProps<{
   distributorPhone?: string;
   status?: string;
   statusId?: number;
-  pago?: string;    // <-- NUEVO
+  pago?: string;
   pagoId?: number;
   date?: string;
   time?: string;
@@ -239,17 +285,26 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['close', 'statusChanged', 'loaded']);
-const localStatus = ref(props.status);
+const localStatus = ref(props.status || '');
 const localStatusId = ref(props.statusId ? Number(props.statusId) : 1);
-const localPago = ref(props.pago || 'Por pagar'); // Ajusta según el prop que recibas
+const localPago = ref(props.pago || 'Por pagar');
 const localPagoId = ref(props.pagoId || 1);
+const despachoData = ref<any>(null);
+const isProofZoomOpen = ref(false);
+
+const getProofUrl = (url: string | undefined) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `http://localhost:8000${url}`;
+};
 
 // Lógica de la línea de tiempo
 const timelineSteps = [
   { id: 1, label: 'En validación' },
   { id: 2, label: 'Preparación' },
-  { id: 3, label: 'En despacho' },
-  { id: 4, label: 'Entregado' }
+  { id: 3, label: 'Listo para despacho' },
+  { id: 4, label: 'En despacho' },
+  { id: 5, label: 'Entregado' }
 ];
 
 const togglePago = async (event: Event) => {
@@ -315,8 +370,11 @@ const updateStatus = async () => {
   isUpdatingStatus.value = true;
   try {
     const result = await orderService.changeOrderStatus(Number(props.orderId), selectedTimelineId.value);
-    console.log("estado",result)
-    notify(result.data.message, 'success');
+    
+    notify(result.data?.message || `El estado del pedido #${props.orderId} se actualizó correctamente.`, 'success', {
+      title: `Pedido #${props.orderId}`,
+      route: '/admin/orders'
+    });
 
     localStatusId.value = selectedTimelineId.value;
     localStatus.value = nombresEstados[localStatusId.value];
@@ -324,9 +382,47 @@ const updateStatus = async () => {
     emit('statusChanged');
   } catch (error: any) {
     console.error('Error al actualizar el estado:', error);
-    notify(error.response?.data?.message || 'Error al actualizar el estado', 'error');
+    notify(error.response?.data?.message || 'Error al actualizar el estado del pedido', 'error', {
+      title: `Pedido #${props.orderId}`
+    });
   } finally {
     isUpdatingStatus.value = false;
+  }
+};
+
+const formatDate = (dateString: string | undefined | null) => {
+  if (!dateString) return 'Sin fecha';
+  try {
+    const raw = dateString.trim();
+    let isoString = raw.includes('T') ? raw : raw.replace(' ', 'T');
+    
+    if (!isoString.endsWith('Z') && !isoString.includes('+') && !isoString.includes('-')) {
+      isoString = `${isoString}Z`;
+    }
+
+    const d = new Date(isoString);
+    
+    if (isNaN(d.getTime())) {
+      return dateString;
+    }
+
+    const dateFormatted = d.toLocaleDateString('es-CL', {
+      timeZone: 'America/Santiago',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    const timeFormatted = d.toLocaleTimeString('es-CL', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    return `${dateFormatted} a las ${timeFormatted} hrs`;
+  } catch (e) {
+    return dateString;
   }
 };
 
@@ -334,14 +430,13 @@ const products = ref<any[]>([]);
 
 
 const nombresEstados: Record<number, string> = {
-  1: 'En validación',
+  1: 'Validación',
   2: 'En preparación',
-  3: 'En despacho',
-  4: 'Entregado',
-  5: 'Pendiente',
-  6: 'Por pagar',
-  7: 'Pagada',
-  8: 'Cancelado'
+  3: 'Listo para despacho',
+  4: 'En despacho',
+  5: 'Entregado',
+  6: 'Pendiente',
+  7: 'Cancelado'
 };
 
 const abrirWhatsapPedido = (pedido, nombreDistribuidor, telefonoDistribuidor) => {
@@ -383,37 +478,64 @@ const formatNumber = (num: number) => {
   return new Intl.NumberFormat('es-CL').format(Math.round(num));
 };
 
-const formato = (CategoryId: number) => {
-  switch (CategoryId) {
+const formato = (val: any) => {
+  if (!val && val !== 0) return '-';
+  if (typeof val === 'string' && isNaN(Number(val))) return val;
+  const id = Number(val);
+  switch (id) {
     case 1: return '10L';
     case 2: return '5L';
     case 3: return '2.5L';
     case 4: return '1L';
+    default: return String(val);
   }
 };
 
-const category = (CategoryId: number) =>
-{
-  switch (CategoryId) {
+const category = (val: any) => {
+  if (!val && val !== 0) return '-';
+  if (typeof val === 'string' && isNaN(Number(val))) return val;
+  const id = Number(val);
+  switch (id) {
     case 1: return 'Al agua';
     case 2: return 'Leche de avena';
-    case 3: return 'Tradicional ';
+    case 3: return 'Tradicional';
     case 4: return 'Sin azúcar';
+    default: return String(val);
   }
 };
 
 const getproducts = async () => {
+  if (!props.orderId) return;
   try {
     const response = await orderService.getOrderDetails(Number(props.orderId));
-    console.log("datos",response.data)
-    const orderData = response.data; 
-
-    console.log('Objeto interno de la cotización/pedido:', orderData);
+    const orderData = response.data?.data || response.data;
 
     if (orderData) {
       backendSubtotal.value = Number(orderData.subtotal_cotizacion || 0);
       backendDiscount.value = Number(orderData.descuento_total || 0);
       backendTotal.value = Number(orderData.total_cotizacion || 0);
+
+      if (orderData.id_estado_pedido && !isUpdatingStatus.value) {
+        localStatusId.value = Number(orderData.id_estado_pedido);
+        selectedTimelineId.value = localStatusId.value;
+        localStatus.value = nombresEstados[localStatusId.value] || localStatus.value;
+      }
+
+      if (orderData.id_estado_pago) {
+        localPagoId.value = Number(orderData.id_estado_pago);
+        localPago.value = localPagoId.value === 2 ? 'Pagada' : 'Por pagar';
+      }
+
+      if (orderData.despacho) {
+        despachoData.value = {
+          foto_comprobante: orderData.despacho.foto_comprobante,
+          notas_entrega: orderData.despacho.notas_entrega,
+          fecha_entrega: orderData.despacho.fecha_entrega,
+          despachador_nombre: orderData.despacho.usuario_dicreme?.nombre_usuario || orderData.despacho.usuario_dicreme?.nombre || ''
+        };
+      } else {
+        despachoData.value = null;
+      }
 
       if (orderData.productos) {
         products.value = orderData.productos.map((p: any) => {
@@ -423,12 +545,11 @@ const getproducts = async () => {
           return {
             id: p.id_producto || p.id,
             name: p.nombre_producto || 'Producto desconocido',
-            format: p.nombre_formato || p.format || p.id_formato || '-',
-            category: p.nombre_categoria || p.category || p.id_categoria || '-',
+            format: p.nombre_formato || p.id_formato || p.format || '-',
+            category: p.nombre_categoria || p.id_categoria || p.category || '-',
             quantity: cantidadItem,
             price: precioItem,
             subtotal: cantidadItem * precioItem,
-            
             discountType: 'none',
             discountValue: 0,
           };
@@ -436,26 +557,61 @@ const getproducts = async () => {
       }
       emit('loaded');
     } else {
-      console.warn('No se encontraron datos dentro de response.data.data:', orderData);
       emit('loaded');
     }
-
-    console.log('Resultado final del Proxy de Vue ya mapeado:', products.value);
-
   } catch (error) {
-    console.error('Error al obtener los productos del pedido/cotización:', error);
+    console.error('Error al obtener los productos del pedido:', error);
     notify('No se pudieron cargar los productos del detalle.', 'error');
   }
 };
 
-const getStatusClass = (status: string | undefined) => {
+watch(
+  () => [props.orderId, props.status, props.statusId, props.pago, props.pagoId],
+  (newVal, oldVal) => {
+    const newOrderId = newVal ? newVal[0] : null;
+    const oldOrderId = oldVal ? oldVal[0] : null;
+
+    if (props.orderId) {
+      // Solo actualizar estado si no estamos en medio de una petición de guardado
+      if (!isUpdatingStatus.value) {
+        localStatusId.value = props.statusId ? Number(props.statusId) : localStatusId.value;
+        selectedTimelineId.value = localStatusId.value;
+        localStatus.value = props.status || nombresEstados[localStatusId.value] || localStatus.value;
+      }
+
+      localPagoId.value = props.pagoId ? Number(props.pagoId) : localPagoId.value;
+      localPago.value = props.pago || (localPagoId.value === 2 ? 'Pagada' : 'Por pagar');
+      
+      // Solo pedir productos a la API si cambió el ID del pedido o es la primera carga
+      if (newOrderId !== oldOrderId || !products.value.length) {
+        getproducts();
+      }
+    }
+  },
+  { immediate: true }
+);
+
+const getStatusClass = (status: string | undefined, statusId?: number) => {
+  if (statusId) {
+    switch (Number(statusId)) {
+      case 1: return 'status-validation';
+      case 2: return 'status-preparation';
+      case 3: return 'status-ready';
+      case 4: return 'status-shipping';
+      case 5: return 'status-completed';
+      case 6: return 'status-pending';
+      case 7: return 'status-cancelled';
+    }
+  }
+
   switch (status) {
     case 'Por pagar': return 'status-unpaid';
     case 'Pagada': return 'status-paid';
-    case 'En preparación': return 'status-preparation';
-    case 'En despacho': return 'status-shipping';
+    case 'Validación': case 'En validación': case 'Validacion': return 'status-validation';
+    case 'Preparación': case 'En preparación': case 'Preparacion': return 'status-preparation';
+    case 'Listo para despacho': case 'Listo para Despacho': return 'status-ready';
+    case 'En despacho': case 'En Despacho': return 'status-shipping';
     case 'Entregado': return 'status-completed';
-    case 'En validación': return 'status-validation';
     case 'Pendiente': return 'status-pending';
     case 'Cancelado': return 'status-cancelled';
     default: return 'status-generic';
@@ -472,9 +628,6 @@ onMounted(() => {
       role: userObj.id_rol || 0
     };
   }
-  getproducts().then(() => {
-    emit('loaded'); // <--- Emitir SÓLO cuando los productos cargaron
-  });
 });
 
 const getBase64FromUrl = async (url: string): Promise<string> => {
@@ -776,20 +929,28 @@ const exportarPDF = async () => {
 }
 
 .status-badge {
-  padding: 4px 10px;
+  padding: 5px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.2;
   margin-top: 4px;
 }
 
-.status-unpaid { background-color: #fff0f3; color: #e4869f; border: 1px solid #e4869f; }
-.status-paid { background-color: #ebfbee; color: #37b24d; border: 1px solid #37b24d; }
-.status-preparation { background-color: #e7f5ff; color: #1c7ed6; border: 1px solid #1c7ed6; }
-.status-shipping { background-color: #dcd5ff; color: #6741d9; border: 1px solid #6741d9; }
-.status-completed { background-color: #e6fffa; color: #087f5b; border: 1px solid #087f5b; }
-.status-validation { background-color: #fff4e6; color: #f76707; border: 1px solid #f76707; }
+.status-unpaid { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+.status-paid { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.status-validation { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+.status-preparation { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.status-ready { background-color: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.status-shipping { background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.status-completed { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.status-pending { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.status-cancelled { background-color: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+.status-generic { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 
 .table-wrapper {
@@ -1154,7 +1315,7 @@ const exportarPDF = async () => {
     position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px;
     background-color: white; transition: .4s; border-radius: 50%;
 }
-input:checked + .slider { background-color: #37b24d; } /* Color Pagada */
+input:checked + .slider { background-color: #059669; } /* Color Pagada */
 input:checked + .slider:before { transform: translateX(26px); }
 
 .status-label { 
@@ -1163,8 +1324,8 @@ input:checked + .slider:before { transform: translateX(26px); }
 }
 
 /* Colores para el texto que acompañan al switch */
-.text-paid { color: #37b24d; }
-.text-unpaid { color: #e4869f; }
+.text-paid { color: #059669; }
+.text-unpaid { color: #64748b; }
 
 /* Botón Exportar */
 .btn-export {
@@ -1173,5 +1334,148 @@ input:checked + .slider:before { transform: translateX(26px); }
     font-weight: 700; cursor: pointer; transition: 0.2s;
 }
 .btn-export:hover { background-color: #4a445c; }
+
+/* Delivery Proof Section & Photo Zoom Modal */
+.delivery-proof-section {
+  margin-top: 30px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #eeedee;
+}
+
+.proof-card-container {
+  display: flex;
+  gap: 24px;
+  margin-top: 15px;
+  align-items: flex-start;
+}
+
+.proof-photo-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid #e4869f;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.proof-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.proof-photo-wrapper:hover .proof-image {
+  transform: scale(1.05);
+}
+
+.zoom-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 22, 36, 0.85);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.proof-info-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.proof-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.proof-label {
+  font-size: 0.82rem;
+  color: #7c7289;
+  font-weight: 600;
+}
+
+.proof-val {
+  font-size: 0.95rem;
+  color: #1a1624;
+  font-weight: 700;
+}
+
+.proof-notes {
+  background: #f8f9fa;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border-left: 3px solid #e4869f;
+  font-size: 0.9rem;
+  color: #322c44;
+  margin: 0;
+}
+
+.zoom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.zoom-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.full-proof-img {
+  max-width: 85vw;
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  object-fit: contain;
+}
+
+.zoom-close-btn {
+  position: absolute;
+  top: -40px;
+  right: -10px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.zoom-caption {
+  color: white;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  font-style: italic;
+  text-align: center;
+}
+
 
 </style>
