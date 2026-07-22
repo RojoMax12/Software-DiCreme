@@ -1,2 +1,6 @@
 *
 !.gitignore
+!avatars/
+!comprobantes/
+!formatos/
+!productos/
