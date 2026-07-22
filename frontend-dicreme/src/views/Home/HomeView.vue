@@ -294,7 +294,9 @@ const fetchIceCreams = async () => {
       throw new Error('Error al obtener los datos del catálogo');
     }
 
-    const dbProducts = response.data;
+    //quiero hacer un filtro en que a partir de la respuesta se filtre para solo tener los productos con estado activo
+    const activeProducts = response.data.filter((product: any) => product.estado_producto === true);
+    const dbProducts = activeProducts;
     
     // Usamos Map porque es el mecanismo más rápido en JS para agrupar elementos dinámicos
     const grouped = new Map<string, any>();
