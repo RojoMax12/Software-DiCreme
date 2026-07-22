@@ -15,7 +15,8 @@ export const authService = {
     // Aquí preparamos el objeto final para el backend
     const payload = {
       ...data,
-      telefono: `+56${data.telefono}`, // Concatenamos el prefijo para la base de datos
+      telefono: data.telefono.startsWith('+56') ? data.telefono : `+56${data.telefono}`,
+      contrasena_confirmation: data.contrasena_confirmation || data.contrasena
     };
 
     try {

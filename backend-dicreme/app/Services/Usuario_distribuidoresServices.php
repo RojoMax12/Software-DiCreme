@@ -26,6 +26,10 @@ class Usuario_distribuidoresServices
         return $this->usuarioDistribuidoresRepository->getUsuarioDistribuidorById($id);
     }
 
+    public function getUsuarioDistribuidorByRut($rut){
+        return $this->usuarioDistribuidoresRepository->getUsuarioDistribuidorByRut($rut);
+    }
+
     public function createUsuarioDistribuidor($data)
     {   
         $data['estado_usuario'] = $data['estado_usuario'] ?? true;
