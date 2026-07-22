@@ -3,4 +3,6 @@
 !avatars/
 !comprobantes/
 !formatos/
+!formatos/**
 !productos/
+!productos/**
