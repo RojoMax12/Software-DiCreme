@@ -53,7 +53,7 @@
         </div>
 
         <div class="divider">
-          <span>O ingresar datos manualmente</span>
+          <span>o ingresar datos manualmente</span>
         </div>
 
         <!-- Se añadió :disabled a todos los inputs si isDistributorSelected es true -->
@@ -64,6 +64,7 @@
               <input 
                 v-model="distributorForm.rut_empresa" 
                 @input="distributorForm.rut_empresa = formatRutInput(distributorForm.rut_empresa)"
+                @blur="validateDistributorByRutBackend(distributorForm.rut_empresa, true)"
                 type="text" 
                 placeholder="12345678-9" 
                 class="dc-input" 
@@ -414,7 +415,7 @@ const goToStep = (step: number) => {
   }
 };
 
-const nextStep = () => {
+const nextStep = async () => {
   if (currentStep.value === 1) {
     const form = distributorForm.value;
 
@@ -432,6 +433,11 @@ const nextStep = () => {
     }
     if (!validatePhone(form.telefono)) {
       notify('El teléfono debe ser un celular válido (+569XXXXXXXX).', 'error');
+      return;
+    }
+
+    const isValidBackend = await validateDistributorByRutBackend(form.rut_empresa, false);
+    if (!isValidBackend) {
       return;
     }
 
@@ -467,7 +473,72 @@ const clearDistributorSelection = () => {
   comunaSearch.value = '';
 };
 
-const selectDistributor = (d: any) => {
+const validateDistributorByRutBackend = async (rut: string, isFromBlur = false): Promise<boolean> => {
+  if (!rut || !validateRUT(rut)) {
+    if (isFromBlur && rut.trim() !== '') {
+      notify('El RUT ingresado no es válido.', 'error');
+    }
+    return false;
+  }
+
+  try {
+    const response = await distributorService.getUsuarioDistribuidorByRut(rut);
+    if (response.data && response.data.status === 'success' && response.data.data) {
+      const d = response.data.data;
+      if (d.estado_usuario === false || d.estado_usuario === 0) {
+        notify(`El distribuidor con RUT ${rut} (${d.nombre_empresa}) se encuentra INACTIVO en el sistema y no puede recibir cotizaciones.`, 'error');
+        return false;
+      }
+
+      let phone = d.telefono || '';
+      if (phone && !phone.startsWith('+56')) {
+        phone = '+56' + phone.replace(/^56/, '');
+      } else if (!phone) {
+        phone = '+56';
+      }
+
+      distributorForm.value = {
+        id: d.id,
+        nombre_empresa: d.nombre_empresa || distributorForm.value.nombre_empresa,
+        rut_empresa: formatRutVisual(d.rut_empresa) || formatRutVisual(rut),
+        correo_electronico: d.correo_electronico || distributorForm.value.correo_electronico,
+        telefono: phone || distributorForm.value.telefono,
+        direccion: d.direccion || distributorForm.value.direccion,
+        comuna: d.comuna || distributorForm.value.comuna,
+        persona_recibe: distributorForm.value.persona_recibe || d.nombre_empresa || ''
+      };
+      searchQuery.value = d.nombre_empresa || '';
+      comunaSearch.value = d.comuna || '';
+      isDistributorSelected.value = true;
+      if (isFromBlur) {
+        notify(`Distribuidor "${d.nombre_empresa}" encontrado en el sistema. Datos autocompletados.`, 'success');
+      }
+      return true;
+    }
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      distributorForm.value.id = null;
+      if (isFromBlur) {
+        notify(`El RUT ${rut} no se encuentra registrado en el sistema. Se creará como nuevo al confirmar la cotización.`, 'info');
+      }
+      return true;
+    } else {
+      console.error('Error al consultar getUsuarioDistribuidorByRut:', error);
+      if (isFromBlur) {
+        notify('Hubo un error al verificar el RUT en el servidor.', 'error');
+      }
+      return false;
+    }
+  }
+  return true;
+};
+
+const selectDistributor = async (d: any) => {
+  if (d.estado_usuario === false || d.estado_usuario === 0) {
+    notify(`El distribuidor ${d.nombre_empresa} se encuentra INACTIVO en el sistema y no puede recibir cotizaciones.`, 'error');
+    return;
+  }
+
   let phone = d.telefono || '';
   if (phone && !phone.startsWith('+56')) {
     phone = '+56' + phone.replace(/^56/, '');
@@ -491,6 +562,8 @@ const selectDistributor = (d: any) => {
   isDistributorSelected.value = true; // Bloquea los campos
   showDropdown.value = false;
   notify(`Cliente ${d.nombre_empresa} seleccionado.`, 'success');
+
+  await validateDistributorByRutBackend(d.rut_empresa, false);
 };
 
 const handlePhoneInput = () => {
@@ -600,32 +673,56 @@ const confirmQuote = async () => {
   isSubmitting.value = true;
   
   try {
+    try {
+      const response = await distributorService.getUsuarioDistribuidorByRut(distributorForm.value.rut_empresa);
+      if (response.data && response.data.status === 'success' && response.data.data) {
+        const d = response.data.data;
+        if (d.estado_usuario === false || d.estado_usuario === 0) {
+          notify(`No se puede generar la cotización: el distribuidor ${d.nombre_empresa} se encuentra inactivo.`, 'error');
+          isSubmitting.value = false;
+          return;
+        }
+        distributorForm.value.id = d.id;
+      }
+    } catch (err: any) {
+      if (err.response && err.response.status === 404) {
+        distributorForm.value.id = null;
+      } else {
+        throw err;
+      }
+    }
+
     let distributorId = distributorForm.value.id;
 
     if (!distributorId) {
-      const cleanPhone = distributorForm.value.telefono.replace(/\+56/g, '').trim();
+      let cleanPhone = distributorForm.value.telefono.replace(/\+56/g, '').replace(/[^0-9]/g, '').trim();
+      if (!/^9\d{8}$/.test(cleanPhone)) {
+        cleanPhone = '900000000';
+      }
       const rutParaValidar = distributorForm.value.rut_empresa.replace(/[^0-9kK]/gi, '');
       const rutLimpio = distributorForm.value.rut_empresa.replace(/[^0-9kK]/gi, '').toUpperCase();
 
       if (!validateRUT(rutParaValidar)) {
-      notify('El RUT ingresado no es válido.', 'error');
-      return;
+        notify('El RUT ingresado no es válido.', 'error');
+        return;
       }
 
       const registerData = {
         rut_empresa: rutLimpio,
-        nombre_empresa: distributorForm.value.nombre_empresa,
-        correo_electronico: distributorForm.value.correo_electronico || `manual_${Date.now()}@dicreme.cl`,
-        telefono: cleanPhone || '900000000', 
+        nombre_empresa: distributorForm.value.nombre_empresa || `Distribuidor ${rutLimpio}`,
+        correo_electronico: distributorForm.value.correo_electronico || `manual_${Date.now()}@gmail.com`,
+        telefono: cleanPhone, 
         comuna: distributorForm.value.comuna || 'Santiago',
         direccion: distributorForm.value.direccion || 'Dirección manual',
-        contrasena: 'DiCreme2026', 
+        contrasena: 'DiCreme2026@',
+        contrasena_confirmation: 'DiCreme2026@'
       };
 
       const response = await authService.registerDistribuidor(registerData);
       distributorId = response.id || response.ID || (response.data && (response.data.id || response.data.ID));
       
       if (!distributorId) throw new Error("No se pudo registrar al cliente automáticamente.");
+      distributorForm.value.id = distributorId;
     }
 
     const payload = {
