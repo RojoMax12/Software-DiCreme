@@ -286,28 +286,32 @@
               :class="{ active: historyEntityFilter === '' }"
               @click="historyEntityFilter = ''"
             >
-              Todos los movimientos
+              <ListFilter :size="16" />
+              <span>Todos los movimientos</span>
             </button>
             <button
               class="entity-btn"
               :class="{ active: historyEntityFilter === 'lote' }"
               @click="historyEntityFilter = 'lote'"
             >
-              📦 Lotes
+              <Box :size="16" />
+              <span>Lotes</span>
             </button>
             <button
               class="entity-btn"
               :class="{ active: historyEntityFilter === 'usuario' }"
               @click="historyEntityFilter = 'usuario'"
             >
-              👥 Usuarios
+              <Users :size="16" />
+              <span>Usuarios</span>
             </button>
             <button
               class="entity-btn"
               :class="{ active: historyEntityFilter === 'producto' }"
               @click="historyEntityFilter = 'producto'"
             >
-              🍦 Productos
+              <IceCream :size="16" />
+              <span>Productos</span>
             </button>
           </div>
 
@@ -556,7 +560,9 @@ import {
   X,
   IceCream,
   PackageX,
-  Loader2
+  Loader2, 
+  Users,
+  ListFilter
 } from 'lucide-vue-next';
 
 import productService from '@/services/productService';
@@ -1269,53 +1275,112 @@ const deleteFormat = async (fmt: any) => {
 }
 
 .entity-btn {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px; 
+  padding: 8px 18px;
+  border-radius: 20px; 
+  border: 1px solid transparent; 
+  background: #f1f5f9; 
   font-size: 0.85rem;
   font-weight: 700;
   color: #64748b;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.entity-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .entity-btn.active {
-  background: #1e293b;
+  background: #2b253b; 
   color: white;
-  border-color: #1e293b;
+  box-shadow: 0 4px 12px rgba(43, 37, 59, 0.2); 
 }
 
 .search-history {
   width: 100%;
 }
 
-.history-table .time-col { font-weight: 600; color: #64748b; font-size: 0.82rem; }
-.history-table .desc-col { font-weight: 600; color: #1e293b; }
+/* --- Mejoras visuales para la tabla de Historial --- */
+.history-table {
+  border-collapse: separate; 
+  border-spacing: 0;
+  width: 100%;
+}
+
+.history-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.history-table .time-col { 
+  font-weight: 400; /* Texto normal, sin negrita */
+  color: #64748b; 
+  font-size: 0.85rem; 
+}
+
+.history-table .desc-col { 
+  font-weight: 400; /* Texto normal para que respire */
+  color: #475569; 
+}
+
+.history-table .user-col strong {
+  font-weight: 500; 
+  color: #475569;
+}
+
 
 .entity-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px; 
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 600; 
+  display: inline-block;
+  text-align: center;
 }
 
-.entity-lote { background: #ffedd5; color: #c2410c; }
-.entity-usuario { background: #e0e7ff; color: #4338ca; }
-.entity-producto { background: #f3e8ff; color: #7c3aed; }
+
+.entity-lote { background: #fef3c7; color: #b45309; } /* Naranja suave */
+.entity-usuario { background: #e0e7ff; color: #4f46e5; } /* Azul índigo suave */
+.entity-producto { background: #fce7f3; color: #be185d; } /* Rosado Di Creme suave */
 
 .action-tag {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 9999px; /* Forma de píldora perfecta */
+  font-size: 0.75rem;
+  font-weight: 600; /* Letra más delgada */
+  display: inline-block;
+  text-align: center;
 }
 
-.action-creacion, .action-creacion_categoria, .action-creacion_formato { background: #ecfdf5; color: #059669; }
-.action-modificacion, .action-modificacion_categoria, .action-modificacion_formato { background: #eff6ff; color: #2563eb; }
-.action-cambio_precio { background: #fef3c7; color: #d97706; }
-.action-activacion { background: #ecfdf5; color: #059669; }
-.action-desactivacion { background: #fff1f2; color: #e11d48; }
-.action-liberacion { background: #f3e8ff; color: #7c3aed; }
+/* Colores pasteles súper suaves para las acciones */
+.action-creacion, .action-creacion_categoria, .action-creacion_formato { 
+  background: #f0fdf4; color: #16a34a; /* Verde menta claro */
+}
+.action-modificacion, .action-modificacion_categoria, .action-modificacion_formato { 
+  background: #eff6ff; color: #2563eb; /* Azul cielo */
+}
+.action-cambio_precio { 
+  background: #fffbeb; color: #d97706; /* Amarillo pastel */
+}
+.action-activacion { 
+  background: #f0fdf4; color: #16a34a; /* Verde menta claro */
+}
+.action-desactivacion { 
+  background: #fef2f2; color: #dc2626; /* Rojo/Rosado pálido */
+}
+.action-liberacion { 
+  background: #fce7f3; color: #be185d; /* Rosado Di Creme suave */
+}
 
 /* Modals */
 .modal-backdrop {
