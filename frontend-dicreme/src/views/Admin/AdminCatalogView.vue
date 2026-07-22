@@ -1166,8 +1166,8 @@ const deleteFormat = async (fmt: any) => {
   font-weight: 700;
 }
 
-.cat-tag { background: #eff6ff; color: #2563eb; }
-.fmt-tag { background: #f3e8ff; color: #7c3aed; }
+.cat-tag { background: #f7e9f9; color: var(--DC-pink); }
+.fmt-tag { background: #f3e8ff; color: #7c3aedba; }
 
 .price-row {
   display: flex;
@@ -1203,7 +1203,7 @@ const deleteFormat = async (fmt: any) => {
   cursor: pointer;
 }
 
-.btn-edit { color: #3b82f6; border-color: #93c5fd; }
+.btn-edit { color: var(--DC-gray); border-color: var(--DC-gray); }
 .btn-toggle-off { color: #ef4444; border-color: #fca5a5; }
 .btn-toggle-on { color: #10b981; border-color: #6ee7b7; }
 
@@ -1253,8 +1253,8 @@ const deleteFormat = async (fmt: any) => {
   border: none;
 }
 
-.btn-edit-sm { background: #eff6ff; color: #2563eb; }
-.btn-delete-sm { background: #fff1f2; color: #e11d48; }
+.btn-edit-sm { background: var(--DC-bg-gray); color: var(--DC-gray); }
+.btn-delete-sm { background: rgb(253, 240, 251); color: var(--DC-pink); }
 
 /* History View */
 .history-toolbar {

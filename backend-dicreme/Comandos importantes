@@ -33,3 +33,6 @@ php artisan make:factory ProductoFactory --model=Producto
 8. Bota todas las tablas y hace el Factories
 
 php artisan migrate:fresh --seed
+
+Hacer solamente una vez, para el linkeo de las carpetas de storage
+php artisan storage:link
