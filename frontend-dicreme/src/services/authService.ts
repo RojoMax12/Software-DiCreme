@@ -8,7 +8,9 @@ export interface RegisterData {
   comuna: string;
   direccion: string;
   contrasena: string;
+  contrasena_confirmation?: string;
 }
+
 
 export const authService = {
   async registerDistribuidor(data: RegisterData) {
