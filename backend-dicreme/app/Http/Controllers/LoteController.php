@@ -165,8 +165,8 @@ class LoteController extends Controller
 
     public function getLotesPorVencer(Request $request): JsonResponse
     {
-        $dias = $request->query('dias', 30);
-        $lotes = $this->loteServices->getLotesPorVencer($dias);
+        $meses = $request->query('meses', 1);
+        $lotes = $this->loteServices->getLotesPorVencer($meses);
         
         return response()->json([
             'status' => 'success',
