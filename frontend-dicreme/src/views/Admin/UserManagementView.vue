@@ -185,12 +185,17 @@ const closeModal = () => {
 
 const handleSaveUser = async () => {
     try {
-        isEditing.value ? await userService.updateuser(editingId.value, form) : await userService.createUser(form);
+        if (isEditing.value && editingId.value !== null) {
+            await userService.updateuser(editingId.value, form);
+        } else {
+            await userService.createUser(form);
+        }
         notify("Guardado exitoso", "success");
         closeModal();
         fetchUsers();
     } catch (e) { notify("Error al guardar", "error"); }
 };
+
 
 const eliminarUsuario = async (id: number) => {
     if (confirm("¿Estás seguro de eliminar este usuario del sistema?")) {

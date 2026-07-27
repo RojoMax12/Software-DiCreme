@@ -15,4 +15,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  esbuild: {
+    drop: process.env.NODE_ENV === 'development' ? [] : ['console', 'debugger'],
+  } as any,
 })
+
+
+

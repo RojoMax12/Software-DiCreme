@@ -147,6 +147,9 @@ class Usuario_distribuidoresController extends Controller
     {
         try {
             $usuario = $this->usuarioDistribuidoresService->getUsuarioDistribuidorById($id);
+            if (!$usuario && !is_numeric($id)) {
+                $usuario = $this->usuarioDistribuidoresService->getUsuarioDistribuidorByRut($id);
+            }
             if (!$usuario) return response()->json(['status' => 'error', 'message' => 'Usuario no encontrado'], 404);
             
             return response()->json(['status' => 'success', 'data' => $usuario], 200);
@@ -218,5 +221,17 @@ class Usuario_distribuidoresController extends Controller
             'message' => $message,
             'debug'   => config('app.debug') ? $e->getMessage() : null
         ], 500);
+    }
+
+    public function getUsuarioDistribuidorByRut($rut): JsonResponse
+    {
+        try {
+            $usuario = $this->usuarioDistribuidoresService->getUsuarioDistribuidorByRut($rut);
+            if (!$usuario) return response()->json(['status' => 'error', 'message' => 'Usuario no encontrado'], 404);
+            
+            return response()->json(['status' => 'success', 'data' => $usuario], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener usuario', $e);
+        }
     }
 }

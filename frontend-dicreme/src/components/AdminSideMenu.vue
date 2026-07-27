@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, ShoppingBag, FilePlus, X, Users, Package2} from 'lucide-vue-next'
+import { FileText, ShoppingBag, FilePlus, X, Users, Package2, Boxes, BookOpen, LayoutTemplate} from 'lucide-vue-next'
 import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps<{
@@ -90,7 +90,7 @@ const isActive = (path: string) => {
               :class="{ active: isActive('/admin/inventario') }"
               @click="navigateTo('/admin/inventario')"
             >
-              <Package2 :size="20" />
+              <Boxes :size="20" />
               <span>Gestión de Inventario</span>
             </button>
 
@@ -99,8 +99,17 @@ const isActive = (path: string) => {
               :class="{ active: isActive('/admin/catalogo') }"
               @click="navigateTo('/admin/catalogo')"
             >
-              <Package2 :size="20" />
+              <BookOpen :size="20" />
               <span>Gestión de catálogo</span>
+            </button>
+
+            <button 
+              class="nav-item" 
+              :class="{ active: isActive('/admin/Apariencia') }"
+              @click="navigateTo('/admin/Apariencia')"
+            >
+              <LayoutTemplate :size="20" />
+              <span>Apariencia de la Tienda</span>
             </button>
 
           </div>
