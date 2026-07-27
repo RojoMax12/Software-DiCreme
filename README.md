@@ -24,120 +24,117 @@ El sistema implementa 4 roles de usuario diferenciados con permisos específicos
 
 ---
 
-## Prerrequisitos
+## 🐳 Despliegue Rápido con Docker (Recomendado)
 
-Antes de iniciar, asegúrate de tener instalado en tu equipo:
+El proyecto incluye orquestación con **Docker Compose** para desplegar automáticamente la base de datos MySQL, la API Backend y la aplicación Frontend sin necesidad de instalar entornos manualmente.
+
+### Pasos para desplegar con Docker:
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/RojoMax12/Software-DiCreme.git
+cd Software-DiCreme
+
+# 2. Levantar todos los servicios en segundo plano
+docker compose up -d --build
+```
+
+**Servicios levantados:**
+- 🛢️ **Base de Datos PostgreSQL**: `localhost:5176`
+- ⚡ **Backend REST API**: `http://localhost:8000`
+- 💻 **Frontend SPA Vue 3**: `http://localhost:5173`
+
+---
+
+## ⚙️ Guía de Instalación y Despliegue Local (Sin Docker)
+
+### 1. Prerrequisitos
 
 - **Git**
 - **PHP 8.3+**
 - **Composer**
-- **Node.js 20.19+** (o versión LTS compatible)
+- **Node.js 20.19+**
 - **npm** o **pnpm**
-- Servidor de base de datos **MySQL** (o PostgreSQL usando `DiCremeInventoryScript.sql`)
+- Servidor de base de datos **MySQL 8.0**
 
----
-
-## Guía de Instalación y Despliegue Local
-
-### 1. Clonar el repositorio
+### 2. Configuración y Arranque del Backend (`backend-dicreme`)
 
 ```bash
-git clone https://github.com/RojoMax12/Software-DiCreme.git
-cd Software-DiCreme
+cd backend-dicreme
+
+# Instalar dependencias
+composer install
+npm install
+
+# Configurar entorno
+cp .env.example .env
+
+# Generar claves de aplicación y JWT
+php artisan key:generate
+php artisan jwt:secret
+
+# Enlace simbólico de almacenamiento
+php artisan storage:link
+
+# Ejecutar migraciones y datos iniciales
+php artisan migrate --seed
+
+# Levantar el servidor local
+php artisan serve
+```
+
+### 3. Configuración y Arranque del Frontend (`frontend-dicreme`)
+
+```bash
+cd frontend-dicreme
+
+# Instalar dependencias y levantar desarrollo
+npm install
+npm run dev
 ```
 
 ---
 
-### 2. Configuración y Arranque del Backend (`backend-dicreme`)
+## 🧪 Pruebas Automatizadas (QA)
 
-1. Entrar al directorio del backend:
-   ```bash
-   cd backend-dicreme
-   ```
+El backend cuenta con suites de pruebas unitarias y de integración desarrolladas con **PHPUnit**:
 
-2. Instalar dependencias de PHP:
-   ```bash
-   composer install
-   ```
+```bash
+cd backend-dicreme
 
-3. Instalar dependencias de Node (para desarrollo de assets):
-   ```bash
-   npm install
-   ```
+# Ejecutar la suite completa de pruebas
+php artisan test
+```
 
-4. Configurar el archivo de entorno `.env`:
-   - Copiar el archivo de ejemplo:
-     ```bash
-     cp .env.example .env
-     ```
-   - Configurar la conexión a tu base de datos MySQL (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
-   - Configurar `APP_URL=http://127.0.0.1:8000`.
-
-5. Generar la clave de la aplicación y la clave JWT:
-   ```bash
-   php artisan key:generate
-   php artisan jwt:secret
-   ```
-
-6. Crear el enlace simbólico del almacenamiento público (para avatares y fotos de productos):
-   ```bash
-   php artisan storage:link
-   ```
-
-7. Ejecutar migraciones y datos iniciales:
-   ```bash
-   php artisan migrate --seed
-   ```
-   *(Opcional: Si deseas inicializar la base de datos desde el script SQL incluido, importa `DiCremeInventoryScript.sql` en tu gestor de base de datos).*
-
-8. Iniciar el servidor local de desarrollo:
-   ```bash
-   php artisan serve
-   ```
-   El backend estará disponible en `http://127.0.0.1:8000`.
+### Pruebas incluidas:
+- `AuthTest.php`: Validación de inicio de sesión, generación de token JWT y protección de endpoints.
+- `ProductoTest.php`: Validación de endpoints de catálogo, productos y resúmenes de stock.
 
 ---
 
-### 3. Configuración y Arranque del Frontend (`frontend-dicreme`)
+## 📑 Documentación de la API (Postman)
 
-1. Abre otra terminal y entra al directorio del frontend:
-   ```bash
-   cd frontend-dicreme
-   ```
+La API REST cuenta con una colección oficial de Postman v2.1 con todos los endpoints catalogados por módulos:
 
-2. Instalar dependencias de paquetes:
-   ```bash
-   npm install
-   ```
-
-3. Iniciar el servidor de desarrollo Vite:
-   ```bash
-   npm run dev
-   ```
-   El frontend estará disponible en `http://localhost:5173`.
+- 📂 **Archivo de colección**: [`docs/DiCreme_API.postman_collection.json`](./docs/DiCreme_API.postman_collection.json)
+- **Instrucciones de uso**:
+  1. Abre Postman y haz clic en **Import**.
+  2. Selecciona el archivo `docs/DiCreme_API.postman_collection.json`.
+  3. Ejecuta el endpoint `Auth -> Login` para obtener automáticamente tu `access_token` JWT.
 
 ---
 
-## Comandos Útiles
+## 🛠️ Comandos Útiles de Desarrollo Local
 
-- **Limpiar cachés del backend**:
-  ```bash
-  php artisan config:clear
-  php artisan cache:clear
-  php artisan route:clear
-  ```
+### Backend (`backend-dicreme`)
 
-- **Reconstruir la base de datos con datos de prueba**:
-  ```bash
-  php artisan migrate:fresh --seed
-  ```
+- **Ejecutar migraciones**: `php artisan migrate`
+- **Revertir migración**: `php artisan migrate:rollback`
+- **Reiniciar base de datos completa con datos de prueba**: `php artisan migrate:fresh --seed`
+- **Limpiar cachés**: `php artisan config:clear && php artisan cache:clear`
 
-- **Validación de tipos TypeScript en el frontend**:
-  ```bash
-  npm run type-check
-  ```
+### Frontend (`frontend-dicreme`)
 
-- **Compilar el frontend para producción**:
-  ```bash
-  npm run build
-  ```
+- **Servidor de desarrollo**: `npm run dev`
+- **Comprobación de tipos TypeScript**: `npm run type-check`
+- **Compilación de producción**: `npm run build`

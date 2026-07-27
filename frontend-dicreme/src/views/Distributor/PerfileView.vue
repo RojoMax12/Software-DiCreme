@@ -58,9 +58,10 @@
         </div>
       </div>
 
-      <button type="submit" :disabled="loading.value" class="submit-btn">
-        {{ loading.value ? 'Guardando...' : 'Guardar Cambios' }}
+      <button type="submit" :disabled="loading" class="submit-btn">
+        {{ loading ? 'Guardando...' : 'Guardar Cambios' }}
       </button>
+
     </form>
   </div>
 </template>
