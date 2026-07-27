@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ProductoServices;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductoController extends Controller
 {
@@ -295,12 +296,38 @@ class ProductoController extends Controller
 
     public function getProductosPocoStock(Request $request)
     {
-        $umbral = $request->query('umbral', 10);
+        $umbralPorDefecto = Cache::get('umbral_poco_stock', 10);
+        $umbral = $request->query('umbral', $umbralPorDefecto);
         $productos = $this->productoServices->getProductosPocoStock($umbral);
 
         return response()->json([
             'status' => 'success',
-            'data' => $productos
+            'data' => $productos,
+            'umbral_aplicado' => (int)$umbral
+        ], 200);
+    }
+
+    public function setUmbralPocoStock(Request $request)
+    {
+        $request->validate([
+            'umbral' => 'required|integer|min:1'
+        ]);
+
+        Cache::forever('umbral_poco_stock', $request->umbral);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Umbral de poco stock actualizado correctamente.',
+            'umbral' => $request->umbral
+        ], 200);
+    }
+
+    public function getUmbralPocoStock()
+    {
+        $umbral = Cache::get('umbral_poco_stock', 10);
+        return response()->json([
+            'status' => 'success',
+            'umbral' => (int)$umbral
         ], 200);
     }
 }
