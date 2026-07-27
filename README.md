@@ -1,142 +1,143 @@
 # Software-DiCreme
 
-Guía rápida para levantar el proyecto en local.
+Sistema web integral para la gestión de catálogo de productos, cotizaciones, pedidos, control de inventario por lotes, despachos y facturación de la empresa **DiCreme**.
+
+---
+
+## Arquitectura y Tecnologías
+
+El proyecto está estructurado en una arquitectura cliente-servidor desacoplada:
+
+- **Backend (`backend-dicreme`)**: API REST desarrollada con **PHP 8.3+** y **Laravel 11**, autenticación JWT (`jwt.auth`), control de acceso basado en roles (RBAC) y base de datos relacional **MySQL**.
+- **Frontend (`frontend-dicreme`)**: Single Page Application (SPA) construida con **Vue 3 (Composition API)**, **TypeScript**, **Vite**, **Vue Router**, **Axios**, **jsPDF** (generación de PDFs de cotización) y **XLSX** (exportación a Excel).
+
+---
+
+## Roles del Sistema
+
+El sistema implementa 4 roles de usuario diferenciados con permisos específicos:
+
+1. **Rol 1 - Admin**: Acceso total a la plataforma, gestión de usuarios, cotizaciones, inventario, pedidos y reportes.
+2. **Rol 2 - Trabajador**: Personal interno de DiCreme encargado del catálogo, control de stock, gestión de lotes y pedidos.
+3. **Rol 3 - Distribuidor**: Clientes y empresas externas que exploran el catálogo, cotizan productos y realizan pedidos.
+4. **Rol 4 - Despachador**: Personal logístico encargado del control de entregas, estado de despachos y recepciones.
+
+---
 
 ## Prerrequisitos
 
-Antes de empezar, instala estas herramientas en tu equipo:
+Antes de iniciar, asegúrate de tener instalado en tu equipo:
 
-- Git
-- PHP 8.3 o superior
-- Composer
-- Node.js 20.19+ o una versión más reciente compatible con el proyecto
-- npm
-- Un motor de base de datos local compatible con tu archivo `.env`
+- **Git**
+- **PHP 8.3+**
+- **Composer**
+- **Node.js 20.19+** (o versión LTS compatible)
+- **npm** o **pnpm**
+- Servidor de base de datos **MySQL** (o PostgreSQL usando `DiCremeInventoryScript.sql`)
 
-El backend incluye un script SQL llamado `DiCremeInventoryScript.sql` con sintaxis de PostgreSQL, así que si vas a usar ese archivo para inicializar la base, instala PostgreSQL.
+---
 
-## 1. Clonar y abrir el proyecto
+## Guía de Instalación y Despliegue Local
 
-Abre la carpeta raíz del repositorio:
-
-```bash
-cd /Software-DiCreme
-```
-
-## 2. Levantar el backend
-
-### 2.1 Entrar al proyecto Laravel
+### 1. Clonar el repositorio
 
 ```bash
-cd backend-dicreme
+git clone https://github.com/RojoMax12/Software-DiCreme.git
+cd Software-DiCreme
 ```
 
-### 2.2 Instalar dependencias PHP
+---
 
-```bash
-composer install
-```
+### 2. Configuración y Arranque del Backend (`backend-dicreme`)
 
-### 2.3 Instalar dependencias de frontend del backend
+1. Entrar al directorio del backend:
+   ```bash
+   cd backend-dicreme
+   ```
 
-El backend también usa Vite para sus assets, así que instala sus dependencias de Node:
+2. Instalar dependencias de PHP:
+   ```bash
+   composer install
+   ```
 
-```bash
-npm install
-```
+3. Instalar dependencias de Node (para desarrollo de assets):
+   ```bash
+   npm install
+   ```
 
-### 2.4 Revisar el archivo de entorno
+4. Configurar el archivo de entorno `.env`:
+   - Copiar el archivo de ejemplo:
+     ```bash
+     cp .env.example .env
+     ```
+   - Configurar la conexión a tu base de datos MySQL (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
+   - Configurar `APP_URL=http://127.0.0.1:8000`.
 
-Verifica el archivo `.env` del backend y ajusta, si hace falta, estos datos:
+5. Generar la clave de la aplicación y la clave JWT:
+   ```bash
+   php artisan key:generate
+   php artisan jwt:secret
+   ```
 
-- Conexión de base de datos
-- `APP_URL`
-- `JWT_SECRET`
+6. Crear el enlace simbólico del almacenamiento público (para avatares y fotos de productos):
+   ```bash
+   php artisan storage:link
+   ```
 
-Si tu instalación no tiene el archivo `.env`, crea uno con la configuración que use tu entorno local.
+7. Ejecutar migraciones y datos iniciales:
+   ```bash
+   php artisan migrate --seed
+   ```
+   *(Opcional: Si deseas inicializar la base de datos desde el script SQL incluido, importa `DiCremeInventoryScript.sql` en tu gestor de base de datos).*
 
-### 2.5 Generar la clave de la aplicación
+8. Iniciar el servidor local de desarrollo:
+   ```bash
+   php artisan serve
+   ```
+   El backend estará disponible en `http://127.0.0.1:8000`.
 
-```bash
-php artisan key:generate
-```
+---
 
-### 2.6 Crear la base de datos y migrar
+### 3. Configuración y Arranque del Frontend (`frontend-dicreme`)
 
-Primero crea la base de datos local indicada en `.env` y luego ejecuta:
+1. Abre otra terminal y entra al directorio del frontend:
+   ```bash
+   cd frontend-dicreme
+   ```
 
-```bash
-php artisan migrate
-```
+2. Instalar dependencias de paquetes:
+   ```bash
+   npm install
+   ```
 
-Si necesitas cargar la estructura inicial desde el script incluido, importa `DiCremeInventoryScript.sql` en PostgreSQL antes o en lugar de las migraciones, según cómo quieras inicializar el entorno.
+3. Iniciar el servidor de desarrollo Vite:
+   ```bash
+   npm run dev
+   ```
+   El frontend estará disponible en `http://localhost:5173`.
 
-### 2.7 Levantar el backend
+---
 
-Para correr solo la API / servidor Laravel:
+## Comandos Útiles
 
-```bash
-php artisan serve
-```
+- **Limpiar cachés del backend**:
+  ```bash
+  php artisan config:clear
+  php artisan cache:clear
+  php artisan route:clear
+  ```
 
-Normalmente quedará disponible en `http://127.0.0.1:8000`.
+- **Reconstruir la base de datos con datos de prueba**:
+  ```bash
+  php artisan migrate:fresh --seed
+  ```
 
-Si además quieres levantar los assets del backend en modo desarrollo, abre otra terminal y ejecuta:
+- **Validación de tipos TypeScript en el frontend**:
+  ```bash
+  npm run type-check
+  ```
 
-```bash
-npm run dev
-```
-
-## 3. Levantar el frontend
-
-### 3.1 Entrar al proyecto Vue
-
-Abre otra terminal y entra al frontend:
-
-```bash
-cd /Users/fescobedo2025/Documents/GitHub/Software-DiCreme/frontend-dicreme
-```
-
-### 3.2 Instalar dependencias
-
-```bash
-npm install
-```
-
-### 3.3 Ejecutar el frontend en desarrollo
-
-```bash
-npm run dev
-```
-
-Vite normalmente lo levanta en `http://localhost:5173`.
-
-## 4. Orden recomendado de arranque
-
-1. Instalar prerrequisitos.
-2. Configurar la base de datos local del backend.
-3. Ejecutar `composer install` y `npm install` en `backend-dicreme`.
-4. Ejecutar `php artisan key:generate` y `php artisan migrate`.
-5. Levantar el backend con `php artisan serve`.
-6. Levantar el frontend con `npm run dev` en `frontend-dicreme`.
-
-## 5. Comandos útiles
-
-- Limpiar cachés del backend:
-
-```bash
-php artisan config:clear
-php artisan cache:clear
-```
-
-- Revertir la última migración:
-
-```bash
-php artisan migrate:rollback
-```
-
-- Reiniciar todo con datos de prueba:
-
-```bash
-php artisan migrate:fresh --seed
-```
+- **Compilar el frontend para producción**:
+  ```bash
+  npm run build
+  ```
