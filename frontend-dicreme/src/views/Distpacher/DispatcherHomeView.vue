@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAutoRefresh } from '@/composables/useAutoRefresh';
 import {
   Search,
   MapPin,
@@ -86,8 +87,8 @@ onMounted(() => {
   loadData();
 });
 
-const loadData = async () => {
-  isLoading.value = true;
+const loadData = async (silent = false) => {
+  if (!silent) isLoading.value = true;
   errorMsg.value = '';
   try {
     const resAvailable: any = await dispatchService.getAvailableDispatches();
@@ -99,11 +100,16 @@ const loadData = async () => {
     }
   } catch (err: any) {
     console.error('Error al cargar despachos:', err);
-    errorMsg.value = 'No se pudieron cargar los datos de despacho.';
+    if (!silent) errorMsg.value = 'No se pudieron cargar los datos de despacho.';
   } finally {
-    isLoading.value = false;
+    if (!silent) isLoading.value = false;
   }
 };
+
+useAutoRefresh((silent) => loadData(silent), {
+  intervalMs: 15000,
+  enabled: () => !showCompleteModal.value && !showDetailModal.value && !isSubmittingDelivery.value
+});
 
 // Comunas dropdown options
 const comunasAvailableOptions = computed(() => {
@@ -141,10 +147,10 @@ const getInitials = (name: string) => {
   return name.substring(0, 2).toUpperCase();
 };
 
+import { getStorageUrl } from '@/utils/imageUrl';
+
 const getAvatarUrl = (url: string | undefined | null) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
+  return getStorageUrl(url);
 };
 
 const triggerProfileAvatarInput = () => {
@@ -258,9 +264,9 @@ const filteredAvailable = computed(() => {
     const q = searchAvailable.value.toLowerCase();
     list = list.filter(
       item =>
-        item.id_pedido.toString().includes(q) ||
-        item.nombre_distribuidor.toLowerCase().includes(q) ||
-        item.comuna.toLowerCase().includes(q)
+        (item.id_pedido || '').toString().includes(q) ||
+        (item.nombre_distribuidor || '').toLowerCase().includes(q) ||
+        (item.comuna || '').toLowerCase().includes(q)
     );
   }
 
@@ -293,9 +299,9 @@ const filteredMy = computed(() => {
     const q = searchMy.value.toLowerCase();
     list = list.filter(
       item =>
-        item.id_pedido.toString().includes(q) ||
-        item.nombre_distribuidor.toLowerCase().includes(q) ||
-        item.comuna.toLowerCase().includes(q)
+        (item.id_pedido || '').toString().includes(q) ||
+        (item.nombre_distribuidor || '').toLowerCase().includes(q) ||
+        (item.comuna || '').toLowerCase().includes(q)
     );
   }
 
@@ -464,9 +470,7 @@ const triggerFileInput = () => {
 };
 
 const getProofUrl = (url: string | undefined) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `http://localhost:8000${url}`;
+  return getStorageUrl(url);
 };
 
 const handleFinalizeDelivery = async () => {

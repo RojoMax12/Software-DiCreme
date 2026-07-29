@@ -299,7 +299,59 @@ import {
   Loader2
 } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
+import { useAutoRefresh } from '@/composables/useAutoRefresh';
 import * as XLSX from 'xlsx';
+
+const currentUser = ref({ id: 0, name: '' });
+const orders = ref<any[]>([]);
+const isLoading = ref(true);
+
+const fetchQuotes = async (silent = false) => {
+  if (!silent) isLoading.value = true;
+  try {
+    const [quotesRes, distsRes, usersRes, statsRes] = await Promise.all([
+      quoteService.getQuotes(),
+      distributorService.getDistributors(),
+      userService.getUsers(),
+      quotationStatusService.getStatuses()
+    ]);
+
+    // MAPA 1 (Intacto): Sigue guardando solo el nombre para no romper nada en el resto del software
+    const distMap = new Map(distsRes.data.map((d: any) => [d.id, d.nombre_empresa]));
+    
+    // 🚀 MAPA 2 (NUEVO): Guarda exclusivamente los teléfonos para esta implementación
+    // Reemplaza 'telefono' por el nombre real de tu columna en PostgreSQL (ej: celular, telefono_contacto)
+    const distPhoneMap = new Map(distsRes.data.map((d: any) => [d.id, d.telefono || '']));
+
+    const userMap = new Map(usersRes.data.map((u: any) => [u.id, u.nombre_usuario]));
+    const statMap = new Map(statsRes.data.map((s: any) => [s.id, s.nombre_estado]));
+
+    orders.value = quotesRes.data.map((q: any) => ({
+      id: q.id,
+      distributor: distMap.get(q.id_distribuidor) || 'Desconocido', // 👈 Sigue funcionando igual que antes
+      
+      // 🚀 Extraemos el teléfono usando el mapa nuevo sin interferir con el anterior
+      distributorPhone: distPhoneMap.get(q.id_distribuidor) || '', 
+      
+      managedBy: q.id_usuario_dicreme ? { id: q.id_usuario_dicreme, name: userMap.get(q.id_usuario_dicreme) } : null,
+      status: statMap.get(q.id_estado_cotizacion) || 'Por Tomar',
+      total: Number(q.total_cotizacion).toLocaleString('es-CL'),
+      date: formatDate(q.fecha_creacion),
+      time: q.hora_creacion ? q.hora_creacion.substring(0, 5) : '',
+      rawStatus: q.id_estado_cotizacion
+    }));
+
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    if (!silent) isLoading.value = false;
+  }
+};
+
+useAutoRefresh((silent) => fetchQuotes(silent), {
+  intervalMs: 15000,
+  enabled: () => !isModalOpen.value && !loadingOrderId.value
+});
 
 
 // Pagination logic
@@ -445,51 +497,7 @@ const closeDropdown = (e: MouseEvent) => {
   }
 };
 
-const currentUser = ref({ id: 0, name: '' });
-const orders = ref<any[]>([]);
-const isLoading = ref(true);
 
-const fetchQuotes = async () => {
-  isLoading.value = true;
-  try {
-    const [quotesRes, distsRes, usersRes, statsRes] = await Promise.all([
-      quoteService.getQuotes(),
-      distributorService.getDistributors(),
-      userService.getUsers(),
-      quotationStatusService.getStatuses()
-    ]);
-
-    // MAPA 1 (Intacto): Sigue guardando solo el nombre para no romper nada en el resto del software
-    const distMap = new Map(distsRes.data.map((d: any) => [d.id, d.nombre_empresa]));
-    
-    // 🚀 MAPA 2 (NUEVO): Guarda exclusivamente los teléfonos para esta implementación
-    // Reemplaza 'telefono' por el nombre real de tu columna en PostgreSQL (ej: celular, telefono_contacto)
-    const distPhoneMap = new Map(distsRes.data.map((d: any) => [d.id, d.telefono || '']));
-
-    const userMap = new Map(usersRes.data.map((u: any) => [u.id, u.nombre_usuario]));
-    const statMap = new Map(statsRes.data.map((s: any) => [s.id, s.nombre_estado]));
-
-    orders.value = quotesRes.data.map((q: any) => ({
-      id: q.id,
-      distributor: distMap.get(q.id_distribuidor) || 'Desconocido', // 👈 Sigue funcionando igual que antes
-      
-      // 🚀 Extraemos el teléfono usando el mapa nuevo sin interferir con el anterior
-      distributorPhone: distPhoneMap.get(q.id_distribuidor) || '', 
-      
-      managedBy: q.id_usuario_dicreme ? { id: q.id_usuario_dicreme, name: userMap.get(q.id_usuario_dicreme) } : null,
-      status: statMap.get(q.id_estado_cotizacion) || 'Por Tomar',
-      total: Number(q.total_cotizacion).toLocaleString('es-CL'),
-      date: formatDate(q.fecha_creacion),
-      time: q.hora_creacion ? q.hora_creacion.substring(0, 5) : '',
-      rawStatus: q.id_estado_cotizacion
-    }));
-
-  } catch (error) {
-    console.error('Error fetching data:', error);
-  } finally {
-    isLoading.value = false;
-  }
-};
 
 const formatDate = (dateString: string) => {
   if (!dateString) return '';

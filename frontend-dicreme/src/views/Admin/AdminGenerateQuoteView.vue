@@ -340,7 +340,7 @@ const handleClickOutside = (event: MouseEvent) => {
 const getDynamicImage = (flavorName: string) => {
   if (!flavorName) return fotoCaja;
   
-  const formattedName = flavorName
+  const formattedName = String(flavorName)
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes
     .replace(/\s+/g, '-'); // Cambia espacios por guiones
@@ -661,8 +661,8 @@ const filteredDistributors = computed(() => {
   if (!searchQuery.value) return [];
   const query = searchQuery.value.toLowerCase();
   return distributors.value.filter(d => 
-    d.nombre_empresa.toLowerCase().includes(query) || 
-    d.rut_empresa.toLowerCase().includes(query)
+    (d.nombre_empresa || '').toLowerCase().includes(query) || 
+    (d.rut_empresa || '').toLowerCase().includes(query)
   ).slice(0, 5);
 });
 
@@ -673,7 +673,7 @@ const filteredIceCreams = computed(() => {
   }
   if (productSearch.value.trim() !== '') {
     const s = productSearch.value.toLowerCase();
-    results = results.filter(item => item.name.toLowerCase().includes(s));
+    results = results.filter(item => (item.name || '').toLowerCase().includes(s));
   }
   return results;
 });

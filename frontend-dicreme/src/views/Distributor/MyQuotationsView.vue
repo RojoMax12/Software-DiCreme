@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { FileText, Calendar, Clock, ChevronRight, IceCream } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import quoteService from '@/services/quoteService'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 
 const router = useRouter()
 
@@ -12,8 +13,7 @@ const quotations = ref<any[]>([])
 const isLoading = ref(true)
 const userId = ref<number | null>(null)
 
-// --- CARGA DE DATOS AL MONTAR EL COMPONENTE ---
-onMounted(async () => {
+const loadQuotations = async (silent = false) => {
   const userParsed = localStorage.getItem('user')
   
   if (userParsed) {
@@ -21,30 +21,29 @@ onMounted(async () => {
       const userObj = JSON.parse(userParsed)
       userId.value = userObj.id || null
       
-      // Validación estricta para asegurar el tipo de dato en TypeScript
       if (!userId.value) {
         throw new Error('User ID not found in session')
       }
 
-      // Llamada al servicio centralizado con el ID del distribuidor
       const response = await quoteService.getQuotesByDistributor(userId.value)
-      console.log(response.data)
       quotations.value = response.data || []
       
     } catch (error) {
       console.error('Error fetching historical quotations:', error)
-      
-      quotations.value = [
-        { id: 1, fecha_creacion: '2026-05-26', hora_creacion: '16:26:00', id_estado_cotizacion: 1, total_cotizacion: 139100 },
-        { id: 2, fecha_creacion: '2026-05-12', hora_creacion: '11:15:00', id_estado_cotizacion: 2, total_cotizacion: 84500 },
-        { id: 3, fecha_creacion: '2026-04-20', hora_creacion: '09:30:00', id_estado_cotizacion: 3, total_cotizacion: 210000 }
-      ]
     } finally {
-      isLoading.value = false
+      if (!silent) isLoading.value = false
     }
-  } else {
+  } else if (!silent) {
     router.push('/')
   }
+}
+
+onMounted(() => {
+  loadQuotations(false)
+})
+
+useAutoRefresh((silent) => loadQuotations(silent), {
+  intervalMs: 15000
 })
 
 // Mapea los IDs de estado a etiquetas de texto en español según tu base de datos

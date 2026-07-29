@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { IceCream } from 'lucide-vue-next' 
+import { IceCream, ShoppingBag, Calendar, ChevronRight } from 'lucide-vue-next' 
 import orderService from '@/services/orderService'
-import {ShoppingBag} from 'lucide-vue-next'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 
 const router = useRouter()
 
@@ -17,9 +17,9 @@ const fallbackUserCompany = ref('Distribuidor Di Creme')
 const fallbackUserAddress = ref('Dirección Registrada')
 
 // Rescata los pedidos procesados del distribuidor activo
-const fetchDistributorOrders = async () => {
+const fetchDistributorOrders = async (silent = false) => {
   try {
-    isLoading.value = true
+    if (!silent) isLoading.value = true
     const userParsed = localStorage.getItem('user')
     
     if (!userParsed) {
@@ -38,15 +38,21 @@ const fetchDistributorOrders = async () => {
     const response = await orderService.getOrdersByDistributor(distributorId)
     ordersList.value = response.data || []
     
-    console.log('Orders logs fetched successfully:', ordersList.value)
-
   } catch (error) {
     console.error('Error fetching orders logs:', error)
     
   } finally {
-    isLoading.value = false
+    if (!silent) isLoading.value = false
   }
 }
+
+onMounted(() => {
+  fetchDistributorOrders(false)
+})
+
+useAutoRefresh((silent) => fetchDistributorOrders(silent), {
+  intervalMs: 15000
+})
 
 // Mapea el id_estado_pedido a un string legible en español
 const getOrderStatusLabel = (statusId: number): string => {
@@ -59,10 +65,6 @@ const getOrderStatusLabel = (statusId: number): string => {
   if (statusId === 7) return 'Cancelado'
   return 'Pendiente'
 }
-
-onMounted(() => {
-  fetchDistributorOrders()
-})
 
 // Formatea las fechas al estándar chileno (DD/MM/AAAA)
 const formatDate = (dateString: string) => {
