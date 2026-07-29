@@ -18,20 +18,23 @@ class PurifyInput
         // 2. Obtenemos todos los datos de la petición
         $input = $request->all();
 
-        // 3. Definimos qué campos queremos proteger (contraseñas y confirmaciones)
+        // 3. Definimos qué campos queremos proteger (contraseñas, confirmaciones y archivos de imagen)
         $camposIgnorados = [
             'contrasena', 
             'password', 
             'password_confirmation', 
             'contrasena_confirmation',
             'foto_producto',
+            'foto_perfil',
+            'foto_comprobante',
+            'avatar',
             'foto'
         ];
 
         // 4. Limpieza manual y segura del mapa de datos
         foreach ($input as $key => $value) {
-            // Ignorar los campos de contraseñas de la limpieza
-            if (in_array($key, $camposIgnorados)) {
+            // Ignorar contraseñas y objetos de archivos subidos
+            if (in_array($key, $camposIgnorados) || $value instanceof \Illuminate\Http\UploadedFile) {
                 continue;
             }
 

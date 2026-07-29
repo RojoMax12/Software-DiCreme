@@ -23,7 +23,7 @@ class DespachoController extends Controller
                 'status' => 'success',
                 'data'   => $this->despachoServices->getAllDespachos()
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al listar despachos', $e);
         }
     }
@@ -36,7 +36,7 @@ class DespachoController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Despacho no encontrado'], 404);
             }
             return response()->json(['status' => 'success', 'data' => $despacho], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener despacho', $e);
         }
     }
@@ -59,7 +59,7 @@ class DespachoController extends Controller
                 'data'   => $this->despachoServices->createDespacho($data),
                 'message' => 'Despacho creado correctamente'
             ], 201);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al crear despacho', $e);
         }
     }
@@ -81,7 +81,7 @@ class DespachoController extends Controller
                 'status' => 'success',
                 'data'   => $this->despachoServices->updateDespacho($id, $data)
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al actualizar despacho', $e);
         }
     }
@@ -91,7 +91,7 @@ class DespachoController extends Controller
         try {
             $this->despachoServices->deleteDespacho($id);
             return response()->json(['status' => 'success', 'message' => 'Despacho eliminado'], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al eliminar despacho', $e);
         }
     }
@@ -103,7 +103,7 @@ class DespachoController extends Controller
                 'status' => 'success',
                 'data'   => $this->despachoServices->despachosbyidpedido($id)
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al buscar despacho por pedido', $e);
         }
     }
@@ -121,7 +121,7 @@ class DespachoController extends Controller
             }
 
             return response()->json(['status' => 'success', 'data' => $despachos], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al consultar despachos del despachador', $e);
         }
     }
@@ -133,7 +133,7 @@ class DespachoController extends Controller
                 'status' => 'success',
                 'data'   => $this->despachoServices->getDespachosDisponibles()
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al listar despachos disponibles', $e);
         }
     }
@@ -151,7 +151,7 @@ class DespachoController extends Controller
             }
 
             return response()->json(['status' => 'success', 'message' => 'Asignado correctamente', 'data' => $despacho], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error en la asignación', $e);
         }
     }
@@ -164,19 +164,39 @@ class DespachoController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'El despacho no existe'], 404);
             }
             return response()->json(['status' => 'success', 'message' => 'Ruta iniciada correctamente', 'data' => $despacho], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al iniciar ruta', $e);
         }
     }
 
     public function finalizarEntrega(Request $request, $id_despacho): JsonResponse
     {
-        try {
-            $request->validate([
-                'foto_comprobante' => 'nullable|file|image|max:10240',
-                'notas_entrega'    => 'nullable|string'
-            ]);
+        $rules = [
+            'notas_entrega' => 'nullable|string'
+        ];
 
+        if (class_exists('finfo')) {
+            $rules['foto_comprobante'] = 'nullable|file|image|max:10240';
+        } else {
+            $rules['foto_comprobante'] = 'nullable|file|max:10240';
+        }
+
+        $request->validate($rules);
+
+        if (!class_exists('finfo') && $request->hasFile('foto_comprobante')) {
+            $file = $request->file('foto_comprobante');
+            if ($file && $file->isValid()) {
+                $ext = strtolower($file->getClientOriginalExtension());
+                $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp'];
+                if (!in_array($ext, $allowedExts)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'foto_comprobante' => ['El archivo seleccionado debe ser una imagen válida (jpg, jpeg, png, webp).']
+                    ]);
+                }
+            }
+        }
+
+        try {
             $fotoFile = $request->file('foto_comprobante');
             $notas = $request->input('notas_entrega');
 
@@ -185,7 +205,7 @@ class DespachoController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'El despacho no existe'], 404);
             }
             return response()->json(['status' => 'success', 'message' => 'Entrega finalizada con éxito', 'data' => $despacho], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al finalizar entrega', $e);
         }
     }
@@ -199,17 +219,18 @@ class DespachoController extends Controller
             }
 
             return response()->json(['status' => 'success', 'message' => 'Despacho liberado correctamente', 'data' => $res['data']], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al liberar el despacho', $e);
         }
     }
 
-    private function errorResponse(string $message, Exception $e): JsonResponse
+    private function errorResponse(string $message, \Throwable $e): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::error($message . ': ' . $e->getMessage(), ['exception' => $e]);
         return response()->json([
             'status'  => 'error',
-            'message' => $message,
-            'debug'   => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            'message' => $message . ($e->getMessage() ? ': ' . $e->getMessage() : ''),
+            'error'   => $e->getMessage()
         ], 500);
     }
 
@@ -229,7 +250,7 @@ class DespachoController extends Controller
                 'status' => 'success',
                 'message' => 'Correo enviado correctamente'
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al enviar correo', $e);
         }
     }

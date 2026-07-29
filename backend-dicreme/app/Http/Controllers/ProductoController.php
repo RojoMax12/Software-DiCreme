@@ -46,7 +46,13 @@ class ProductoController extends Controller
             }
 
             if ($uploadedFile) {
-                $path = $uploadedFile->store('productos', 'public');
+                if (class_exists('finfo')) {
+                    $path = $uploadedFile->store('productos', 'public');
+                } else {
+                    $ext = $uploadedFile->getClientOriginalExtension() ?: 'webp';
+                    $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
+                    $path = $uploadedFile->storeAs('productos', $fileName, 'public');
+                }
                 $data['foto_producto'] = '/storage/' . $path;
             } else {
                 $fotoInput = $request->input('foto_producto');
@@ -145,7 +151,13 @@ class ProductoController extends Controller
             }
 
             if ($uploadedFile) {
-                $path = $uploadedFile->store('productos', 'public');
+                if (class_exists('finfo')) {
+                    $path = $uploadedFile->store('productos', 'public');
+                } else {
+                    $ext = $uploadedFile->getClientOriginalExtension() ?: 'webp';
+                    $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
+                    $path = $uploadedFile->storeAs('productos', $fileName, 'public');
+                }
                 $data['foto_producto'] = '/storage/' . $path;
             } else {
                 $fotoInput = $request->input('foto_producto');
