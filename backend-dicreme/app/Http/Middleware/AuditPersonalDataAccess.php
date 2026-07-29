@@ -31,11 +31,17 @@ class AuditPersonalDataAccess
             $accion = 'lectura_masiva';
         }
 
-        // Sanitizar el input: si es una modificación, guardar qué campos se intentaron alterar (EXCEPTUANDO datos críticos)
+        // Sanitizar el input: si es una modificación, guardar qué campos se intentaron alterar (EXCEPTUANDO datos críticos y archivos binarios)
         $payload = [];
         if ($accion === 'modificacion') {
-            // Excluimos explícitamente passwords, tokens o tarjetas de crédito si aplicara
-            $payload = $request->except(['password', 'password_confirmation', 'token', 'current_password']);
+            $input = $request->except(['password', 'password_confirmation', 'token', 'current_password', 'contrasena']);
+            foreach ($input as $key => $value) {
+                if ($value instanceof \Illuminate\Http\UploadedFile) {
+                    $payload[$key] = '[Archivo: ' . $value->getClientOriginalName() . ']';
+                } else {
+                    $payload[$key] = $value;
+                }
+            }
         }
 
         Log::channel(config('logging.default'))->info('acceso_datos_personales', [

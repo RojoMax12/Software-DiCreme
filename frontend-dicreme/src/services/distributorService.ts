@@ -13,5 +13,8 @@ export default {
     },
     toggledistristatus(id: number) {
         return api.put(`/usuarios_distribuidores/${id}/toggle-estado`);
+    },
+    getUsuarioDistribuidorByRut(rut: string) {
+        return api.get(`/usuarios_distribuidores/rut/${encodeURIComponent(rut)}`);
     }
 };

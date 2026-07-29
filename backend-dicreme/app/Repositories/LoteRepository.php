@@ -62,9 +62,9 @@ class LoteRepository
         return Lote::where('id_bodega', $idBodega)->get();
     }
 
-    public function getLotesPorVencer($dias = 30)
+    public function getLotesPorVencer($meses = 1)
     {
-        $fechaLimite = now()->addDays((int)$dias)->toDateString();
+        $fechaLimite = now()->addMonths((int)$meses)->toDateString();
         
         return Lote::with(['producto.formato', 'bodega'])
             ->where('cantidad_producto', '>', 0)

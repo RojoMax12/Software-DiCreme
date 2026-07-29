@@ -18,6 +18,7 @@ use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\Cotizacion_productoController;
 use App\Http\Controllers\Estado_cotizacionController;
 use App\Http\Controllers\HistorialMovimientoController;
+use App\Http\Controllers\CarruselController;
 use Illuminate\Support\Facades\Route;
 
 // ==========================================
@@ -47,6 +48,7 @@ Route::middleware('throttle:api_lectura')->group(function() {
 
 	Route::get('/productos', [ProductoController::class, 'index']);
     Route::get('/productos/resumen_totales', [ProductoController::class, 'getResumenTodosLosProductos']);
+    Route::get('/productos/umbral-poco-stock', [ProductoController::class, 'getUmbralPocoStock']);
     Route::get('/productos/poco-stock', [ProductoController::class, 'getProductosPocoStock']);
     Route::get('/productos/{id}/cantidadTotal', [ProductoController::class, 'getCantidadTotal']);
 	Route::get('/productos/{id}', [ProductoController::class, 'show']);
@@ -55,6 +57,9 @@ Route::middleware('throttle:api_lectura')->group(function() {
 	Route::get('/categorias/{id}', [CategoriaController::class, 'show']);
 	Route::get('/formatos', [FormatoController::class, 'index']);
 	Route::get('/formatos/{id}', [FormatoController::class, 'show']);
+
+	Route::get('/carruseles', [CarruselController::class, 'index']);
+	Route::get('/carruseles/{id}', [CarruselController::class, 'show']);
 });
 
 
@@ -93,6 +98,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::post('/formatos', [FormatoController::class, 'store'])->middleware('role:1,2');
         Route::put('/formatos/{id}', [FormatoController::class, 'update'])->middleware('role:1,2');
         Route::delete('/formatos/{id}', [FormatoController::class, 'destroy'])->middleware('role:1,2');
+        Route::post('/productos/umbral-poco-stock', [ProductoController::class, 'setUmbralPocoStock'])->middleware('role:1,2');
         Route::post('/productos', [ProductoController::class, 'store'])->middleware('role:1,2');
         Route::put('/productos/{id}', [ProductoController::class, 'update'])->middleware('role:1,2');
         Route::post('/productos/{id}', [ProductoController::class, 'update'])->middleware('role:1,2');
@@ -106,6 +112,12 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::post('/roles', [RolController::class, 'store'])->middleware('role:1');
         Route::put('/roles/{id}', [RolController::class, 'update'])->middleware('role:1');
         Route::delete('/roles/{id}', [RolController::class, 'destroy'])->middleware('role:1');
+        
+        Route::post('/carruseles', [CarruselController::class, 'store'])->middleware('role:1,2');
+        Route::put('/carruseles/{id}', [CarruselController::class, 'update'])->middleware('role:1,2');
+        Route::post('/carruseles/{id}', [CarruselController::class, 'update'])->middleware('role:1,2');
+        Route::put('/carruseles/{id}/toggle-estado', [CarruselController::class, 'toggleEstado'])->middleware('role:1,2');
+        Route::delete('/carruseles/{id}', [CarruselController::class, 'destroy'])->middleware('role:1,2');
         Route::put('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update'])->middleware('role:1,2,3', 'audit.pii');
         Route::post('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update'])->middleware('role:1,2,3', 'audit.pii');
         Route::put('/usuarios_distribuidores/{id}/toggle-estado', [Usuario_distribuidoresController::class, 'toggleestadousuario'])->middleware('role:1,2', 'audit.pii');
@@ -173,8 +185,10 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::get('/estado_cotizacion/{id}', [Estado_cotizacionController::class, 'show'])->middleware('role:1,2');
         Route::get('/roles', [RolController::class, 'index']);           
         Route::get('/roles/{id}', [RolController::class, 'show']);      
-        Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index'])->middleware('role:1,2');;      
-        Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show'])->middleware('role:1,2,3');             
+        Route::get('/usuarios_distribuidores/rut/{rut}', [Usuario_distribuidoresController::class, 'getUsuarioDistribuidorByRut'])->middleware('role:1,2,3');
+        Route::get('/usuarios_distribuidores', [Usuario_distribuidoresController::class, 'index'])->middleware('role:1,2');      
+        Route::get('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'show'])->middleware('role:1,2,3')->where('id', '[0-9]+');             
+        Route::get('/usuarios_distribuidores/{rut}', [Usuario_distribuidoresController::class, 'getUsuarioDistribuidorByRut'])->middleware('role:1,2,3');
         Route::get('/usuarios_dicreme', [Usuario_dicremeController::class, 'index'])->middleware('role:1');          
         Route::get('/usuarios_dicreme/despachadores', [Usuario_dicremeController::class, 'getusuariodicremedespachadores'])->middleware('role:1');
         Route::get('/usuarios_dicreme/{id}', [Usuario_dicremeController::class, 'show'])->middleware('role:1');        

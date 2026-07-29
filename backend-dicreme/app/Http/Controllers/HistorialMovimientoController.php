@@ -40,11 +40,12 @@ class HistorialMovimientoController extends Controller
                 'status' => 'success',
                 'data' => $movimientos
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error al obtener historial de movimientos: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al obtener historial de movimientos',
-                'debug' => config('app.debug') ? $e->getMessage() : null
+                'message' => 'Error al obtener historial de movimientos: ' . $e->getMessage(),
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -68,10 +69,12 @@ class HistorialMovimientoController extends Controller
                 'data' => $movimiento,
                 'message' => 'Movimiento registrado correctamente'
             ], 201);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error al registrar movimiento: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al registrar movimiento'
+                'message' => 'Error al registrar movimiento: ' . $e->getMessage(),
+                'error' => $e->getMessage()
             ], 500);
         }
     }

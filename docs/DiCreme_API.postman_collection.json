@@ -1,0 +1,165 @@
+{
+	"info": {
+		"_postman_id": "dicreme-api-collection-v1",
+		"name": "DiCreme REST API (Oficial)",
+		"description": "Colección oficial de endpoints de la API REST del backend DiCreme para desarrollo, integración y pruebas.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://127.0.0.1:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Autenticación (Auth)",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"admin@dicreme.cl\",\n  \"contrasena\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Obtener Usuario Actual (Me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "me"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Productos y Catálogo",
+			"item": [
+				{
+					"name": "Listar Productos Públicos",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/productos",
+							"host": ["{{baseUrl}}"],
+							"path": ["productos"]
+						}
+					}
+				},
+				{
+					"name": "Listar Productos Poco Stock",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/productos/poco-stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["productos", "poco-stock"]
+						}
+					}
+				},
+				{
+					"name": "Listar Categorías",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/categorias",
+							"host": ["{{baseUrl}}"],
+							"path": ["categorias"]
+						}
+					}
+				},
+				{
+					"name": "Listar Formatos",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/formatos",
+							"host": ["{{baseUrl}}"],
+							"path": ["formatos"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Cotizaciones",
+			"item": [
+				{
+					"name": "Crear Cotización",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id_distribuidor\": 1,\n  \"id_estado_cotizacion\": 1,\n  \"total_cotizacion\": 15000,\n  \"persona_recibe\": \"Juan Pérez\",\n  \"cotizacion_productos\": [\n    {\n      \"id_producto\": 1,\n      \"cantidad\": 3,\n      \"precio_unitario_venta\": 5000\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cotizaciones",
+							"host": ["{{baseUrl}}"],
+							"path": ["cotizaciones"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Inventario y Lotes",
+			"item": [
+				{
+					"name": "Listar Bodegas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bodegas",
+							"host": ["{{baseUrl}}"],
+							"path": ["bodegas"]
+						}
+					}
+				},
+				{
+					"name": "Listar Lotes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/lotes",
+							"host": ["{{baseUrl}}"],
+							"path": ["lotes"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

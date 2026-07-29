@@ -127,15 +127,25 @@ class DespachoServices
         $fotoUrl = $despacho->foto_comprobante;
 
         // Manejar subida de archivo si existe
-        if ($fotoFile) {
-            $path = $fotoFile->store('comprobantes', 'public');
+        if ($fotoFile && $fotoFile->isValid()) {
+            $destinationPath = storage_path('app/public/comprobantes');
+            if (!file_exists($destinationPath)) {
+                @mkdir($destinationPath, 0775, true);
+            }
+            if (class_exists('finfo')) {
+                $path = $fotoFile->store('comprobantes', 'public');
+            } else {
+                $extension = $fotoFile->getClientOriginalExtension() ?: 'jpg';
+                $filename = \Illuminate\Support\Str::random(40) . '.' . $extension;
+                $path = $fotoFile->storeAs('comprobantes', $filename, 'public');
+            }
             $fotoUrl = '/storage/' . $path;
         }
 
         // 1. Actualizar despacho a estado 4 ("Entrega exitosa")
         $this->despachoRepository->updateDespacho($id_despacho, [
             'id_estado_despacho' => 4,
-            'fecha_entrega' => \Carbon\Carbon::now('America/Santiago')->toDateTimeString(),
+            'fecha_entrega' => \Carbon\Carbon::now('America/Santiago')->toDateString(),
             'foto_comprobante' => $fotoUrl,
             'notas_entrega' => $notasEntrega
         ]);
@@ -146,6 +156,15 @@ class DespachoServices
                 'id_estado_pedido' => 5
             ]);
         }
+
+        \App\Models\HistorialMovimiento::registrar(
+            'usuario',
+            $id_despacho,
+            'finalizacion_entrega',
+            "Se finalizó la entrega del despacho #{$id_despacho}",
+            null,
+            ['notas_entrega' => $notasEntrega, 'foto_comprobante' => $fotoUrl]
+        );
 
         return $this->despachoRepository->getDespachoById($id_despacho);
     }

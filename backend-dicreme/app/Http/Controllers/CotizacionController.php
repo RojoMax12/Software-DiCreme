@@ -25,7 +25,7 @@ class CotizacionController extends Controller
                 'status' => 'success',
                 'data'   => $cotizaciones
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener las cotizaciones', $e);
         }
     }
@@ -57,7 +57,7 @@ class CotizacionController extends Controller
                 'message' => 'Cotización creada exitosamente',
                 'data'    => $cotizacion
             ], 201);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al crear la cotización', $e);
         }
     }
@@ -75,7 +75,7 @@ class CotizacionController extends Controller
                 'status' => 'success',
                 'data'   => $cotizacion
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener la cotización', $e);
         }
     }
@@ -97,7 +97,7 @@ class CotizacionController extends Controller
                 'message' => 'Cotización actualizada',
                 'data'    => $cotizacion
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al actualizar la cotización', $e);
         }
     }
@@ -115,7 +115,7 @@ class CotizacionController extends Controller
                 'message' => 'Total actualizado',
                 'data'    => $resultado
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al actualizar el total', $e);
         }
     }
@@ -128,7 +128,7 @@ class CotizacionController extends Controller
                 'status'  => 'success',
                 'message' => 'Cotización eliminada correctamente'
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al eliminar la cotización', $e);
         }
     }
@@ -150,7 +150,7 @@ class CotizacionController extends Controller
                 'message' => 'La cotización ahora es un pedido',
                 'data'    => $pedido
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage() // Captura stock insuficiente
@@ -175,7 +175,7 @@ class CotizacionController extends Controller
                 'message' => 'El administrador tomó la cotización correctamente.',
                 'data'    => $cotizacion
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al tomar cotización', $e);
         }
     }
@@ -197,7 +197,7 @@ class CotizacionController extends Controller
                 'message' => 'Cotización liberada correctamente.',
                 'data'    => $resultado
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al dejar cotización', $e);
         }
     }
@@ -219,7 +219,7 @@ class CotizacionController extends Controller
                 'message' => 'La cotización fue cancelada exitosamente',
                 'data'    => $resultado
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al cancelar la cotización', $e);
         }
     }
@@ -242,7 +242,7 @@ class CotizacionController extends Controller
                 'status'  => 'success',
                 'message' => '¡Cotización validada y pasada a estado Completado con éxito!'
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al validar la cotización', $e);
         }
     }
@@ -252,7 +252,7 @@ class CotizacionController extends Controller
         try {
             $cotizaciones = $this->cotizacionServices->getCotizacionesByUsuarioDistribuidor($id_usuario_distribuidor);
             return response()->json(['status' => 'success', 'data' => $cotizaciones], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener las cotizaciones del distribuidor', $e);
         }
     }
@@ -271,7 +271,7 @@ class CotizacionController extends Controller
                 'message' => 'Detalles obtenidos exitosamente',
                 'data'    => $resultado
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener el detalle', $e);
         }
     }
@@ -292,7 +292,7 @@ class CotizacionController extends Controller
                 'message' => 'Producto añadido correctamente.',
                 'data'    => $cotizacion
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al añadir producto', $e);
         }
     }
@@ -313,7 +313,7 @@ class CotizacionController extends Controller
                 'message' => 'Producto removido con éxito.',
                 'data'    => $cotizacion
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
         }
     }
@@ -332,7 +332,7 @@ class CotizacionController extends Controller
                 'message' => 'Producto eliminado por completo.',
                 'data'    => $cotizacion
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
         }
     }
@@ -342,7 +342,7 @@ class CotizacionController extends Controller
         try {
             $cotizaciones = $this->cotizacionServices->getCotizacionesByUsuario($id_usuario_dicreme);
             return response()->json(['status' => 'success', 'data' => $cotizaciones], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener cotizaciones del usuario', $e);
         }
     }
@@ -351,12 +351,13 @@ class CotizacionController extends Controller
      * Función privada (Helper) para centralizar y estandarizar los errores 500.
      * Si la App está en debug (Local) te muestra el error real, si está en Producción lo oculta.
      */
-    private function errorResponse(string $message, Exception $e): JsonResponse
+    private function errorResponse(string $message, \Throwable $e): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::error($message . ': ' . $e->getMessage(), ['exception' => $e]);
         return response()->json([
             'status'  => 'error',
-            'message' => $message,
-            'debug'   => config('app.debug') ? $e->getMessage() : 'Contacte al administrador'
+            'message' => $message . ($e->getMessage() ? ': ' . $e->getMessage() : ''),
+            'error'   => $e->getMessage()
         ], 500);
     }
 }
