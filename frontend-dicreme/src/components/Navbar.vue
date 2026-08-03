@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
 import DistributorSideMenu from '@/components/DistributorSideMenu.vue'
 import { useNotification } from '@/composables/useNotification';
+import { getStorageUrl } from '@/utils/imageUrl';
 
 const { notify } = useNotification();
 
@@ -17,10 +18,7 @@ const userAvatar = ref<string | null>(null);
 
 const formatAvatarUrl = (path: string | null | undefined) => {
   if (!path || path === 'null' || path === 'undefined') return null;
-  if (path.startsWith('http')) return path;
-  if (path.startsWith('/storage/')) return `http://localhost:8000${path}`;
-  if (path.startsWith('storage/')) return `http://localhost:8000/${path}`;
-  return `http://localhost:8000/storage/${path}`;
+  return getStorageUrl(path);
 };
 
 // Carga el nombre real del usuario logueado
@@ -28,7 +26,7 @@ const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
   const token = localStorage.getItem('token')
   
-  if (userParsed && token) {
+  if (userParsed && userParsed !== 'undefined' && userParsed !== 'null' && token) {
     try {
       const userObj = JSON.parse(userParsed)
       username.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Distribuidor'
@@ -39,6 +37,7 @@ const checkAuth = () => {
     
     } catch (e) {
       console.error('Error parsing user session inside Navbar:', e)
+      localStorage.removeItem('user')
       isLoggedIn.value = false
     }
   } else {

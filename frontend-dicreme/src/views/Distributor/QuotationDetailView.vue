@@ -72,7 +72,7 @@ const formatRutVisual = (rut: string) => {
 const getDynamicImage = (flavorName: string) => {
   if (!flavorName) return boxPlaceholderImage;
   
-  const formattedName = flavorName
+  const formattedName = String(flavorName)
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes
     .replace(/\s+/g, '-'); // Cambia espacios por guiones

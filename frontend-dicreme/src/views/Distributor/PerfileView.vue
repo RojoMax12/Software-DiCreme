@@ -73,6 +73,7 @@ import { useNotification } from '@/composables/useNotification';
 import { globalLoading } from '@/composables/useLoading';
 import distributorService from '@/services/distributorService';
 import api from '@/services/api';
+import { getStorageUrl } from '@/utils/imageUrl';
 
 const { notify } = useNotification();
 const loading = globalLoading; 
@@ -189,10 +190,7 @@ const handleFileChange = async (event: Event) => {
 
 const getImageUrl = (path: string | null | undefined) => {
   if (!path || path === 'undefined' || path === 'null') return '';
-  if (path.startsWith('http')) return path;
-  if (path.startsWith('/storage/')) return `http://localhost:8000${path}`;
-  if (path.startsWith('storage/')) return `http://localhost:8000/${path}`;
-  return `http://localhost:8000/storage/${path}`;
+  return getStorageUrl(path);
 };
 
 const hasAvatar = computed(() => {

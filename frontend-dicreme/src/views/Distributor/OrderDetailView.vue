@@ -29,7 +29,7 @@ const pedidoId = computed(() => Number(route.params.id))
 
 const getDynamicImage = (flavorName: string) => {
   if (!flavorName) return boxPlaceholderImage;
-  const formattedName = flavorName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+  const formattedName = String(flavorName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
   const path = `/src/assets/FotoHelados/${formattedName}.webp`;
   return heladoImages[path] || boxPlaceholderImage;
 };
