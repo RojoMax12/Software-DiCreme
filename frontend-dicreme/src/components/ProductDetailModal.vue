@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { X, Plus, Minus } from 'lucide-vue-next';
+import { getStorageUrl } from '@/utils/imageUrl';
 const images = import.meta.glob('@/assets/*.{png,jpg,jpeg,webp}', { eager: true });
 
 const props = defineProps<{
@@ -55,9 +56,8 @@ const decreaseQuantity = () => {
 const getImageUrl = (imageName: string) => {
   if (!imageName) return '';
   if (imageName.startsWith('http')) return imageName;
-  if (imageName.startsWith('/storage/')) {
-    const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
-    return `${baseUrl}${imageName}`;
+  if (imageName.startsWith('/storage/') || imageName.startsWith('storage/')) {
+    return getStorageUrl(imageName);
   }
   return new URL(`../assets/${imageName}`, import.meta.url).href;
 };

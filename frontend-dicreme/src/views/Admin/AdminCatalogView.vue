@@ -568,6 +568,7 @@ import {
 import productService from '@/services/productService';
 import historyService, { type MovementHistoryItem } from '@/services/historyService';
 import { useNotification } from '@/composables/useNotification';
+import { getStorageUrl } from '@/utils/imageUrl';
 
 const { notify } = useNotification();
 
@@ -681,7 +682,7 @@ onMounted(() => {
 // Computed Filters
 const filteredProducts = computed(() => {
   return products.value.filter((p) => {
-    const matchSearch = !searchProduct.value.trim() || p.nombre_producto.toLowerCase().includes(searchProduct.value.toLowerCase());
+    const matchSearch = !searchProduct.value.trim() || (p.nombre_producto || '').toLowerCase().includes(searchProduct.value.toLowerCase());
     const matchCat = filterCategory.value === '' || p.id_categoria == filterCategory.value;
     const matchFmt = filterFormat.value === '' || p.id_formato == filterFormat.value;
     return matchSearch && matchCat && matchFmt;
@@ -721,13 +722,13 @@ const groupedFlavorProducts = computed(() => {
 
 const filteredCategories = computed(() => {
   return categories.value.filter((c) => {
-    return !searchCategory.value.trim() || c.nombre_categoria.toLowerCase().includes(searchCategory.value.toLowerCase());
+    return !searchCategory.value.trim() || (c.nombre_categoria || '').toLowerCase().includes(searchCategory.value.toLowerCase());
   });
 });
 
 const filteredFormats = computed(() => {
   return formats.value.filter((f) => {
-    return !searchFormat.value.trim() || f.nombre_formato.toLowerCase().includes(searchFormat.value.toLowerCase());
+    return !searchFormat.value.trim() || (f.nombre_formato || '').toLowerCase().includes(searchFormat.value.toLowerCase());
   });
 });
 
@@ -735,7 +736,7 @@ const filteredHistory = computed(() => {
   return historyLogs.value.filter((item) => {
     const matchEntity = !historyEntityFilter.value || item.tipo_entidad === historyEntityFilter.value;
     const q = searchHistory.value.toLowerCase();
-    const matchSearch = !q || item.descripcion.toLowerCase().includes(q) || (item.usuario_responsable && item.usuario_responsable.toLowerCase().includes(q));
+    const matchSearch = !q || (item.descripcion || '').toLowerCase().includes(q) || (item.usuario_responsable && (item.usuario_responsable || '').toLowerCase().includes(q));
     return matchEntity && matchSearch;
   });
 });
@@ -757,8 +758,8 @@ const formatPrice = (price: number) => {
 
 const getImageUrl = (url: string) => {
   if (!url) return '';
-  if (url.startsWith('http') || url.startsWith('data:')) return url;
-  return `http://localhost:8000${url}`;
+  if (url.startsWith('data:')) return url;
+  return getStorageUrl(url);
 };
 
 const formatDate = (dateStr: string) => {

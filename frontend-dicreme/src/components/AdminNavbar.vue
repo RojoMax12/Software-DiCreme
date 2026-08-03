@@ -12,7 +12,7 @@ const userRole = ref('Usuario') // 🌟 Nueva variable reactiva para el rol
 
 const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
-  if (userParsed) {
+  if (userParsed && userParsed !== 'undefined' && userParsed !== 'null') {
     try {
       const userObj = JSON.parse(userParsed)
       username.value = userObj.nombre_usuario || userObj.nombre || 'Usuario'

@@ -23,7 +23,7 @@ class Estado_cotizacionController extends Controller
             'status' => 'success', 
             'data' => $this->estadoCotizacionServices->getAllEstadosCotizacion()], 
             200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al listar estados de cotización', $e);
         }
     }
@@ -33,7 +33,7 @@ class Estado_cotizacionController extends Controller
         $data = $request->validate(['nombre_estado' => 'required|string|max:255']);
         try {
             return response()->json(['status' => 'success', 'data' => $this->estadoCotizacionServices->createEstadoCotizacion($data)], 201);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al crear estado', $e);
         }
     }
@@ -43,7 +43,7 @@ class Estado_cotizacionController extends Controller
         $data = $request->validate(['nombre_estado' => 'required|string|max:255']);
         try {
             return response()->json(['status' => 'success', 'data' => $this->estadoCotizacionServices->updateEstadoCotizacion($id, $data)], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al actualizar estado', $e);
         }
     }
@@ -53,7 +53,7 @@ class Estado_cotizacionController extends Controller
         try {
             $this->estadoCotizacionServices->deleteEstadoCotizacion($id);
             return response()->json(['status' => 'success', 'message' => 'Estado eliminado'], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al eliminar estado', $e);
         }
     }
@@ -62,12 +62,17 @@ class Estado_cotizacionController extends Controller
     {
         try {
             return response()->json(['status' => 'success', 'data' => $this->estadoCotizacionServices->getEstadoCotizacionById($id)], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener estado', $e);
         }
     }
 
-    private function errorResponse(string $message, Exception $e): JsonResponse {
-        return response()->json(['status' => 'error', 'message' => $message, 'debug' => config('app.debug') ? $e->getMessage() : null], 500);
+    private function errorResponse(string $message, \Throwable $e): JsonResponse {
+        \Illuminate\Support\Facades\Log::error($message . ': ' . $e->getMessage(), ['exception' => $e]);
+        return response()->json([
+            'status'  => 'error',
+            'message' => $message . ($e->getMessage() ? ': ' . $e->getMessage() : ''),
+            'error'   => $e->getMessage()
+        ], 500);
     }
 }

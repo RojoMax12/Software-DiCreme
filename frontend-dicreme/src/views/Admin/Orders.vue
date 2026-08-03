@@ -324,6 +324,7 @@ const isLoading = ref(true);
 const activeTab = ref('pedidos');
 const isExporting = ref(false);
 import { useNotification } from '@/composables/useNotification';
+import { useAutoRefresh } from '@/composables/useAutoRefresh';
 
 const { notify } = useNotification();
 
@@ -364,9 +365,8 @@ const changePage = (page: number) => {
 };
 
 
-const fetchOrders = async () => {
-  isLoading.value = true;
-  console.log('--- [DEBUG] INICIANDO CARGA COMPLETA ---');
+const fetchOrders = async (silent = false) => {
+  if (!silent) isLoading.value = true;
   
   try {
     let ordersRes, distsRes, statsRes;
@@ -418,14 +418,17 @@ const fetchOrders = async () => {
       };
     });
 
-    console.log('Mapeo de grilla general refrescado con éxito:', orders.value);
-
   } catch (error) {
     console.error('Error crítico al refrescar la grilla:', error);
   } finally {
-    isLoading.value = false;
+    if (!silent) isLoading.value = false;
   }
 };
+
+useAutoRefresh((silent) => fetchOrders(silent), {
+  intervalMs: 15000,
+  enabled: () => selectedOrderId.value === '' && !isModalOpen.value
+});
 
 const exportarExcel = () => {
   if (orders.value.length === 0) {

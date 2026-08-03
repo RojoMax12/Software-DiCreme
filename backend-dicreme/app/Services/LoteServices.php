@@ -74,9 +74,9 @@ class LoteServices
         return $this->loteRepository->getLotesByBodegaId($idBodega);
     }
 
-    public function getLotesPorVencer($dias = 30)
+    public function getLotesPorVencer($meses = 1)
     {
-        $lotes = $this->loteRepository->getLotesPorVencer($dias);
+        $lotes = $this->loteRepository->getLotesPorVencer($meses);
         $hoy = \Carbon\Carbon::now()->startOfDay();
 
         return $lotes->map(function ($lote) use ($hoy) {

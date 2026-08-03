@@ -31,7 +31,9 @@ class Usuario_dicremeRepository
     public function updateUsuarioDicreme($id, $data)
     {
         $usuarioDicreme = $this->getUsuarioDicremeById($id);
-        $usuarioDicreme->update($data);
+        if ($usuarioDicreme) {
+            $usuarioDicreme->update($data);
+        }
         return $usuarioDicreme;
     }
 
