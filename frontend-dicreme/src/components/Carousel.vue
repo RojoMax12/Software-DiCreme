@@ -85,7 +85,7 @@ onUnmounted(() => {
 .carousel-track-container {
   width: 100%;
   height: auto;
-  aspect-ratio: 1920 / 450; /* Define la proporción exacta de tu imagen */
+  aspect-ratio: 1920 / 350; /* Define la proporción exacta de tu imagen */
   position: relative;
   overflow: hidden;
 }
