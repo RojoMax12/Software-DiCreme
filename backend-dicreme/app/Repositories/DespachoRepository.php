@@ -48,8 +48,8 @@ class DespachoRepository
 
     public function getDespachosDisponibles()
     {
-        // 1. Obtener todos los pedidos con estado_pedido = 3 (Listo para Despacho)
-        $pedidos = \App\Models\Pedido::where('id_estado_pedido', 3)->get();
+        // 1. Obtener todos los pedidos con estado_pedido = 3 (Listo para Despacho) ordenados del más reciente al más antiguo
+        $pedidos = \App\Models\Pedido::where('id_estado_pedido', 3)->orderBy('created_at', 'desc')->orderBy('id', 'desc')->get();
 
         $disponibles = [];
         foreach ($pedidos as $pedido) {
@@ -104,8 +104,8 @@ class DespachoRepository
                     'telefono_contacto' => $distribuidor ? $distribuidor->telefono : '',
                     'cantidad_productos' => $cantidadProductos,
                     'monto_total' => $pedido->monto_final,
-                    'fecha_creacion' => $pedido->fecha_creacion ? $pedido->fecha_creacion->format('Y-m-d') : null,
-                    'hora_creacion' => $pedido->hora_creacion ? $pedido->hora_creacion->format('H:i') : null,
+                    'fecha_creacion' => $pedido->fecha_creacion ? (is_string($pedido->fecha_creacion) ? substr($pedido->fecha_creacion, 0, 10) : $pedido->fecha_creacion->format('Y-m-d')) : null,
+                    'hora_creacion' => $pedido->hora_creacion ? (is_string($pedido->hora_creacion) ? substr($pedido->hora_creacion, 0, 5) : $pedido->hora_creacion->format('H:i')) : null,
                     'created_at' => $pedido->created_at ? $pedido->created_at->toISOString() : null,
                     'productos' => $productosList
                 ];
@@ -117,7 +117,7 @@ class DespachoRepository
 
     public function getDespachoByIdUsuarioDiCreme($id)
     {
-        $despachos = Despacho::where('id_usuario_dicreme', $id)->get();
+        $despachos = Despacho::where('id_usuario_dicreme', $id)->orderBy('created_at', 'desc')->orderBy('id', 'desc')->get();
 
         $resultado = [];
         foreach ($despachos as $despacho) {
@@ -146,6 +146,18 @@ class DespachoRepository
                 }
             }
 
+            $fechaEntrega = null;
+            if ($despacho->id_estado_despacho == 4) {
+                $rawFe = (string)$despacho->fecha_entrega;
+                if (!empty($rawFe) && !str_contains($rawFe, '00:00:00')) {
+                    $fechaEntrega = is_string($despacho->fecha_entrega) ? $despacho->fecha_entrega : $despacho->fecha_entrega->format('Y-m-d H:i:s');
+                } else if ($despacho->updated_at) {
+                    $fechaEntrega = $despacho->updated_at->setTimezone('America/Santiago')->format('Y-m-d H:i:s');
+                } else if (!empty($rawFe)) {
+                    $fechaEntrega = $rawFe;
+                }
+            }
+
             $resultado[] = [
                 'id_despacho' => $despacho->id,
                 'id_pedido' => $pedido->id,
@@ -158,9 +170,9 @@ class DespachoRepository
                 'telefono_contacto' => $distribuidor ? $distribuidor->telefono : '',
                 'cantidad_productos' => $cantidadProductos,
                 'monto_total' => $pedido->monto_final,
-                'fecha_creacion' => $pedido->fecha_creacion ? $pedido->fecha_creacion->format('Y-m-d') : null,
-                'hora_creacion' => $pedido->hora_creacion ? $pedido->hora_creacion->format('H:i') : null,
-                'fecha_entrega' => $despacho->fecha_entrega ? $despacho->fecha_entrega->format('Y-m-d H:i') : null,
+                'fecha_creacion' => $pedido->fecha_creacion ? (is_string($pedido->fecha_creacion) ? substr($pedido->fecha_creacion, 0, 10) : $pedido->fecha_creacion->format('Y-m-d')) : null,
+                'hora_creacion' => $pedido->hora_creacion ? (is_string($pedido->hora_creacion) ? substr($pedido->hora_creacion, 0, 5) : $pedido->hora_creacion->format('H:i')) : null,
+                'fecha_entrega' => $fechaEntrega,
                 'foto_comprobante' => $despacho->foto_comprobante,
                 'notas_entrega' => $despacho->notas_entrega,
                 'created_at' => $pedido->created_at ? $pedido->created_at->toISOString() : null,

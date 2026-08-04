@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\CarruselService;
+use App\Helpers\ImageHelper;
+use App\Models\Aviso;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class CarruselController extends Controller
 {
@@ -78,11 +79,12 @@ class CarruselController extends Controller
             }
 
             if ($request->hasFile('imagen_url') || (isset($data['imagen_url']) && str_starts_with($data['imagen_url'], 'data:image'))) {
+                // Eliminar imagen vieja del servidor si se subió una nueva
+                ImageHelper::deleteOldImage($carruselAnterior->imagen_url);
                 $data['imagen_url'] = $this->procesarImagen($request, 'imagen_url');
             } else {
                 if (isset($data['imagen_url']) && str_starts_with($data['imagen_url'], '/storage/')) {
-                    // Mantener la misma URL si ya venía
-                    // $data['imagen_url'] = $data['imagen_url'];
+                    $data['imagen_url'] = $data['imagen_url'];
                 } else {
                     $data['imagen_url'] = $carruselAnterior->imagen_url;
                 }
@@ -111,12 +113,8 @@ class CarruselController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'No encontrado'], 404);
             }
 
-            // Opcional: Eliminar la imagen del disco
-            // si empieza con /storage/
-            // if (str_starts_with($carrusel->imagen_url, '/storage/')) {
-            //     $path = str_replace('/storage/', '', $carrusel->imagen_url);
-            //     Storage::disk('public')->delete($path);
-            // }
+            // Eliminar archivo de la imagen del servidor
+            ImageHelper::deleteOldImage($carrusel->imagen_url);
 
             $this->carruselService->deleteCarrusel($id);
 
@@ -130,6 +128,49 @@ class CarruselController extends Controller
                 'message' => 'Error al eliminar: ' . $e->getMessage()
             ], 400);
         }
+    }
+
+    public function getAvisos()
+    {
+        $avisos = Aviso::where('estado', true)
+            ->orderBy('orden', 'asc')
+            ->pluck('mensaje');
+
+        if ($avisos->isEmpty()) {
+            return response()->json([
+                "📢 Aviso: Horario de atención hasta las 17:00 hrs.",
+                "🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.",
+                "🍦 Descuentos especiales para distribuidores registrados."
+            ]);
+        }
+
+        return response()->json($avisos);
+    }
+
+    public function saveAvisos(Request $request)
+    {
+        $data = $request->validate([
+            'mensajes' => 'required|array'
+        ]);
+
+        // Truncar avisos existentes en la BD e insertar los nuevos
+        Aviso::truncate();
+
+        foreach ($data['mensajes'] as $index => $mensaje) {
+            if (!empty(trim($mensaje))) {
+                Aviso::create([
+                    'mensaje' => trim($mensaje),
+                    'orden' => $index + 1,
+                    'estado' => true
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Barra de avisos actualizada con éxito en la base de datos',
+            'data' => $data['mensajes']
+        ]);
     }
 
     public function toggleEstado($id)
@@ -155,38 +196,19 @@ class CarruselController extends Controller
     }
 
     /**
-     * Procesa la imagen, guardándola en disco público si es File o Base64.
+     * Procesa la imagen forzando guardado en formato webp y usando ImageHelper.
      */
     private function procesarImagen(Request $request, $fieldName = 'imagen_url')
     {
-        $uploadedFile = null;
+        $fileInput = null;
         if ($request->hasFile($fieldName)) {
-            $file = $request->file($fieldName);
-            if ($file && $file->isValid()) {
-                $uploadedFile = $file;
-            }
-        } else if ($request->$fieldName instanceof \Illuminate\Http\UploadedFile && $request->$fieldName->isValid()) {
-            $uploadedFile = $request->$fieldName;
-        }
-
-        if ($uploadedFile) {
-            $path = $uploadedFile->store('carruseles', 'public');
-            return '/storage/' . $path;
+            $fileInput = $request->file($fieldName);
+        } else if ($request->$fieldName instanceof \Illuminate\Http\UploadedFile) {
+            $fileInput = $request->$fieldName;
         } else {
-            $fotoInput = $request->input($fieldName);
-            if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, 'data:image')) {
-                $base64Image = $fotoInput;
-                @list($type, $file_data) = explode(';', $base64Image);
-                @list(, $file_data) = explode(',', $file_data);
-                if ($file_data) {
-                    $fileName = 'carruseles/carrusel_' . time() . '_' . uniqid() . '.webp';
-                    Storage::disk('public')->put($fileName, base64_decode($file_data));
-                    return '/storage/' . $fileName;
-                }
-            }
+            $fileInput = $request->input($fieldName);
         }
 
-        // Retorna el mismo input si era un enlace externo o falló la conversión
-        return $request->input($fieldName);
+        return ImageHelper::storeAsWebp($fileInput, 'carruseles');
     }
 }

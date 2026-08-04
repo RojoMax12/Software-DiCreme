@@ -88,9 +88,13 @@ class CotizacionRepository
         return false;
     }
 
-    public function getAllCotizaciones()
+    public function getAllCotizaciones($fecha = null)
     {
-        return Cotizacion::all();
+        $query = Cotizacion::query();
+        if ($fecha) {
+            $query->whereDate('fecha_creacion', $fecha);
+        }
+        return $query->orderBy('created_at', 'desc')->orderBy('id', 'desc')->get();
     }
 
     public function getCotizacionConProductos($id)
@@ -100,11 +104,11 @@ class CotizacionRepository
 
     public function getCotizacionesByUsuario($id)
     { 
-        return Cotizacion::where('id_usuario_dicreme', $id)->get();
+        return Cotizacion::where('id_usuario_dicreme', $id)->orderBy('created_at', 'desc')->orderBy('id', 'desc')->get();
     }
 
     public function getCotizacionesByUsuarioDistribuidor($id) 
     {
-        return Cotizacion::where('id_distribuidor', $id)->get();
+        return Cotizacion::where('id_distribuidor', $id)->orderBy('created_at', 'desc')->orderBy('id', 'desc')->get();
     }
 }

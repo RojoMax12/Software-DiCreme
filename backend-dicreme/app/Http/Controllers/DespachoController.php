@@ -172,23 +172,18 @@ class DespachoController extends Controller
     public function finalizarEntrega(Request $request, $id_despacho): JsonResponse
     {
         $rules = [
-            'notas_entrega' => 'nullable|string'
+            'notas_entrega' => 'nullable|string',
+            'foto_comprobante' => 'nullable|file|max:10240'
         ];
-
-        if (class_exists('finfo')) {
-            $rules['foto_comprobante'] = 'nullable|file|image|max:10240';
-        } else {
-            $rules['foto_comprobante'] = 'nullable|file|max:10240';
-        }
 
         $request->validate($rules);
 
-        if (!class_exists('finfo') && $request->hasFile('foto_comprobante')) {
+        if ($request->hasFile('foto_comprobante')) {
             $file = $request->file('foto_comprobante');
             if ($file && $file->isValid()) {
                 $ext = strtolower($file->getClientOriginalExtension());
-                $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp'];
-                if (!in_array($ext, $allowedExts)) {
+                $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp', 'jfif'];
+                if (!in_array($ext, $allowedExts) && !str_starts_with($file->getMimeType(), 'image/')) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'foto_comprobante' => ['El archivo seleccionado debe ser una imagen válida (jpg, jpeg, png, webp).']
                     ]);

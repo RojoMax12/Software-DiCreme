@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ProductoServices;
+use App\Helpers\ImageHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -35,42 +36,12 @@ class ProductoController extends Controller
         }
 
         try {
-            $uploadedFile = null;
-            if ($request->hasFile('foto_producto')) {
-                $file = $request->file('foto_producto');
-                if ($file && $file->isValid()) {
-                    $uploadedFile = $file;
-                }
-            } else if ($request->foto_producto instanceof \Illuminate\Http\UploadedFile && $request->foto_producto->isValid()) {
-                $uploadedFile = $request->foto_producto;
-            }
-
-            if ($uploadedFile) {
-                if (class_exists('finfo')) {
-                    $path = $uploadedFile->store('productos', 'public');
-                } else {
-                    $ext = $uploadedFile->getClientOriginalExtension() ?: 'webp';
-                    $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
-                    $path = $uploadedFile->storeAs('productos', $fileName, 'public');
-                }
-                $data['foto_producto'] = '/storage/' . $path;
+            $fileInput = $request->hasFile('foto_producto') ? $request->file('foto_producto') : $request->input('foto_producto');
+            if ($fileInput) {
+                $data['foto_producto'] = ImageHelper::storeAsWebp($fileInput, 'productos');
             } else {
-                $fotoInput = $request->input('foto_producto');
-                if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, 'data:image')) {
-                    $base64Image = $fotoInput;
-                    @list($type, $file_data) = explode(';', $base64Image);
-                    @list(, $file_data) = explode(',', $file_data);
-                    if ($file_data) {
-                        $fileName = 'productos/prod_' . time() . '_' . uniqid() . '.webp';
-                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($file_data));
-                        $data['foto_producto'] = '/storage/' . $fileName;
-                    }
-                } else if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, '/storage/')) {
-                    $data['foto_producto'] = $fotoInput;
-                } else {
-                    $saborName = mb_strtolower($data['nombre_producto'] ?? '');
-                    $data['foto_producto'] = \Database\Factories\ProductoFactory::getFotoForSabor($saborName);
-                }
+                $saborName = mb_strtolower($data['nombre_producto'] ?? '');
+                $data['foto_producto'] = \Database\Factories\ProductoFactory::getFotoForSabor($saborName);
             }
 
             // Al crear un nuevo helado, generamos automáticamente todos los formatos disponibles
@@ -140,44 +111,17 @@ class ProductoController extends Controller
 
         try {
             $productoAnterior = $this->productoServices->getProductoById($id);
-            $uploadedFile = null;
-            if ($request->hasFile('foto_producto')) {
-                $file = $request->file('foto_producto');
-                if ($file && $file->isValid()) {
-                    $uploadedFile = $file;
+            $fileInput = $request->hasFile('foto_producto') ? $request->file('foto_producto') : $request->input('foto_producto');
+            
+            if ($fileInput && ($fileInput instanceof \Illuminate\Http\UploadedFile || (is_string($fileInput) && str_starts_with($fileInput, 'data:image')))) {
+                if ($productoAnterior && !empty($productoAnterior->foto_producto)) {
+                    ImageHelper::deleteOldImage($productoAnterior->foto_producto);
                 }
-            } else if ($request->foto_producto instanceof \Illuminate\Http\UploadedFile && $request->foto_producto->isValid()) {
-                $uploadedFile = $request->foto_producto;
-            }
-
-            if ($uploadedFile) {
-                if (class_exists('finfo')) {
-                    $path = $uploadedFile->store('productos', 'public');
-                } else {
-                    $ext = $uploadedFile->getClientOriginalExtension() ?: 'webp';
-                    $fileName = \Illuminate\Support\Str::random(40) . '.' . $ext;
-                    $path = $uploadedFile->storeAs('productos', $fileName, 'public');
-                }
-                $data['foto_producto'] = '/storage/' . $path;
-            } else {
-                $fotoInput = $request->input('foto_producto');
-                if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, 'data:image')) {
-                    $base64Image = $fotoInput;
-                    @list($type, $file_data) = explode(';', $base64Image);
-                    @list(, $file_data) = explode(',', $file_data);
-                    if ($file_data) {
-                        $fileName = 'productos/prod_' . $id . '_' . time() . '.webp';
-                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($file_data));
-                        $data['foto_producto'] = '/storage/' . $fileName;
-                    }
-                } else if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, '/storage/')) {
-                    $data['foto_producto'] = $fotoInput;
-                } else if ($productoAnterior && !empty($productoAnterior->foto_producto)) {
-                    $data['foto_producto'] = $productoAnterior->foto_producto;
-                } else {
-                    $saborName = mb_strtolower($data['nombre_producto'] ?? ($productoAnterior->nombre_producto ?? ''));
-                    $data['foto_producto'] = \Database\Factories\ProductoFactory::getFotoForSabor($saborName);
-                }
+                $data['foto_producto'] = ImageHelper::storeAsWebp($fileInput, 'productos');
+            } else if (is_string($fileInput) && str_starts_with($fileInput, '/storage/')) {
+                $data['foto_producto'] = $fileInput;
+            } else if ($productoAnterior && !empty($productoAnterior->foto_producto)) {
+                $data['foto_producto'] = $productoAnterior->foto_producto;
             }
 
             // Sincronizar categoría, foto y nombre (manteniendo el estado independiente por formato)
@@ -224,6 +168,9 @@ class ProductoController extends Controller
     {
         try {
             $producto = $this->productoServices->getProductoById($id);
+            if ($producto && !empty($producto->foto_producto)) {
+                ImageHelper::deleteOldImage($producto->foto_producto);
+            }
             $producto_destroy = $this->productoServices->deleteProducto($id);
 
             if ($producto) {

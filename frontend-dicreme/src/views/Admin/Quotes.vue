@@ -12,6 +12,20 @@
             />
           </div>
 
+          <div class="date-filter-box">
+            <Calendar :size="18" class="date-icon" />
+            <input 
+              type="date" 
+              v-model="selectedDate" 
+              class="date-input"
+              @change="onDateChange"
+              title="Filtrar por fecha"
+            />
+            <button v-if="selectedDate" class="btn-clear-date" @click="clearDateFilter" title="Limpiar fecha">
+              ✕
+            </button>
+          </div>
+
           <div class="dropdown-container">
             <button class="btn-filter" @click.stop="toggleStatusDropdown">
               <Filter :size="18" />
@@ -28,6 +42,10 @@
               <div class="dropdown-item" @click="selectStatus('Cancelado')">Cancelado</div>
             </div>
           </div>
+          <button class="btn-refresh" @click="refreshTable" :disabled="isRefreshing" title="Actualizar cotizaciones">
+            <RefreshCw :size="18" :class="{ 'spin-icon': isRefreshing }" />
+            <span>Actualizar</span>
+          </button>
           <button class="btn-export" @click="exportarExcel" :disabled="isExporting">
             <Download :size="18" />
             <span>{{ isExporting ? 'Exportando...' : 'Exportar' }}</span>
@@ -188,19 +206,26 @@
                   <button 
                     v-if="order.managedBy?.id === currentUser.id"
                     class="btn-action btn-leave" 
+                    :disabled="actionLoadingId === order.id"
                     @click="leaveQuote(order.id)"
                   >
-                    <UserMinus :size="18" />
-                    <span>Dejar</span>
+                    <IceCream v-if="actionLoadingId === order.id" class="spinner" :size="18" />
+                    <template v-else>
+                      <UserMinus :size="18" />
+                      <span>Dejar</span>
+                    </template>
                   </button>
                   <button 
                     v-else
                     class="btn-action btn-take" 
-                    :disabled="order.status !== 'Por Tomar'"
+                    :disabled="order.status !== 'Por Tomar' || actionLoadingId === order.id"
                     @click="takeQuote(order.id)"
                   >
-                    <UserPlus :size="18" />
-                    <span>Tomar</span>
+                    <IceCream v-if="actionLoadingId === order.id" class="spinner" :size="18" />
+                    <template v-else>
+                      <UserPlus :size="18" />
+                      <span>Tomar</span>
+                    </template>
                   </button>
                 </template>
 
@@ -212,7 +237,7 @@
                   @click="openModal(order.id)"
                 >
                   <component 
-                    :is="loadingOrderId === order.id ? Loader2 : (order.managedBy?.id === currentUser.id && order.status !== 'Completado' && order.status !== 'Cancelado') ? Pencil : Eye" 
+                    :is="loadingOrderId === order.id ? IceCream : (order.managedBy?.id === currentUser.id && order.status !== 'Completado' && order.status !== 'Cancelado') ? Pencil : Eye" 
                     :size="18" 
                     :class="{ 'spinner': loadingOrderId === order.id }" 
                   />
@@ -295,8 +320,10 @@ import {
   ChevronDown,
   ClockAlert,
   FileSearch,
-  LayoutGrid,Download,
-  Loader2
+  LayoutGrid,
+  Download,
+  Loader2,
+  RefreshCw
 } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification'; // Importamos el composable de notificaciones
 import { useAutoRefresh } from '@/composables/useAutoRefresh';
@@ -305,12 +332,43 @@ import * as XLSX from 'xlsx';
 const currentUser = ref({ id: 0, name: '' });
 const orders = ref<any[]>([]);
 const isLoading = ref(true);
+const isRefreshing = ref(false);
+const actionLoadingId = ref<number | string>('');
+
+const getTodayDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const selectedDate = ref(getTodayDate());
+
+const onDateChange = () => {
+  currentPage.value = 1;
+  fetchQuotes();
+};
+
+const clearDateFilter = () => {
+  selectedDate.value = '';
+  currentPage.value = 1;
+  fetchQuotes();
+};
+
+const refreshTable = async () => {
+  isRefreshing.value = true;
+  await fetchQuotes(true);
+  setTimeout(() => {
+    isRefreshing.value = false;
+  }, 500);
+};
 
 const fetchQuotes = async (silent = false) => {
   if (!silent) isLoading.value = true;
   try {
     const [quotesRes, distsRes, usersRes, statsRes] = await Promise.all([
-      quoteService.getQuotes(),
+      quoteService.getQuotes(selectedDate.value || undefined),
       distributorService.getDistributors(),
       userService.getUsers(),
       quotationStatusService.getStatuses()
@@ -330,7 +388,6 @@ const fetchQuotes = async (silent = false) => {
       id: q.id,
       distributor: distMap.get(q.id_distribuidor) || 'Desconocido', // 👈 Sigue funcionando igual que antes
       
-      // 🚀 Extraemos el teléfono usando el mapa nuevo sin interferir con el anterior
       distributorPhone: distPhoneMap.get(q.id_distribuidor) || '', 
       
       managedBy: q.id_usuario_dicreme ? { id: q.id_usuario_dicreme, name: userMap.get(q.id_usuario_dicreme) } : null,
@@ -462,12 +519,12 @@ const closeModal = () => {
 
 const handleModalCancel = async () => {
   closeModal();
-  await fetchQuotes();
+  await fetchQuotes(true);
 };
 
 const handleModalComplete = async () => {
   closeModal();
-  await fetchQuotes();
+  await fetchQuotes(true);
 };
 
 const toggleStatusDropdown = () => {
@@ -506,24 +563,30 @@ const formatDate = (dateString: string) => {
 };
 
 const takeQuote = async (quoteId: number) => {
+  actionLoadingId.value = quoteId;
   try {
     const responseValidacion = await quoteService.takeQuote(quoteId, currentUser.value.id);
     notify(responseValidacion?.data?.message || 'Cotización tomada exitosamente', 'success');
 
-    await fetchQuotes();
-  } catch (error: any) { // <--- Agregamos :any aquí
+    await fetchQuotes(true);
+  } catch (error: any) {
     notify(error.response?.data?.message || 'Error al tomar la cotización', 'error');
-  } 
+  } finally {
+    actionLoadingId.value = '';
+  }
 };
 
 const leaveQuote = async (quoteId: number) => {
+  actionLoadingId.value = quoteId;
   try {
     const response = await quoteService.leaveQuote(quoteId, currentUser.value.id);
     notify(response?.data?.message || 'Cotización dejada exitosamente', 'success');
     
-    await fetchQuotes();
-  } catch (error: any) { // <--- Agregamos :any aquí
+    await fetchQuotes(true);
+  } catch (error: any) {
     notify(error.response?.data?.message || 'Error al dejar la cotización', 'error');
+  } finally {
+    actionLoadingId.value = '';
   }
 };
 
@@ -727,6 +790,82 @@ watch([searchQuery, statusFilter, activeFilter], () => {
 
 .search-icon {
   color: #777;
+}
+
+.date-filter-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: white;
+  border-radius: 10px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  height: 40px;
+}
+
+.date-icon {
+  color: #777;
+}
+
+.date-input {
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: #322c44;
+  outline: none;
+  cursor: pointer;
+}
+
+.btn-clear-date {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0 4px;
+  font-weight: bold;
+}
+
+.btn-clear-date:hover {
+  color: #e4869f;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  color: #322c44;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: #e4869f;
+  color: #e4869f;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .search-box input {

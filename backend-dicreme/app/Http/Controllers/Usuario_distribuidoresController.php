@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Usuario_distribuidoresServices;
+use App\Helpers\ImageHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Rules\RutChilenoRule;
@@ -80,19 +81,12 @@ class Usuario_distribuidoresController extends Controller
         ]);
 
         if ($request->hasFile('foto_perfil') || $request->hasFile('avatar')) {
-            $destinationPath = storage_path('app/public/avatars');
-            if (!file_exists($destinationPath)) {
-                @mkdir($destinationPath, 0775, true);
+            $usuarioAnterior = $this->usuarioDistribuidoresService->getUsuarioDistribuidorById($id);
+            if ($usuarioAnterior && !empty($usuarioAnterior->foto_perfil)) {
+                ImageHelper::deleteOldImage($usuarioAnterior->foto_perfil);
             }
             $file = $request->file('foto_perfil') ?? $request->file('avatar');
-            if (class_exists('finfo')) {
-                $path = $file->store('avatars', 'public');
-            } else {
-                $ext = $file->getClientOriginalExtension() ?: 'png';
-                $filename = \Illuminate\Support\Str::random(40) . '.' . $ext;
-                $path = $file->storeAs('avatars', $filename, 'public');
-            }
-            $data['foto_perfil'] = '/storage/' . $path;
+            $data['foto_perfil'] = ImageHelper::storeAsWebp($file, 'avatars');
         }
 
         try {

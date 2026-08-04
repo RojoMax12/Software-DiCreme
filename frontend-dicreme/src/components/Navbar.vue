@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
 import DistributorSideMenu from '@/components/DistributorSideMenu.vue'
 import { useNotification } from '@/composables/useNotification';
 import { getStorageUrl } from '@/utils/imageUrl';
+import carruselService from '@/services/carruselService';
 
 const { notify } = useNotification();
 
@@ -15,6 +16,8 @@ const username = ref('')
 const isLoggedIn = ref(false)
 const isSideMenuOpen = ref(false) // Controla la barra lateral
 const userAvatar = ref<string | null>(null);
+const tickerMessages = ref<string[]>([
+]);
 
 const formatAvatarUrl = (path: string | null | undefined) => {
   if (!path || path === 'null' || path === 'undefined') return null;
@@ -47,15 +50,34 @@ const checkAuth = () => {
   }
 }
 
+const loadAvisos = async () => {
+  try {
+    const res = await carruselService.getAvisos();
+    const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    if (data && data.length > 0) {
+      tickerMessages.value = data;
+    }
+  } catch (e) {
+    console.error('Error al cargar avisos:', e);
+  }
+};
+
+watch(() => router.currentRoute.value.path, () => {
+  loadAvisos();
+});
+
 onMounted(() => {
   checkAuth();
-  
-  // 2. Escucha si alguien cambió el perfil en otra parte
+  loadAvisos();
+  window.addEventListener('storage', checkAuth);
   window.addEventListener('perfil-actualizado', checkAuth);
+  window.addEventListener('avisos-actualizados', loadAvisos);
 });
 
 onUnmounted(() => {
+  window.removeEventListener('storage', checkAuth);
   window.removeEventListener('perfil-actualizado', checkAuth);
+  window.removeEventListener('avisos-actualizados', loadAvisos);
 });
 
 // Cierra la sesión y redirige al catálogo
@@ -129,17 +151,13 @@ const goToHome = () => {
         </template>
         </div>
         </div>
-        <div class="ticker-wrapper">
+        <div class="ticker-wrapper" v-if="tickerMessages.length > 0">
           <div class="ticker-track">
             <div class="ticker-content">
-              <span>📢 Aviso: Horario de atención hasta las 17:00 hrs.</span>
-              <span>🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.</span>
-              <span>🍦 Descuentos especiales para distribuidores registrados.</span>
+              <span v-for="(msg, index) in tickerMessages" :key="index">{{ msg }}</span>
             </div>
             <div class="ticker-content" aria-hidden="true">
-              <span>📢 Aviso: Horario de atención hasta las 17:00 hrs.</span>
-              <span>🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.</span>
-              <span>🍦 Descuentos especiales para distribuidores registrados.</span>
+              <span v-for="(msg, index) in tickerMessages" :key="'dup-'+index">{{ msg }}</span>
             </div>
           </div>
         </div>

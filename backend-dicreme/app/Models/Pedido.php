@@ -26,8 +26,8 @@ class Pedido extends Model
         ];
 
     protected $casts = [
-        'fecha_creacion' => 'date',
-        'hora_creacion' => 'datetime',
+        'fecha_creacion' => 'date:Y-m-d',
+        'hora_creacion'  => 'string',
     ];
 
 

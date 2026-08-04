@@ -59,7 +59,8 @@
       </div>
 
       <button type="submit" :disabled="loading" class="submit-btn">
-        {{ loading ? 'Guardando...' : 'Guardar Cambios' }}
+        <IceCream v-if="loading" class="spinner" :size="18" color="#ffffff" style="margin-right: 6px;" />
+        <span>{{ loading ? 'Guardando...' : 'Guardar Cambios' }}</span>
       </button>
 
     </form>
@@ -68,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
-import { Camera } from 'lucide-vue-next';
+import { Camera, IceCream } from 'lucide-vue-next';
 import { useNotification } from '@/composables/useNotification';
 import { globalLoading } from '@/composables/useLoading';
 import distributorService from '@/services/distributorService';
@@ -413,5 +414,15 @@ input:focus { border-color: var(--DC-pink); outline: none; }
   letter-spacing: 0.5px;
   border-color: #eee;
   opacity: 0.8;
+}
+
+.spinner {
+  animation: rotate 2s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes rotate {
+  100% { transform: rotate(360deg); }
 }
 </style>

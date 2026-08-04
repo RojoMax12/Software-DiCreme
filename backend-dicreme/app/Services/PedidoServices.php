@@ -35,9 +35,9 @@ class PedidoServices
 
     }
 
-    public function getAllPedidos()
+    public function getAllPedidos($fecha = null)
     {
-        return $this->pedidoRepository->getAllPedidos();
+        return $this->pedidoRepository->getAllPedidos($fecha);
     }
 
     public function getPedidoById($id)
