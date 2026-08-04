@@ -25,7 +25,7 @@ class Despacho extends Model
     ];
 
     protected $casts = [
-        'fecha_entrega' => 'datetime',
+        'fecha_entrega' => 'string',
     ];
 
     public function pedido(): BelongsTo

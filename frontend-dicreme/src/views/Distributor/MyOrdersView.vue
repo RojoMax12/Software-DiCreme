@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { IceCream } from 'lucide-vue-next' 
+import { IceCream, ShoppingBag, Calendar, ChevronRight } from 'lucide-vue-next' 
 import orderService from '@/services/orderService'
-import {ShoppingBag} from 'lucide-vue-next'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 
 const router = useRouter()
 
@@ -17,9 +17,9 @@ const fallbackUserCompany = ref('Distribuidor Di Creme')
 const fallbackUserAddress = ref('Dirección Registrada')
 
 // Rescata los pedidos procesados del distribuidor activo
-const fetchDistributorOrders = async () => {
+const fetchDistributorOrders = async (silent = false) => {
   try {
-    isLoading.value = true
+    if (!silent) isLoading.value = true
     const userParsed = localStorage.getItem('user')
     
     if (!userParsed) {
@@ -38,15 +38,21 @@ const fetchDistributorOrders = async () => {
     const response = await orderService.getOrdersByDistributor(distributorId)
     ordersList.value = response.data || []
     
-    console.log('Orders logs fetched successfully:', ordersList.value)
-
   } catch (error) {
     console.error('Error fetching orders logs:', error)
     
   } finally {
-    isLoading.value = false
+    if (!silent) isLoading.value = false
   }
 }
+
+onMounted(() => {
+  fetchDistributorOrders(false)
+})
+
+useAutoRefresh((silent) => fetchDistributorOrders(silent), {
+  intervalMs: 15000
+})
 
 // Mapea el id_estado_pedido a un string legible en español
 const getOrderStatusLabel = (statusId: number): string => {
@@ -60,9 +66,19 @@ const getOrderStatusLabel = (statusId: number): string => {
   return 'Pendiente'
 }
 
-onMounted(() => {
-  fetchDistributorOrders()
-})
+const getStatusClass = (statusId: number): string => {
+  const safeId = Number(statusId)
+  switch (safeId) {
+    case 1: return 'status-validation'
+    case 2: return 'status-preparation'
+    case 3: return 'status-ready'
+    case 4: return 'status-shipping'
+    case 5: return 'status-completed'
+    case 6: return 'status-pending'
+    case 7: return 'status-cancelled'
+    default: return 'status-generic'
+  }
+}
 
 // Formatea las fechas al estándar chileno (DD/MM/AAAA)
 const formatDate = (dateString: string) => {
@@ -117,7 +133,7 @@ const formatCurrency = (value: any) => {
           </div>
 
           <div class="card-right">
-            <span class="status-badge" :class="'status-' + (order.id_estado_pedido ?? 1)">
+            <span class="status-badge" :class="getStatusClass(order.id_estado_pedido)">
               {{ order.estado_nombre ?? getOrderStatusLabel(order.id_estado_pedido) }}
             </span>
             <span class="order-total">
@@ -156,14 +172,18 @@ const formatCurrency = (value: any) => {
 .time-group { display: flex; gap: 10px; color: #888; font-size: 0.8rem; }
 .time-item { display: flex; align-items: center; gap: 4px; }
 
-.status-badge { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; min-width: 100px; text-align: center; }
+.status-badge { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; min-width: 110px; text-align: center; }
 .order-total { font-weight: 800; color: #1a1624; font-size: 1.05rem; min-width: 80px; text-align: right; }
 
 /* Estados */
-.status-1 { background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
-.status-2 { background-color: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
-.status-3 { background-color: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
-.status-4 { background-color: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
+.status-validation { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+.status-preparation { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.status-ready { background-color: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.status-shipping { background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.status-completed { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.status-pending { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.status-cancelled { background-color: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+.status-generic { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 /* Estados vacíos */
 .loading-state, .empty-state { background-color: white; border-radius: 20px; padding: 50px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }

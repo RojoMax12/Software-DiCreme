@@ -76,6 +76,12 @@
                 {{ fmt.nombre_formato }}
               </option>
             </select>
+
+            <select v-model="filterStatus" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="activo">Solo Activos</option>
+              <option value="inactivo">Solo Inactivos</option>
+            </select>
           </div>
 
           <button class="btn btn-primary" @click="openProductModal()">
@@ -84,9 +90,47 @@
           </button>
         </div>
 
+        <!-- Barra de Acciones Rápidas y Selección Múltiple -->
+        <div class="bulk-actions-toolbar">
+          <div class="bulk-toolbar-left">
+            <button 
+              type="button"
+              class="btn-selection-toggle" 
+              :class="{ active: isSelectionMode }"
+              @click="toggleSelectionMode()"
+            >
+              <CheckSquare :size="16" />
+              <span>{{ isSelectionMode ? 'Cancelar Selección' : 'Seleccionar Varios' }}</span>
+            </button>
+
+            <template v-if="isSelectionMode">
+              <button type="button" class="btn-white-action" @click="selectAllFlavors">
+                Seleccionar todos
+              </button>
+              <button type="button" class="btn-white-action" @click="deselectAllFlavors">
+                Desmarcar todos
+              </button>
+              <span v-if="selectedFlavorNames.length > 0" class="selected-count-badge">
+                {{ selectedFlavorNames.length }} seleccionado(s)
+              </span>
+            </template>
+          </div>
+
+          <div v-if="isSelectionMode && selectedFlavorNames.length > 0" class="bulk-toolbar-right">
+            <button type="button" class="btn btn-bulk-enable" @click="openBulkModal('activar')">
+              <CheckCircle2 :size="16" />
+              <span>Activar Seleccionados</span>
+            </button>
+            <button type="button" class="btn btn-bulk-disable" @click="openBulkModal('desactivar')">
+              <XCircle :size="16" />
+              <span>Desactivar Seleccionados</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Products Grid -->
         <div v-if="isLoadingProducts" class="loading-box">
-          <Loader2 class="spinner" :size="32" />
+          <IceCream class="spinner" :size="48" color="#e4869f" />
           <p>Cargando productos del catálogo...</p>
         </div>
 
@@ -100,9 +144,19 @@
             v-for="prod in groupedFlavorProducts"
             :key="prod.nombre_producto"
             class="product-card"
-            :class="{ inactive: !prod.estado_producto }"
+            :class="{ inactive: !prod.estado_producto, 'is-selected-card': selectedFlavorNames.includes(prod.nombre_producto) }"
+            @click="isSelectionMode && toggleFlavorSelection(prod.nombre_producto)"
           >
             <div class="card-image-box">
+              <div 
+                v-if="isSelectionMode" 
+                class="card-select-checkbox"
+                @click.stop="toggleFlavorSelection(prod.nombre_producto)"
+              >
+                <CheckSquare v-if="selectedFlavorNames.includes(prod.nombre_producto)" :size="24" color="#e4869f" />
+                <Square v-else :size="24" color="#cbd5e1" />
+              </div>
+
               <img
                 v-if="prod.foto_producto"
                 :src="getImageUrl(prod.foto_producto)"
@@ -131,7 +185,13 @@
               </div>
 
               <div class="formats-list" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
-                <span v-for="fmt in prod.formats" :key="fmt.id_formato" class="tag-badge fmt-tag" style="font-size: 0.75rem;">
+                <span 
+                  v-for="fmt in prod.formats" 
+                  :key="fmt.id_formato" 
+                  class="tag-badge fmt-tag" 
+                  :style="{ opacity: fmt.estado_producto ? 1 : 0.45, textDecoration: fmt.estado_producto ? 'none' : 'line-through' }"
+                  style="font-size: 0.75rem;"
+                >
                   {{ getFormatName(fmt.id_formato) }}: ${{ formatPrice(fmt.precio_producto) }}
                 </span>
               </div>
@@ -150,11 +210,11 @@
               <button
                 class="btn-icon"
                 :class="prod.estado_producto ? 'btn-toggle-off' : 'btn-toggle-on'"
-                :title="prod.estado_producto ? 'Desactivar producto' : 'Activar producto'"
-                @click="toggleProductStatus(prod)"
+                title="Gestionar disponibilidad de formatos"
+                @click="openDisableFormatModal(prod)"
               >
                 <Power :size="16" />
-                <span>{{ prod.estado_producto ? 'Desactivar' : 'Activar' }}</span>
+                <span>Desactivar</span>
               </button>
             </div>
           </div>
@@ -194,7 +254,12 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingCategories">
-                <td colspan="4" class="text-center">Cargando categorías...</td>
+                <td colspan="4" class="text-center">
+                  <div class="table-loading-box">
+                    <IceCream class="spinner" :size="36" color="#e4869f" />
+                    <span>Cargando categorías...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="filteredCategories.length === 0">
                 <td colspan="4" class="text-center">No hay categorías registradas.</td>
@@ -252,7 +317,12 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingFormats">
-                <td colspan="4" class="text-center">Cargando formatos...</td>
+                <td colspan="4" class="text-center">
+                  <div class="table-loading-box">
+                    <IceCream class="spinner" :size="36" color="#e4869f" />
+                    <span>Cargando formatos...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="filteredFormats.length === 0">
                 <td colspan="4" class="text-center">No hay formatos registrados.</td>
@@ -286,28 +356,32 @@
               :class="{ active: historyEntityFilter === '' }"
               @click="historyEntityFilter = ''"
             >
-              Todos los movimientos
+              <ListFilter :size="16" />
+              <span>Todos los movimientos</span>
             </button>
             <button
               class="entity-btn"
               :class="{ active: historyEntityFilter === 'lote' }"
               @click="historyEntityFilter = 'lote'"
             >
-              📦 Lotes
+              <Box :size="16" />
+              <span>Lotes</span>
             </button>
             <button
               class="entity-btn"
               :class="{ active: historyEntityFilter === 'usuario' }"
               @click="historyEntityFilter = 'usuario'"
             >
-              👥 Usuarios
+              <Users :size="16" />
+              <span>Usuarios</span>
             </button>
             <button
               class="entity-btn"
               :class="{ active: historyEntityFilter === 'producto' }"
               @click="historyEntityFilter = 'producto'"
             >
-              🍦 Productos
+              <IceCream :size="16" />
+              <span>Productos</span>
             </button>
           </div>
 
@@ -335,7 +409,12 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingHistory">
-                <td colspan="5" class="text-center">Cargando historial de movimientos...</td>
+                <td colspan="5" class="text-center">
+                  <div class="table-loading-box">
+                    <IceCream class="spinner" :size="36" color="#e4869f" />
+                    <span>Cargando historial de movimientos...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="filteredHistory.length === 0">
                 <td colspan="5" class="text-center">No se registraron movimientos en el historial.</td>
@@ -430,9 +509,19 @@
             </div>
           </div>
 
+          <div v-if="!editingProduct" class="form-group" style="margin-top: 15px;">
+            <label style="margin-bottom: 10px; display: block;">Formatos Iniciales (Opcional)</label>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+              <label v-for="fmt in formats" :key="fmt.id" style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem; color: #475569;">
+                <input type="checkbox" :value="fmt.id" v-model="productForm.formatos_seleccionados" style="accent-color: #00aea7; width: 16px; height: 16px;" />
+                {{ fmt.nombre_formato }}
+              </label>
+            </div>
+          </div>
+
           <div class="auto-formats-info" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.85rem; color: #475569;">
-            <p style="margin: 0; font-weight: 600;">✨ Formatos vinculados automáticamente:</p>
-            <p style="margin: 4px 0 0 0; color: #64748b;">Al guardar, este helado se creará automáticamente en todos los formatos (10L, 5L, 2.5L y 1L) aplicando sus precios base correspondientes.</p>
+            <p style="margin: 0; font-weight: 600;">Comportamiento de formatos:</p>
+            <p style="margin: 4px 0 0 0; color: #64748b;">Al guardar, el helado se creará en todos los formatos del sistema. Los formatos que no selecciones arriba se crearán de igual manera pero en estado "Inactivo". Si no seleccionas ninguno, se activarán todos por defecto.</p>
           </div>
 
           <div class="modal-footer">
@@ -537,6 +626,25 @@
       </div>
     </div>
 
+    <!-- Modal de Gestión de Formatos (Individual) -->
+    <DisableFormatModal
+      :isOpen="showDisableFormatModal"
+      :product="selectedProductForDisable"
+      :isLoading="isSavingFormats"
+      @close="showDisableFormatModal = false"
+      @save="handleSaveDisableFormats"
+    />
+
+    <!-- Modal de Gestión de Formatos (Masivo) -->
+    <BulkDisableFormatModal
+      :isOpen="showBulkModal"
+      :selectedProducts="selectedFlavorObjects"
+      :initialAction="bulkActionType"
+      :isLoading="isSavingBulk"
+      @close="showBulkModal = false"
+      @save="handleApplyBulkFormats"
+    />
+
   </div>
 </template>
 
@@ -556,12 +664,21 @@ import {
   X,
   IceCream,
   PackageX,
-  Loader2
+  Loader2, 
+  Users,
+  ListFilter,
+  CheckSquare,
+  Square,
+  CheckCircle2,
+  XCircle
 } from 'lucide-vue-next';
 
 import productService from '@/services/productService';
 import historyService, { type MovementHistoryItem } from '@/services/historyService';
 import { useNotification } from '@/composables/useNotification';
+import { getStorageUrl } from '@/utils/imageUrl';
+import DisableFormatModal from '@/components/DisableFormatModal.vue';
+import BulkDisableFormatModal from '@/components/BulkDisableFormatModal.vue';
 
 const { notify } = useNotification();
 
@@ -583,6 +700,7 @@ const isSaving = ref(false);
 const searchProduct = ref('');
 const filterCategory = ref<number | ''>('');
 const filterFormat = ref<number | ''>('');
+const filterStatus = ref<string>('');
 
 const searchCategory = ref('');
 const searchFormat = ref('');
@@ -600,6 +718,7 @@ const productForm = ref({
   nombre_producto: '',
   id_categoria: '' as number | '',
   estado_producto: true,
+  formatos_seleccionados: [] as number[],
 });
 
 const showCategoryModal = ref(false);
@@ -615,6 +734,111 @@ const formatForm = ref({
   nombre_formato: '',
   precio_formato: 0,
 });
+
+// Modal de Desactivación por Formatos
+const showDisableFormatModal = ref(false);
+const selectedProductForDisable = ref<any>(null);
+const isSavingFormats = ref(false);
+
+// Selección Múltiple y Acciones Masivas
+const isSelectionMode = ref(false);
+const selectedFlavorNames = ref<string[]>([]);
+const showBulkModal = ref(false);
+const bulkActionType = ref<'activar' | 'desactivar'>('activar');
+const isSavingBulk = ref(false);
+
+const toggleSelectionMode = () => {
+  isSelectionMode.value = !isSelectionMode.value;
+  if (!isSelectionMode.value) {
+    selectedFlavorNames.value = [];
+  }
+};
+
+const toggleFlavorSelection = (flavorName: string) => {
+  if (selectedFlavorNames.value.includes(flavorName)) {
+    selectedFlavorNames.value = selectedFlavorNames.value.filter(n => n !== flavorName);
+  } else {
+    selectedFlavorNames.value.push(flavorName);
+  }
+};
+
+const selectAllFlavors = () => {
+  selectedFlavorNames.value = groupedFlavorProducts.value.map(p => p.nombre_producto);
+};
+
+const deselectAllFlavors = () => {
+  selectedFlavorNames.value = [];
+};
+
+const selectedFlavorObjects = computed(() => {
+  return groupedFlavorProducts.value.filter(p => selectedFlavorNames.value.includes(p.nombre_producto));
+});
+
+const openBulkModal = (action: 'activar' | 'desactivar') => {
+  if (selectedFlavorNames.value.length === 0) return;
+  bulkActionType.value = action;
+  showBulkModal.value = true;
+};
+
+const handleApplyBulkFormats = async ({ selectedFormatIds, actionType }: { selectedFormatIds: number[]; actionType: 'activar' | 'desactivar' }) => {
+  try {
+    isSavingBulk.value = true;
+    const targetStatus = actionType === 'activar';
+    
+    // Obtener los IDs de todos los productos que coinciden con los sabores y formatos elegidos
+    const targetProductIds = products.value
+      .filter(p => selectedFlavorNames.value.includes(p.nombre_producto) && selectedFormatIds.includes(p.id_formato))
+      .map(p => p.id);
+
+    if (targetProductIds.length === 0) {
+      notify('No se encontraron formatos coincidentes para los helados seleccionados', 'info');
+      showBulkModal.value = false;
+      return;
+    }
+
+    // 🚀 Petición única de actualización masiva instantánea en backend
+    const res: any = await productService.bulkToggleState(targetProductIds, targetStatus);
+    const afectados = res.data?.afectados !== undefined ? res.data.afectados : targetProductIds.length;
+
+    notify(`Se ${targetStatus ? 'activaron' : 'desactivaron'} ${afectados} formato(s) correctamente`, 'success');
+
+    showBulkModal.value = false;
+    selectedFlavorNames.value = [];
+    isSelectionMode.value = false;
+    await loadProducts();
+  } catch (e: any) {
+    console.error('Error al aplicar cambios masivos:', e);
+    notify('Error al aplicar cambios masivos', 'error');
+  } finally {
+    isSavingBulk.value = false;
+  }
+};
+
+const openDisableFormatModal = (prod: any) => {
+  selectedProductForDisable.value = prod;
+  showDisableFormatModal.value = true;
+};
+
+const handleSaveDisableFormats = async (updatedFormats: any[]) => {
+  try {
+    isSavingFormats.value = true;
+    for (const fmt of updatedFormats) {
+      if (fmt.id_producto) {
+        await productService.updateProduct(fmt.id_producto, {
+          estado_producto: fmt.estado_producto
+        });
+      }
+    }
+    notify('Disponibilidad de formatos actualizada', 'success');
+    showDisableFormatModal.value = false;
+    await loadProducts();
+  } catch (e: any) {
+    console.error('Error al guardar estados de formatos:', e);
+    notify('Error al guardar cambios de formatos', 'error');
+  } finally {
+    isSavingFormats.value = false;
+  }
+};
 
 // Load Data
 const loadProducts = async () => {
@@ -675,7 +899,7 @@ onMounted(() => {
 // Computed Filters
 const filteredProducts = computed(() => {
   return products.value.filter((p) => {
-    const matchSearch = !searchProduct.value.trim() || p.nombre_producto.toLowerCase().includes(searchProduct.value.toLowerCase());
+    const matchSearch = !searchProduct.value.trim() || (p.nombre_producto || '').toLowerCase().includes(searchProduct.value.toLowerCase());
     const matchCat = filterCategory.value === '' || p.id_categoria == filterCategory.value;
     const matchFmt = filterFormat.value === '' || p.id_formato == filterFormat.value;
     return matchSearch && matchCat && matchFmt;
@@ -693,7 +917,7 @@ const groupedFlavorProducts = computed(() => {
         nombre_producto: p.nombre_producto,
         id_categoria: p.id_categoria,
         foto_producto: p.foto_producto,
-        estado_producto: Boolean(p.estado_producto),
+        estado_producto: false,
         formats: [] as any[]
       });
     }
@@ -702,7 +926,8 @@ const groupedFlavorProducts = computed(() => {
       item.formats.push({
         id_producto: p.id,
         id_formato: p.id_formato,
-        precio_producto: p.precio_formato || p.precio_producto
+        precio_producto: p.precio_formato || p.precio_producto,
+        estado_producto: Boolean(p.estado_producto)
       });
     }
     if (p.estado_producto) {
@@ -710,18 +935,37 @@ const groupedFlavorProducts = computed(() => {
     }
   });
 
-  return Array.from(map.values());
+  const getFormatOrderRank = (fmt: any) => {
+    switch (fmt.id_formato) {
+      case 4: return 1; // 1L
+      case 3: return 2; // 2.5L
+      case 2: return 3; // 5L
+      case 1: return 4; // 10L
+      default: return fmt.id_formato;
+    }
+  };
+
+  const resultList = Array.from(map.values()).map(item => {
+    item.formats.sort((a: any, b: any) => getFormatOrderRank(a) - getFormatOrderRank(b));
+    return item;
+  });
+
+  return resultList.filter((item) => {
+    if (filterStatus.value === 'activo') return item.estado_producto === true;
+    if (filterStatus.value === 'inactivo') return item.estado_producto === false;
+    return true;
+  });
 });
 
 const filteredCategories = computed(() => {
   return categories.value.filter((c) => {
-    return !searchCategory.value.trim() || c.nombre_categoria.toLowerCase().includes(searchCategory.value.toLowerCase());
+    return !searchCategory.value.trim() || (c.nombre_categoria || '').toLowerCase().includes(searchCategory.value.toLowerCase());
   });
 });
 
 const filteredFormats = computed(() => {
   return formats.value.filter((f) => {
-    return !searchFormat.value.trim() || f.nombre_formato.toLowerCase().includes(searchFormat.value.toLowerCase());
+    return !searchFormat.value.trim() || (f.nombre_formato || '').toLowerCase().includes(searchFormat.value.toLowerCase());
   });
 });
 
@@ -729,7 +973,7 @@ const filteredHistory = computed(() => {
   return historyLogs.value.filter((item) => {
     const matchEntity = !historyEntityFilter.value || item.tipo_entidad === historyEntityFilter.value;
     const q = searchHistory.value.toLowerCase();
-    const matchSearch = !q || item.descripcion.toLowerCase().includes(q) || (item.usuario_responsable && item.usuario_responsable.toLowerCase().includes(q));
+    const matchSearch = !q || (item.descripcion || '').toLowerCase().includes(q) || (item.usuario_responsable && (item.usuario_responsable || '').toLowerCase().includes(q));
     return matchEntity && matchSearch;
   });
 });
@@ -751,8 +995,8 @@ const formatPrice = (price: number) => {
 
 const getImageUrl = (url: string) => {
   if (!url) return '';
-  if (url.startsWith('http') || url.startsWith('data:')) return url;
-  return `http://localhost:8000${url}`;
+  if (url.startsWith('data:')) return url;
+  return getStorageUrl(url);
 };
 
 const formatDate = (dateStr: string) => {
@@ -793,13 +1037,15 @@ const openProductModal = (prod?: any) => {
       nombre_producto: prod.nombre_producto,
       id_categoria: prod.id_categoria,
       estado_producto: Boolean(prod.estado_producto),
+      formatos_seleccionados: [],
     };
     productPhotoPreview.value = prod.foto_producto ? getImageUrl(prod.foto_producto) : null;
   } else {
     productForm.value = {
       nombre_producto: '',
-      id_categoria: categories.value[0]?.id || '',
+      id_categoria: '',
       estado_producto: true,
+      formatos_seleccionados: formats.value.map((f: any) => f.id),
     };
     productPhotoPreview.value = null;
   }
@@ -830,6 +1076,12 @@ const saveProduct = async () => {
     formData.append('nombre_producto', productForm.value.nombre_producto);
     formData.append('id_categoria', String(productForm.value.id_categoria));
     formData.append('estado_producto', productForm.value.estado_producto ? '1' : '0');
+
+    if (!editingProduct.value && productForm.value.formatos_seleccionados.length > 0) {
+      productForm.value.formatos_seleccionados.forEach((fId) => {
+        formData.append('formatos[]', String(fId));
+      });
+    }
 
     if (productPhotoFile.value) {
       formData.append('foto_producto', productPhotoFile.value);
@@ -1051,11 +1303,157 @@ const deleteFormat = async (fmt: any) => {
   flex-wrap: wrap;
 }
 
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.btn-primary {
+  background-color: #e4869f;
+  color: white;
+  box-shadow: 0 4px 12px rgba(228, 134, 159, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: #d1728c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(228, 134, 159, 0.4);
+}
+
 .search-filters-bar {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   flex: 1;
+}
+
+/* Bulk actions toolbar */
+.bulk-actions-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.bulk-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bulk-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-selection-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-selection-toggle.active {
+  background-color: #322c44;
+  color: white;
+  border-color: #322c44;
+}
+
+.btn-white-action {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #322c44;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-white-action:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.selected-count-badge {
+  background-color: #fff5f7;
+  color: #e4869f;
+  border: 1px solid #fecdd3;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.btn-bulk-enable {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-bulk-enable:hover {
+  background-color: #059669;
+}
+
+.btn-bulk-disable {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-bulk-disable:hover {
+  background-color: #dc2626;
+}
+
+.card-select-checkbox {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  background: white;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+.product-card.is-selected-card {
+  border-color: #e4869f;
+  box-shadow: 0 0 0 2px rgba(228, 134, 159, 0.3);
 }
 
 .input-with-icon {
@@ -1166,8 +1564,8 @@ const deleteFormat = async (fmt: any) => {
   font-weight: 700;
 }
 
-.cat-tag { background: #eff6ff; color: #2563eb; }
-.fmt-tag { background: #f3e8ff; color: #7c3aed; }
+.cat-tag { background: #f7e9f9; color: var(--DC-pink); }
+.fmt-tag { background: #f3e8ff; color: #7c3aedba; }
 
 .price-row {
   display: flex;
@@ -1203,7 +1601,7 @@ const deleteFormat = async (fmt: any) => {
   cursor: pointer;
 }
 
-.btn-edit { color: #3b82f6; border-color: #93c5fd; }
+.btn-edit { color: var(--DC-gray); border-color: var(--DC-gray); }
 .btn-toggle-off { color: #ef4444; border-color: #fca5a5; }
 .btn-toggle-on { color: #10b981; border-color: #6ee7b7; }
 
@@ -1253,8 +1651,8 @@ const deleteFormat = async (fmt: any) => {
   border: none;
 }
 
-.btn-edit-sm { background: #eff6ff; color: #2563eb; }
-.btn-delete-sm { background: #fff1f2; color: #e11d48; }
+.btn-edit-sm { background: var(--DC-bg-gray); color: var(--DC-gray); }
+.btn-delete-sm { background: rgb(253, 240, 251); color: var(--DC-pink); }
 
 /* History View */
 .history-toolbar {
@@ -1269,53 +1667,112 @@ const deleteFormat = async (fmt: any) => {
 }
 
 .entity-btn {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px; 
+  padding: 8px 18px;
+  border-radius: 20px; 
+  border: 1px solid transparent; 
+  background: #f1f5f9; 
   font-size: 0.85rem;
   font-weight: 700;
   color: #64748b;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.entity-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .entity-btn.active {
-  background: #1e293b;
+  background: #2b253b; 
   color: white;
-  border-color: #1e293b;
+  box-shadow: 0 4px 12px rgba(43, 37, 59, 0.2); 
 }
 
 .search-history {
   width: 100%;
 }
 
-.history-table .time-col { font-weight: 600; color: #64748b; font-size: 0.82rem; }
-.history-table .desc-col { font-weight: 600; color: #1e293b; }
+/* --- Mejoras visuales para la tabla de Historial --- */
+.history-table {
+  border-collapse: separate; 
+  border-spacing: 0;
+  width: 100%;
+}
+
+.history-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.history-table .time-col { 
+  font-weight: 400; /* Texto normal, sin negrita */
+  color: #64748b; 
+  font-size: 0.85rem; 
+}
+
+.history-table .desc-col { 
+  font-weight: 400; /* Texto normal para que respire */
+  color: #475569; 
+}
+
+.history-table .user-col strong {
+  font-weight: 500; 
+  color: #475569;
+}
+
 
 .entity-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px; 
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 600; 
+  display: inline-block;
+  text-align: center;
 }
 
-.entity-lote { background: #ffedd5; color: #c2410c; }
-.entity-usuario { background: #e0e7ff; color: #4338ca; }
-.entity-producto { background: #f3e8ff; color: #7c3aed; }
+
+.entity-lote { background: #fef3c7; color: #b45309; } /* Naranja suave */
+.entity-usuario { background: #e0e7ff; color: #4f46e5; } /* Azul índigo suave */
+.entity-producto { background: #fce7f3; color: #be185d; } /* Rosado Di Creme suave */
 
 .action-tag {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 9999px; /* Forma de píldora perfecta */
+  font-size: 0.75rem;
+  font-weight: 600; /* Letra más delgada */
+  display: inline-block;
+  text-align: center;
 }
 
-.action-creacion, .action-creacion_categoria, .action-creacion_formato { background: #ecfdf5; color: #059669; }
-.action-modificacion, .action-modificacion_categoria, .action-modificacion_formato { background: #eff6ff; color: #2563eb; }
-.action-cambio_precio { background: #fef3c7; color: #d97706; }
-.action-activacion { background: #ecfdf5; color: #059669; }
-.action-desactivacion { background: #fff1f2; color: #e11d48; }
-.action-liberacion { background: #f3e8ff; color: #7c3aed; }
+/* Colores pasteles súper suaves para las acciones */
+.action-creacion, .action-creacion_categoria, .action-creacion_formato { 
+  background: #f0fdf4; color: #16a34a; /* Verde menta claro */
+}
+.action-modificacion, .action-modificacion_categoria, .action-modificacion_formato { 
+  background: #eff6ff; color: #2563eb; /* Azul cielo */
+}
+.action-cambio_precio { 
+  background: #fffbeb; color: #d97706; /* Amarillo pastel */
+}
+.action-activacion { 
+  background: #f0fdf4; color: #16a34a; /* Verde menta claro */
+}
+.action-desactivacion { 
+  background: #fef2f2; color: #dc2626; /* Rojo/Rosado pálido */
+}
+.action-liberacion { 
+  background: #fce7f3; color: #be185d; /* Rosado Di Creme suave */
+}
 
 /* Modals */
 .modal-backdrop {
@@ -1456,8 +1913,19 @@ const deleteFormat = async (fmt: any) => {
   color: #64748b;
 }
 
+.table-loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 0;
+  color: #9793a0;
+  font-weight: 500;
+}
+
 .spinner {
-  animation: spin 1s linear infinite;
+  animation: spin 1.2s linear infinite;
   margin-bottom: 12px;
 }
 

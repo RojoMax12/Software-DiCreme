@@ -2,8 +2,8 @@ import api from './api';
 
 export default { 
 
-    getQuotes(){
-        return api.get('/cotizaciones');
+    getQuotes(fecha?: string){
+        return api.get('/cotizaciones', { params: fecha ? { fecha } : {} });
     },
 
     getQuotesByDistributor(idDistribuidor: number){

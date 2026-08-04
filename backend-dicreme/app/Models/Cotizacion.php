@@ -28,6 +28,11 @@ class Cotizacion extends Model
         'descuento_productos_total'
     ];
 
+    protected $casts = [
+        'fecha_creacion' => 'date:Y-m-d',
+        'hora_creacion'  => 'string',
+    ];
+
     public function usuarioDicreme(): BelongsTo
     {
         return $this->belongsTo(Usuario_dicreme::class, 'id_usuario_dicreme');

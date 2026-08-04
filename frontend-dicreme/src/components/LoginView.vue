@@ -16,6 +16,8 @@ const goBack = () => {
 }
 
 const handleLogin = async () => {
+  if (isLoading.value) return;
+
   if (!username.value || !password.value) {
     errorMessage.value = 'Por favor, ingresa tu correo y contraseña.'
     return
@@ -118,6 +120,7 @@ const handleLogin = async () => {
 
 <style scoped>
 .login-container {
+
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -138,7 +141,7 @@ const handleLogin = async () => {
 .back-button {
   position: absolute;
   left: 1.2rem;
-  top: -1;
+  top: 1.2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -158,6 +161,7 @@ const handleLogin = async () => {
 }
 
 .login-card {
+  position: relative;
   background-color: white;
   padding: 2rem;
   border-radius: 1.5rem;

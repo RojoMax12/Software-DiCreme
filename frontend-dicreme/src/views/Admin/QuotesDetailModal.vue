@@ -288,6 +288,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import ConfirmModal from '../../components/ConfirmModal.vue';
 import quoteService from '@/services/quoteService';
 import productService from '@/services/productService';
@@ -344,9 +345,22 @@ const isReadOnly = computed(() => {
 
 const emit = defineEmits(['close', 'cancel', 'complete', 'notificar', 'loaded']);
 
+interface MissingStockItem {
+  id_producto: number;
+  nombre_producto: string;
+  formato: string;
+  categoria?: string;
+  cantidad_requerida: number;
+  cantidad_disponible: number;
+  cantidad_faltante: number;
+  message: string;
+}
+
 const showCancelConfirm = ref(false);
 const isCancelSuccess = ref(false);
 const { notify } = useNotification();
+const router = useRouter();
+const stockErrorItems = ref<MissingStockItem[]>([]);
 
 // Estados para agregar nuevos productos
 const availableCatalog = ref<CatalogProduct[]>([]);
@@ -578,14 +592,59 @@ const handleComplete = async () => {
 
   } catch (error: any) {
     console.error('❌ [ERROR CRÍTICO] Se interrumpió la operación en el frontend:', error);
-    if (error.response) {
-      console.error('❌ [DETALLE ERROR API]:', error.response.data);
+    const data = error.response?.data;
+    const errorMsg = data?.message || 'Hubo un error al sincronizar las modificaciones.';
+    
+    if (data?.productos_faltantes && Array.isArray(data.productos_faltantes) && data.productos_faltantes.length > 0) {
+      stockErrorItems.value = data.productos_faltantes;
+
+      data.productos_faltantes.forEach((item: MissingStockItem) => {
+        notify(`Falta stock para ${item.nombre_producto} (${item.formato}): Faltan ${item.cantidad_faltante} unids.`, 'error', {
+          title: 'Falta de Stock',
+          actionText: 'Crear Lote',
+          onAction: () => goToCreateBatchForItem(item),
+          duration: 10000
+        });
+      });
+    } else if (data?.id_producto || (errorMsg && (errorMsg.toLowerCase().includes('stock') || errorMsg.toLowerCase().includes('lote')))) {
+      const targetProd = products.value.find(p => p.id_producto === data?.id_producto) || products.value[0];
+      const singleItem: MissingStockItem = {
+        id_producto: data?.id_producto || targetProd?.id_producto || 0,
+        nombre_producto: targetProd?.name || 'Producto',
+        formato: targetProd?.format || '',
+        cantidad_requerida: targetProd?.quantity || 1,
+        cantidad_disponible: 0,
+        cantidad_faltante: targetProd?.quantity || 1,
+        message: errorMsg
+      };
+      stockErrorItems.value = [singleItem];
+
+      notify(errorMsg, 'error', {
+        title: 'Falta de Stock',
+        actionText: 'Crear Lote',
+        onAction: () => goToCreateBatchForItem(singleItem),
+        duration: 10000
+      });
+    } else {
+      notify(errorMsg, 'error');
     }
-    const errorMsg = error.response?.data?.message || 'Hubo un error al sincronizar las modificaciones.';
-    notify(errorMsg, 'error');
   } finally {
     isSubmitting.value = false;
   }
+};
+
+const goToCreateBatchForItem = (item: MissingStockItem) => {
+  if (!item || !item.id_producto) return;
+
+  router.push({
+    path: `/admin/lotes/${item.id_producto}`,
+    query: {
+      autoOpen: 'true',
+      returnQuote: String(props.orderId),
+      product_name: item.nombre_producto,
+      format_name: item.formato
+    }
+  });
 };
 
 const getBase64FromUrl = async (url: string): Promise<string> => {
@@ -1457,5 +1516,4 @@ const formatNumber = (num: number) => new Intl.NumberFormat('es-CL').format(Math
 .modal-overlay {
   transition: background-color 0.3s ease;
 }
-
 </style>

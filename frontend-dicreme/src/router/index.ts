@@ -145,6 +145,18 @@ const router = createRouter({
       name: 'not-found',
       component: () => import('../views/NotFoundView.vue'),
       meta: { hideNavbar: false }
+    },
+    {
+      path: '/admin/Apariencia',
+      name: 'admin-StoreFront',
+      component: () => import('../views/Admin/AdminStoreFrontView.vue'),
+      meta: {useLoader: true, requiresAuth: true, roles: [1] }
+    },
+    {
+      path: '/admin/vista-tienda',
+      name: 'admin-store-view',
+      component: () => import('../views/Home/HomeView.vue'),
+      meta: { useLoader: true, requiresAuth: true, roles: [1, 2] }
     }
   ]
 })

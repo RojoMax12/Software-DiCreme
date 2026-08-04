@@ -21,7 +21,11 @@
       <div class="col-actions">Acciones</div>
     </div>
 
-    <div class="users-list">
+    <div v-if="isLoadingUsers" class="table-loading-box">
+      <IceCream class="spinner" :size="48" color="#e4869f" />
+      <span>Cargando usuarios...</span>
+    </div>
+    <div v-else class="users-list">
       <div v-for="user in paginatedUsers" :key="user.id" class="user-table-row">
         <div class="col-id">#{{ user.id }}</div>
         <div class="col-user-name">{{ user.nombre_usuario || user.nombre_empresa }}</div>
@@ -99,7 +103,10 @@ import userService from '@/services/userService';
 import { ref, onMounted, reactive } from 'vue';
 import { useNotification } from '@/composables/useNotification';
 import distributorService from '@/services/distributorService';
+import { IceCream } from 'lucide-vue-next';
 import { watch, computed } from 'vue';
+
+const isLoadingUsers = ref(false);
 
 const usersAdmin = ref<any[]>([]);
 const usersTrabajador = ref<any[]>([]);
@@ -155,6 +162,7 @@ const toggleEstado = async (user: any) => {
 
 
 const fetchUsers = async () => {
+    isLoadingUsers.value = true;
     try {
         const [uRes, dRes] = await Promise.all([userService.getUsers(), distributorService.getDistributors()]);
         usersAdmin.value = uRes.data.filter((u: any) => u.id_rol == 1);
@@ -162,6 +170,7 @@ const fetchUsers = async () => {
         usersDistribuidor.value = dRes.data.filter((u: any) => u.id_rol == 3);
         usersDespachador.value = uRes.data.filter((u: any) => u.id_rol == 4);
     } catch (e) { notify("Error cargando usuarios", "error"); }
+    finally { isLoadingUsers.value = false; }
 };
 
 const openModal = (user: any = null) => {
@@ -185,12 +194,17 @@ const closeModal = () => {
 
 const handleSaveUser = async () => {
     try {
-        isEditing.value ? await userService.updateuser(editingId.value, form) : await userService.createUser(form);
+        if (isEditing.value && editingId.value !== null) {
+            await userService.updateuser(editingId.value, form);
+        } else {
+            await userService.createUser(form);
+        }
         notify("Guardado exitoso", "success");
         closeModal();
         fetchUsers();
     } catch (e) { notify("Error al guardar", "error"); }
 };
+
 
 const eliminarUsuario = async (id: number) => {
     if (confirm("¿Estás seguro de eliminar este usuario del sistema?")) {
@@ -565,5 +579,24 @@ watch(activeFilter, () => {
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95) translateY(10px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.table-loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+.spinner {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  100% { transform: rotate(360deg); }
 }
 </style>

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\ProductoServices;
+use App\Helpers\ImageHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductoController extends Controller
 {
@@ -20,6 +22,8 @@ class ProductoController extends Controller
         $data = $request->validate([
             'id_categoria'    => 'required|integer|exists:categorias,id',
             'id_formato'      => 'nullable|integer|exists:formatos,id',
+            'formatos'        => 'nullable|array',
+            'formatos.*'      => 'integer|exists:formatos,id',
             'nombre_producto' => 'required|string|max:255',
             'precio_producto' => 'nullable|integer|min:0',
             'estado_producto' => 'required|boolean',
@@ -34,36 +38,12 @@ class ProductoController extends Controller
         }
 
         try {
-            $uploadedFile = null;
-            if ($request->hasFile('foto_producto')) {
-                $file = $request->file('foto_producto');
-                if ($file && $file->isValid()) {
-                    $uploadedFile = $file;
-                }
-            } else if ($request->foto_producto instanceof \Illuminate\Http\UploadedFile && $request->foto_producto->isValid()) {
-                $uploadedFile = $request->foto_producto;
-            }
-
-            if ($uploadedFile) {
-                $path = $uploadedFile->store('productos', 'public');
-                $data['foto_producto'] = '/storage/' . $path;
+            $fileInput = $request->hasFile('foto_producto') ? $request->file('foto_producto') : $request->input('foto_producto');
+            if ($fileInput) {
+                $data['foto_producto'] = ImageHelper::storeAsWebp($fileInput, 'productos');
             } else {
-                $fotoInput = $request->input('foto_producto');
-                if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, 'data:image')) {
-                    $base64Image = $fotoInput;
-                    @list($type, $file_data) = explode(';', $base64Image);
-                    @list(, $file_data) = explode(',', $file_data);
-                    if ($file_data) {
-                        $fileName = 'productos/prod_' . time() . '_' . uniqid() . '.webp';
-                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($file_data));
-                        $data['foto_producto'] = '/storage/' . $fileName;
-                    }
-                } else if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, '/storage/')) {
-                    $data['foto_producto'] = $fotoInput;
-                } else {
-                    $saborName = mb_strtolower($data['nombre_producto'] ?? '');
-                    $data['foto_producto'] = \Database\Factories\ProductoFactory::getFotoForSabor($saborName);
-                }
+                $saborName = mb_strtolower($data['nombre_producto'] ?? '');
+                $data['foto_producto'] = \Database\Factories\ProductoFactory::getFotoForSabor($saborName);
             }
 
             // Al crear un nuevo helado, generamos automáticamente todos los formatos disponibles
@@ -71,10 +51,17 @@ class ProductoController extends Controller
             $productosCreados = [];
 
             if ($formatos->count() > 0) {
+                $formatosSeleccionados = $request->input('formatos'); // Puede ser null
+
                 foreach ($formatos as $fmt) {
                     $itemData = $data;
                     $itemData['id_formato'] = $fmt->id;
                     $itemData['precio_producto'] = $fmt->precio_formato;
+
+                    // Si mandaron un array de formatos, los que no estén se crean pero desactivados
+                    if (is_array($formatosSeleccionados)) {
+                        $itemData['estado_producto'] = in_array($fmt->id, $formatosSeleccionados) ? 1 : 0;
+                    }
 
                     $prod = \App\Models\Producto::updateOrCreate(
                         [
@@ -101,10 +88,10 @@ class ProductoController extends Controller
             );
 
             return response()->json([
-                'status' => 'success', 
+                'status' => 'success',
                 'data' =>  $producto_creado,
                 'message' => "Producto creado correctamente con todos sus formatos"
-            ], 200); 
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -133,50 +120,27 @@ class ProductoController extends Controller
 
         try {
             $productoAnterior = $this->productoServices->getProductoById($id);
-            $uploadedFile = null;
-            if ($request->hasFile('foto_producto')) {
-                $file = $request->file('foto_producto');
-                if ($file && $file->isValid()) {
-                    $uploadedFile = $file;
+            $fileInput = $request->hasFile('foto_producto') ? $request->file('foto_producto') : $request->input('foto_producto');
+            
+            if ($fileInput && ($fileInput instanceof \Illuminate\Http\UploadedFile || (is_string($fileInput) && str_starts_with($fileInput, 'data:image')))) {
+                if ($productoAnterior && !empty($productoAnterior->foto_producto)) {
+                    ImageHelper::deleteOldImage($productoAnterior->foto_producto);
                 }
-            } else if ($request->foto_producto instanceof \Illuminate\Http\UploadedFile && $request->foto_producto->isValid()) {
-                $uploadedFile = $request->foto_producto;
+                $data['foto_producto'] = ImageHelper::storeAsWebp($fileInput, 'productos');
+            } else if (is_string($fileInput) && str_starts_with($fileInput, '/storage/')) {
+                $data['foto_producto'] = $fileInput;
+            } else if ($productoAnterior && !empty($productoAnterior->foto_producto)) {
+                $data['foto_producto'] = $productoAnterior->foto_producto;
             }
 
-            if ($uploadedFile) {
-                $path = $uploadedFile->store('productos', 'public');
-                $data['foto_producto'] = '/storage/' . $path;
-            } else {
-                $fotoInput = $request->input('foto_producto');
-                if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, 'data:image')) {
-                    $base64Image = $fotoInput;
-                    @list($type, $file_data) = explode(';', $base64Image);
-                    @list(, $file_data) = explode(',', $file_data);
-                    if ($file_data) {
-                        $fileName = 'productos/prod_' . $id . '_' . time() . '.webp';
-                        \Illuminate\Support\Facades\Storage::disk('public')->put($fileName, base64_decode($file_data));
-                        $data['foto_producto'] = '/storage/' . $fileName;
-                    }
-                } else if (is_string($fotoInput) && !empty($fotoInput) && str_starts_with($fotoInput, '/storage/')) {
-                    $data['foto_producto'] = $fotoInput;
-                } else if ($productoAnterior && !empty($productoAnterior->foto_producto)) {
-                    $data['foto_producto'] = $productoAnterior->foto_producto;
-                } else {
-                    $saborName = mb_strtolower($data['nombre_producto'] ?? ($productoAnterior->nombre_producto ?? ''));
-                    $data['foto_producto'] = \Database\Factories\ProductoFactory::getFotoForSabor($saborName);
-                }
-            }
-
-            // Sincronizar todos los formatos del mismo sabor
+            // Sincronizar categoría, foto y nombre (manteniendo el estado independiente por formato)
             if ($productoAnterior) {
-                $updateFields = array_intersect_key($data, array_flip(['id_categoria', 'estado_producto', 'foto_producto']));
+                $updateFields = array_intersect_key($data, array_flip(['id_categoria', 'foto_producto']));
                 if (!empty($data['nombre_producto'])) {
                     $updateFields['nombre_producto'] = $data['nombre_producto'];
                 }
                 \App\Models\Producto::where('nombre_producto', $productoAnterior->nombre_producto)->update($updateFields);
             }
-
-            $producto_actualizado = $this->productoServices->updateProducto($id, $data);
 
             $producto_actualizado = $this->productoServices->updateProducto($id, $data);
 
@@ -197,10 +161,10 @@ class ProductoController extends Controller
             );
 
             return response()->json([
-                'status' => 'success', 
+                'status' => 'success',
                 'data' =>  $producto_actualizado,
                 'message' => "Producto actualizado correctamente"
-            ], 200); 
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -210,9 +174,12 @@ class ProductoController extends Controller
     }
 
     public function destroy($id)
-    {   
+    {
         try {
             $producto = $this->productoServices->getProductoById($id);
+            if ($producto && !empty($producto->foto_producto)) {
+                ImageHelper::deleteOldImage($producto->foto_producto);
+            }
             $producto_destroy = $this->productoServices->deleteProducto($id);
 
             if ($producto) {
@@ -226,10 +193,10 @@ class ProductoController extends Controller
             }
 
             return response()->json([
-                'status' => 'success', 
+                'status' => 'success',
                 'data' =>  $producto_destroy,
                 'message' => "Producto eliminado correctamente"
-            ], 200); 
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -295,12 +262,78 @@ class ProductoController extends Controller
 
     public function getProductosPocoStock(Request $request)
     {
-        $umbral = $request->query('umbral', 10);
+        $umbralPorDefecto = Cache::get('umbral_poco_stock', 10);
+        $umbral = $request->query('umbral', $umbralPorDefecto);
         $productos = $this->productoServices->getProductosPocoStock($umbral);
 
         return response()->json([
             'status' => 'success',
-            'data' => $productos
+            'data' => $productos,
+            'umbral_aplicado' => (int)$umbral
+        ], 200);
+    }
+
+    public function setUmbralPocoStock(Request $request)
+    {
+        $request->validate([
+            'umbral' => 'required|integer|min:1'
+        ]);
+
+        Cache::forever('umbral_poco_stock', $request->umbral);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Umbral de poco stock actualizado correctamente.',
+            'umbral' => $request->umbral
+        ], 200);
+    }
+
+    public function getUmbralPocoStock()
+    {
+        $umbral = Cache::get('umbral_poco_stock', 10);
+        return response()->json([
+            'status' => 'success',
+            'umbral' => (int)$umbral
+        ], 200);
+    }
+
+    public function bulkToggleEstado(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'integer|exists:productos,id',
+            'estado_producto' => 'required|boolean'
+        ]);
+
+        $productIds = $request->input('product_ids');
+        $estadoNuevo = (bool) $request->input('estado_producto');
+        $estadoTxt = $estadoNuevo ? 'activados' : 'desactivados';
+
+        // Actualización masiva instantánea en SQL
+        $afectados = \App\Models\Producto::whereIn('id', $productIds)
+            ->update(['estado_producto' => $estadoNuevo]);
+
+        // Limpiar la caché de productos para que la API entregue los datos frescos al instante
+        (new \App\Repositories\ProductoRepository())->clearCache();
+        \Illuminate\Support\Facades\Cache::forget('catalogo_completo_productos');
+
+        // Auditoría única en el historial de movimientos
+        \App\Models\HistorialMovimiento::registrar(
+            'producto',
+            null,
+            $estadoNuevo ? 'activacion' : 'desactivacion',
+            "Se actualizaron masivamente {$afectados} formato(s) de helados a estado '{$estadoTxt}'",
+            null,
+            ['ids_actualizados' => $productIds, 'nuevo_estado' => $estadoNuevo]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Se actualizaron {$afectados} formatos a '{$estadoTxt}' correctamente.",
+            'data' => [
+                'afectados' => $afectados,
+                'estado_nuevo' => $estadoNuevo
+            ]
         ], 200);
     }
 }

@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Services;
+
 use App\Repositories\DespachoRepository;
 use App\Repositories\Usuario_dicremeRepository;
 use App\Repositories\Usuario_distribuidoresRepository;
 use App\Repositories\PedidoRepository;
+use App\Helpers\ImageHelper;
 use Illuminate\Support\Facades\Mail;
 
 class DespachoServices
@@ -128,8 +130,10 @@ class DespachoServices
 
         // Manejar subida de archivo si existe
         if ($fotoFile) {
-            $path = $fotoFile->store('comprobantes', 'public');
-            $fotoUrl = '/storage/' . $path;
+            if (!empty($despacho->foto_comprobante)) {
+                ImageHelper::deleteOldImage($despacho->foto_comprobante);
+            }
+            $fotoUrl = ImageHelper::storeAsWebp($fotoFile, 'comprobantes');
         }
 
         // 1. Actualizar despacho a estado 4 ("Entrega exitosa")
@@ -146,6 +150,15 @@ class DespachoServices
                 'id_estado_pedido' => 5
             ]);
         }
+
+        \App\Models\HistorialMovimiento::registrar(
+            'usuario',
+            $id_despacho,
+            'finalizacion_entrega',
+            "Se finalizó la entrega del despacho #{$id_despacho}",
+            null,
+            ['notas_entrega' => $notasEntrega, 'foto_comprobante' => $fotoUrl]
+        );
 
         return $this->despachoRepository->getDespachoById($id_despacho);
     }

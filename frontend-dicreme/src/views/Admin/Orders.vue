@@ -126,26 +126,29 @@
             </div>
           </div>
 
-          <div class="dropdown-container">
-            <button class="btn-secondary" @click.stop="toggleDateDropdown">
-              <Calendar :size="18" />
-              <span>{{ dateFilterLabel }}</span>
-              <ChevronDown :size="16" />
+          <div class="date-filter-box">
+            <CalendarIcon :size="18" class="date-icon" />
+            <input 
+              type="date" 
+              v-model="selectedDate" 
+              class="date-input"
+              @change="onDateChange"
+              title="Filtrar por fecha específica"
+            />
+            <button v-if="selectedDate" class="btn-clear-date" @click="clearDateFilter" title="Ver todas las fechas">
+              ✕
             </button>
-            
-            <div class="dropdown-menu" v-if="isDateDropdownOpen">
-              <div class="dropdown-item" @click="selectDateFilter('all', 'Todas las fechas')">Todas las fechas</div>
-              <div class="dropdown-divider"></div>
-              <div class="dropdown-item" @click="selectDateFilter('last30', 'Últimos 30 días')">Últimos 30 días</div>
-              <div class="dropdown-item" @click="selectDateFilter('last3months', 'Últimos 3 meses')">Últimos 3 meses</div>
-            </div>
           </div>
         </div>
 
         <div class="actions-right">
-          <button class="btn-export" @click="exportarExcel">
+          <button class="btn-refresh" @click="refreshTable" :disabled="isRefreshing" title="Actualizar pedidos">
+            <RefreshCw :size="18" :class="{ 'spin-icon': isRefreshing }" />
+            <span>Actualizar</span>
+          </button>
+          <button class="btn-export" @click="exportarExcel" :disabled="isExporting">
             <Download :size="18" />
-            <span>Exportar</span>
+            <span>{{ isExporting ? 'Exportando...' : 'Exportar' }}</span>
           </button>
         </div>
       </div>
@@ -235,7 +238,7 @@
                   @click="openModal(order.id)"
                 >
                   <component 
-                    :is="loadingOrderId === order.id ? Loader2 : Eye" 
+                    :is="loadingOrderId === order.id ? IceCream : Eye" 
                     :size="18" 
                     :class="{ 'spinner': loadingOrderId === order.id }" 
                   />
@@ -314,16 +317,48 @@ import {
   Download,
   Eye,
   ChevronsUpDown,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-vue-next';
 import { IceCream } from 'lucide-vue-next'
 import * as XLSX from 'xlsx';
+
+const getTodayDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const orders = ref<any[]>([]);
 const isLoading = ref(true);
 const activeTab = ref('pedidos');
 const isExporting = ref(false);
+const isRefreshing = ref(false);
+const selectedDate = ref(getTodayDate());
+
+const onDateChange = () => {
+  currentPage.value = 1;
+  fetchOrders();
+};
+
+const clearDateFilter = () => {
+  selectedDate.value = '';
+  currentPage.value = 1;
+  fetchOrders();
+};
+
+const refreshTable = async () => {
+  isRefreshing.value = true;
+  await fetchOrders(true);
+  setTimeout(() => {
+    isRefreshing.value = false;
+  }, 500);
+};
+
 import { useNotification } from '@/composables/useNotification';
+import { useAutoRefresh } from '@/composables/useAutoRefresh';
 
 const { notify } = useNotification();
 
@@ -364,14 +399,13 @@ const changePage = (page: number) => {
 };
 
 
-const fetchOrders = async () => {
-  isLoading.value = true;
-  console.log('--- [DEBUG] INICIANDO CARGA COMPLETA ---');
+const fetchOrders = async (silent = false) => {
+  if (!silent) isLoading.value = true;
   
   try {
     let ordersRes, distsRes, statsRes;
     
-    try { ordersRes = await orderService.getOrders(); } catch (e) { console.error(e); }
+    try { ordersRes = await orderService.getOrders(selectedDate.value || undefined); } catch (e) { console.error(e); }
     try { distsRes = await distributorService.getDistributors(); } catch (e) { console.error(e); }
     try { statsRes = await orderStatusService.getOrderStatuses(); } catch (e) { console.error(e); }
 
@@ -418,14 +452,17 @@ const fetchOrders = async () => {
       };
     });
 
-    console.log('Mapeo de grilla general refrescado con éxito:', orders.value);
-
   } catch (error) {
     console.error('Error crítico al refrescar la grilla:', error);
   } finally {
-    isLoading.value = false;
+    if (!silent) isLoading.value = false;
   }
 };
+
+useAutoRefresh((silent) => fetchOrders(silent), {
+  intervalMs: 15000,
+  enabled: () => selectedOrderId.value === '' && !isModalOpen.value
+});
 
 const exportarExcel = () => {
   if (orders.value.length === 0) {
@@ -656,8 +693,8 @@ const filteredOrders = computed(() => {
 });
 
 const sortConfig = ref({
-  key: '',
-  direction: 'asc'
+  key: 'id',
+  direction: 'desc'
 });
 
 const sortBy = (key: string) => {
@@ -671,11 +708,16 @@ const sortBy = (key: string) => {
 
 const sortedOrders = computed(() => {
   const dataToSort = filteredOrders.value;
-  if (!sortConfig.value.key) return dataToSort;
+  if (!sortConfig.value.key) return [...dataToSort].sort((a: any, b: any) => Number(b.id) - Number(a.id));
 
   return [...dataToSort].sort((a: any, b: any) => {
     let aValue = a[sortConfig.value.key];
     let bValue = b[sortConfig.value.key];
+
+    if (sortConfig.value.key === 'id') {
+      aValue = Number(a.id);
+      bValue = Number(b.id);
+    }
 
     if (sortConfig.value.key === 'date') {
       const parseDate = (d: string, t: string) => {
@@ -885,22 +927,36 @@ watch([searchQuery, statusFilter, activeTab], () => {
 }
 
 .table-actions {
-  padding: 24px;
+  padding: 20px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .actions-left {
   display: flex;
+  align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 300px;
+  flex-wrap: wrap;
+}
+
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .search-box {
   position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
-  max-width: 400px;
+  max-width: 340px;
+  height: 42px;
 }
 
 .search-icon {
@@ -913,7 +969,8 @@ watch([searchQuery, statusFilter, activeTab], () => {
 
 .search-box input {
   width: 100%;
-  padding: 12px 12px 12px 42px;
+  height: 100%;
+  padding: 0 12px 0 42px;
   border-radius: 10px;
   border: 1px solid #dee2e6;
   font-size: 0.9rem;
@@ -934,7 +991,8 @@ watch([searchQuery, statusFilter, activeTab], () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  height: 42px;
+  padding: 0 16px;
   background-color: white;
   border: 1px solid #dee2e6;
   border-radius: 10px;
@@ -948,6 +1006,82 @@ watch([searchQuery, statusFilter, activeTab], () => {
 .btn-secondary:hover {
   background-color: #f8f9fa;
   border-color: #ced4da;
+}
+
+.date-filter-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: white;
+  border-radius: 10px;
+  padding: 0 12px;
+  border: 1px solid #dee2e6;
+  height: 42px;
+}
+
+.date-icon {
+  color: #adb5bd;
+}
+
+.date-input {
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: #495057;
+  outline: none;
+  cursor: pointer;
+}
+
+.btn-clear-date {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0 4px;
+  font-weight: bold;
+}
+
+.btn-clear-date:hover {
+  color: #e4869f;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: #e4869f;
+  color: #e4869f;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .dropdown-menu {
@@ -988,7 +1122,8 @@ watch([searchQuery, statusFilter, activeTab], () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
+  height: 42px;
+  padding: 0 20px;
   background-color: white;
   border: 1.5px solid #e4869f;
   border-radius: 10px;
@@ -999,8 +1134,13 @@ watch([searchQuery, statusFilter, activeTab], () => {
   transition: all 0.2s;
 }
 
-.btn-export:hover {
+.btn-export:hover:not(:disabled) {
   background-color: #fff0f3;
+}
+
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .orders-table {

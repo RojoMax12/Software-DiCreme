@@ -8,6 +8,7 @@ import {
 } from 'lucide-vue-next'
 import { authService } from '../services/authService'
 import SuccessAccountModal from './SuccessAccountModal.vue'
+import TermsModal from './TermsModal.vue'
 
 const hasMinLength = computed(() => form.value.contrasena.length >= 8)
 const hasUpperCase = computed(() => /[A-Z]/.test(form.value.contrasena))
@@ -30,6 +31,8 @@ const form = ref({
 const isLoading = ref(false)
 const errorMessage = ref('')
 const showSuccessModal = ref(false)
+const acceptTerms = ref(false)
+const showTermsModal = ref(false)
 
 const comunasSantiago = [
   'Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central', 'Huechuraba', 
@@ -106,6 +109,8 @@ const formatRutInput = (rut: string) => {
 }
 
 const handleRegister = async () => {
+  if (isLoading.value) return;
+
   // 1. Validaciones básicas antes de enviar
   if (!form.value.rut_empresa || !form.value.nombre_empresa || !form.value.correo_electronico || !form.value.contrasena) {
     errorMessage.value = 'Por favor, completa todos los campos obligatorios.'
@@ -114,6 +119,11 @@ const handleRegister = async () => {
 
   if (form.value.contrasena !== form.value.contrasena_confirmation) {
     errorMessage.value = 'Las contraseñas no coinciden.'
+    return
+  }
+
+  if (!acceptTerms.value) {
+    errorMessage.value = 'Debes aceptar los términos y condiciones para continuar.'
     return
   }
 
@@ -316,16 +326,41 @@ const goToLogin = () => {
             <p :class="{'valid': hasSpecialChar}">✓ Un carácter especial (@$!%*#?&)</p>
           </div>
 
+          <!-- Casilla Términos y Condiciones -->
+          <div class="terms-container">
+            <label class="terms-label">
+              <input 
+                type="checkbox" 
+                v-model="acceptTerms" 
+                class="terms-checkbox"
+                :disabled="isLoading"
+              />
+              <span class="terms-text">
+                Acepto los 
+                <button type="button" class="terms-link" @click.stop="showTermsModal = true">
+                  Términos y Condiciones
+                </button>
+              </span>
+            </label>
+          </div>
+
           <button 
             @click="handleRegister" 
             class="btn btn-primary"
-            :disabled="isLoading"
+            :disabled="isLoading || !acceptTerms"
           >
             {{ isLoading ? 'PROCESANDO...' : 'CREAR CUENTA' }}
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Modal de Términos y Condiciones -->
+    <TermsModal
+      v-if="showTermsModal"
+      @close="showTermsModal = false"
+      @accept="acceptTerms = true; showTermsModal = false"
+    />
 
     <!-- Success Modal -->
     <SuccessAccountModal
@@ -358,7 +393,7 @@ const goToLogin = () => {
 .back-button {
   position: absolute;
   left: 1.5rem;
-  top: -1;
+  top: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -377,6 +412,7 @@ const goToLogin = () => {
 }
 
 .register-card {
+  position: relative;
   background-color: white;
   padding: 2rem;
   border-radius: 1.5rem;
@@ -690,4 +726,53 @@ const goToLogin = () => {
 
 .password-hints { font-size: 0.75rem; color: #9793a0; margin-top: 5px; }
 .password-hints p.valid { color: #16a34a; }
+
+
+.terms-container {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.terms-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.9rem;
+  color: #322c44;
+}
+
+.terms-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #e4869f;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.terms-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.terms-text {
+  line-height: 1.3;
+}
+
+.terms-link {
+  background: none;
+  border: none;
+  color: #e4869f;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.terms-link:hover {
+  color: #d16b85;
+}
 </style>

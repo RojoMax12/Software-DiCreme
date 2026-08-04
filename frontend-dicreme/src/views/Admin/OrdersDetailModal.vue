@@ -262,6 +262,7 @@ import {
 } from 'lucide-vue-next';
 import orderService from '@/services/orderService';
 import { useNotification } from '@/composables/useNotification';
+import { getStorageUrl } from '@/utils/imageUrl';
 
 
 const { notify } = useNotification();
@@ -293,9 +294,7 @@ const despachoData = ref<any>(null);
 const isProofZoomOpen = ref(false);
 
 const getProofUrl = (url: string | undefined) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `http://localhost:8000${url}`;
+  return getStorageUrl(url);
 };
 
 // Lógica de la línea de tiempo

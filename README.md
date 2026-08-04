@@ -1,142 +1,140 @@
 # Software-DiCreme
 
-Guía rápida para levantar el proyecto en local.
+Sistema web integral para la gestión de catálogo de productos, cotizaciones, pedidos, control de inventario por lotes, despachos y facturación de la empresa **DiCreme**.
 
-## Prerrequisitos
+---
 
-Antes de empezar, instala estas herramientas en tu equipo:
+## Arquitectura y Tecnologías
 
-- Git
-- PHP 8.3 o superior
-- Composer
-- Node.js 20.19+ o una versión más reciente compatible con el proyecto
-- npm
-- Un motor de base de datos local compatible con tu archivo `.env`
+El proyecto está estructurado en una arquitectura cliente-servidor desacoplada:
 
-El backend incluye un script SQL llamado `DiCremeInventoryScript.sql` con sintaxis de PostgreSQL, así que si vas a usar ese archivo para inicializar la base, instala PostgreSQL.
+- **Backend (`backend-dicreme`)**: API REST desarrollada con **PHP 8.3+** y **Laravel 11**, autenticación JWT (`jwt.auth`), control de acceso basado en roles (RBAC) y base de datos relacional **MySQL**.
+- **Frontend (`frontend-dicreme`)**: Single Page Application (SPA) construida con **Vue 3 (Composition API)**, **TypeScript**, **Vite**, **Vue Router**, **Axios**, **jsPDF** (generación de PDFs de cotización) y **XLSX** (exportación a Excel).
 
-## 1. Clonar y abrir el proyecto
+---
 
-Abre la carpeta raíz del repositorio:
+## Roles del Sistema
+
+El sistema implementa 4 roles de usuario diferenciados con permisos específicos:
+
+1. **Rol 1 - Admin**: Acceso total a la plataforma, gestión de usuarios, cotizaciones, inventario, pedidos y reportes.
+2. **Rol 2 - Trabajador**: Personal interno de DiCreme encargado del catálogo, control de stock, gestión de lotes y pedidos.
+3. **Rol 3 - Distribuidor**: Clientes y empresas externas que exploran el catálogo, cotizan productos y realizan pedidos.
+4. **Rol 4 - Despachador**: Personal logístico encargado del control de entregas, estado de despachos y recepciones.
+
+---
+
+## 🐳 Despliegue Rápido con Docker (Recomendado)
+
+El proyecto incluye orquestación con **Docker Compose** para desplegar automáticamente la base de datos MySQL, la API Backend y la aplicación Frontend sin necesidad de instalar entornos manualmente.
+
+### Pasos para desplegar con Docker:
 
 ```bash
-cd /Software-DiCreme
+# 1. Clonar el repositorio
+git clone https://github.com/RojoMax12/Software-DiCreme.git
+cd Software-DiCreme
+
+# 2. Levantar todos los servicios en segundo plano
+docker compose up -d --build
 ```
 
-## 2. Levantar el backend
+**Servicios levantados:**
+- 🛢️ **Base de Datos PostgreSQL**: `localhost:5176`
+- ⚡ **Backend REST API**: `http://localhost:8000`
+- 💻 **Frontend SPA Vue 3**: `http://localhost:5173`
 
-### 2.1 Entrar al proyecto Laravel
+---
+
+## ⚙️ Guía de Instalación y Despliegue Local (Sin Docker)
+
+### 1. Prerrequisitos
+
+- **Git**
+- **PHP 8.3+**
+- **Composer**
+- **Node.js 20.19+**
+- **npm** o **pnpm**
+- Servidor de base de datos **MySQL 8.0**
+
+### 2. Configuración y Arranque del Backend (`backend-dicreme`)
 
 ```bash
 cd backend-dicreme
-```
 
-### 2.2 Instalar dependencias PHP
-
-```bash
+# Instalar dependencias
 composer install
-```
-
-### 2.3 Instalar dependencias de frontend del backend
-
-El backend también usa Vite para sus assets, así que instala sus dependencias de Node:
-
-```bash
 npm install
-```
 
-### 2.4 Revisar el archivo de entorno
+# Configurar entorno
+cp .env.example .env
 
-Verifica el archivo `.env` del backend y ajusta, si hace falta, estos datos:
-
-- Conexión de base de datos
-- `APP_URL`
-- `JWT_SECRET`
-
-Si tu instalación no tiene el archivo `.env`, crea uno con la configuración que use tu entorno local.
-
-### 2.5 Generar la clave de la aplicación
-
-```bash
+# Generar claves de aplicación y JWT
 php artisan key:generate
-```
+php artisan jwt:secret
 
-### 2.6 Crear la base de datos y migrar
+# Enlace simbólico de almacenamiento
+php artisan storage:link
 
-Primero crea la base de datos local indicada en `.env` y luego ejecuta:
+# Ejecutar migraciones y datos iniciales
+php artisan migrate --seed
 
-```bash
-php artisan migrate
-```
-
-Si necesitas cargar la estructura inicial desde el script incluido, importa `DiCremeInventoryScript.sql` en PostgreSQL antes o en lugar de las migraciones, según cómo quieras inicializar el entorno.
-
-### 2.7 Levantar el backend
-
-Para correr solo la API / servidor Laravel:
-
-```bash
+# Levantar el servidor local
 php artisan serve
 ```
 
-Normalmente quedará disponible en `http://127.0.0.1:8000`.
-
-Si además quieres levantar los assets del backend en modo desarrollo, abre otra terminal y ejecuta:
+### 3. Configuración y Arranque del Frontend (`frontend-dicreme`)
 
 ```bash
-npm run dev
-```
+cd frontend-dicreme
 
-## 3. Levantar el frontend
-
-### 3.1 Entrar al proyecto Vue
-
-Abre otra terminal y entra al frontend:
-
-```bash
-cd /Users/fescobedo2025/Documents/GitHub/Software-DiCreme/frontend-dicreme
-```
-
-### 3.2 Instalar dependencias
-
-```bash
+# Instalar dependencias y levantar desarrollo
 npm install
-```
-
-### 3.3 Ejecutar el frontend en desarrollo
-
-```bash
 npm run dev
 ```
 
-Vite normalmente lo levanta en `http://localhost:5173`.
+---
 
-## 4. Orden recomendado de arranque
+## 🧪 Pruebas Automatizadas (QA)
 
-1. Instalar prerrequisitos.
-2. Configurar la base de datos local del backend.
-3. Ejecutar `composer install` y `npm install` en `backend-dicreme`.
-4. Ejecutar `php artisan key:generate` y `php artisan migrate`.
-5. Levantar el backend con `php artisan serve`.
-6. Levantar el frontend con `npm run dev` en `frontend-dicreme`.
-
-## 5. Comandos útiles
-
-- Limpiar cachés del backend:
+El backend cuenta con suites de pruebas unitarias y de integración desarrolladas con **PHPUnit**:
 
 ```bash
-php artisan config:clear
-php artisan cache:clear
+cd backend-dicreme
+
+# Ejecutar la suite completa de pruebas
+php artisan test
 ```
 
-- Revertir la última migración:
+### Pruebas incluidas:
+- `AuthTest.php`: Validación de inicio de sesión, generación de token JWT y protección de endpoints.
+- `ProductoTest.php`: Validación de endpoints de catálogo, productos y resúmenes de stock.
 
-```bash
-php artisan migrate:rollback
-```
+---
 
-- Reiniciar todo con datos de prueba:
+## 📑 Documentación de la API (Postman)
 
-```bash
-php artisan migrate:fresh --seed
-```
+La API REST cuenta con una colección oficial de Postman v2.1 con todos los endpoints catalogados por módulos:
+
+- 📂 **Archivo de colección**: [`docs/DiCreme_API.postman_collection.json`](./docs/DiCreme_API.postman_collection.json)
+- **Instrucciones de uso**:
+  1. Abre Postman y haz clic en **Import**.
+  2. Selecciona el archivo `docs/DiCreme_API.postman_collection.json`.
+  3. Ejecuta el endpoint `Auth -> Login` para obtener automáticamente tu `access_token` JWT.
+
+---
+
+## 🛠️ Comandos Útiles de Desarrollo Local
+
+### Backend (`backend-dicreme`)
+
+- **Ejecutar migraciones**: `php artisan migrate`
+- **Revertir migración**: `php artisan migrate:rollback`
+- **Reiniciar base de datos completa con datos de prueba**: `php artisan migrate:fresh --seed`
+- **Limpiar cachés**: `php artisan config:clear && php artisan cache:clear`
+
+### Frontend (`frontend-dicreme`)
+
+- **Servidor de desarrollo**: `npm run dev`
+- **Comprobación de tipos TypeScript**: `npm run type-check`
+- **Compilación de producción**: `npm run build`

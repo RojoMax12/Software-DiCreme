@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FileSearch, CheckCircle2, IceCream } from 'lucide-vue-next'
+import { FileSearch, CheckCircle2, XCircle, IceCream } from 'lucide-vue-next'
 import quoteService from '@/services/quoteService'
 import userService from '@/services/userService'
 import distributorService from '@/services/distributorService'
@@ -34,6 +34,21 @@ const fallbackComuna = ref('Comuna Registrada')
 // Captura el ID de la cotización directo desde los parámetros de la URL
 const quotationId = computed(() => Number(route.params.id))
 
+const isCancelled = computed(() => {
+  if (!quotationData.value) return false
+  const rawStatus = quotationData.value.id_estado_cotizacion 
+                 || quotationData.value.estado_id 
+                 || quotationData.value.id_estado;
+  const statusId = Number(rawStatus);
+  const statusName = String(
+    quotationData.value.estado_nombre || 
+    quotationData.value.nombre_estado || 
+    quotationData.value.estado?.nombre_estado || ''
+  ).toLowerCase();
+
+  return statusId === 4 || statusName.includes('cancelad');
+})
+
 // CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1 o Paso 2)
 const currentStep = computed(() => {
   if (!quotationData.value) return 1
@@ -45,8 +60,8 @@ const currentStep = computed(() => {
                  
   const statusId = Number(rawStatus);
 
-  // Si el estado es 3 (Completado), vamos al paso 2. Si no, nos quedamos en el 1.
-  return statusId === 3 ? 2 : 1
+  // Si el estado es 3 (Completado) o 4 (Cancelado), vamos al paso 2. Si no, nos quedamos en el 1.
+  return (statusId === 3 || statusId === 4 || isCancelled.value) ? 2 : 1
 })
 
 const abrirWhatsappConDatos = (quotationId) => {
@@ -72,7 +87,7 @@ const formatRutVisual = (rut: string) => {
 const getDynamicImage = (flavorName: string) => {
   if (!flavorName) return boxPlaceholderImage;
   
-  const formattedName = flavorName
+  const formattedName = String(flavorName)
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes
     .replace(/\s+/g, '-'); // Cambia espacios por guiones
@@ -160,6 +175,7 @@ const getQuoteStatusLabel = (statusId: number): string => {
   const safeId = Number(statusId)
   if (safeId === 1) return 'En revisión'
   if (safeId === 3) return 'Completado'
+  if (safeId === 4) return 'Cancelado'
   return 'En proceso'
 }
 
@@ -257,8 +273,9 @@ const handleGoBack = () => {
           <div class="timeline-wrapper">
             
             <div class="floating-icon-container" :class="'step-active-' + currentStep">
-              <div class="icon-bubble">
-                <FileSearch v-if="currentStep === 1" :size="24" color="white" />
+              <div class="icon-bubble" :class="{ 'is-cancelled': isCancelled }">
+                <FileSearch v-if="currentStep === 1 && !isCancelled" :size="24" color="white" />
+                <XCircle v-else-if="isCancelled" :size="24" color="white" />
                 <CheckCircle2 v-else :size="24" color="white" />
               </div>
             </div>
@@ -272,9 +289,9 @@ const handleGoBack = () => {
                 <div class="node-dot"></div>
                 <span class="node-text">En revisión</span>
               </div>
-              <div class="timeline-node" :class="{ active: currentStep === 2 }">
-                <div class="node-dot"></div>
-                <span class="node-text">Completado</span>
+              <div class="timeline-node" :class="{ active: currentStep === 2, cancelled: isCancelled }">
+                <div class="node-dot" :class="{ 'dot-cancelled': isCancelled }"></div>
+                <span class="node-text">{{ isCancelled ? 'Cancelado' : 'Completado' }}</span>
               </div>
             </div>
           </div>
@@ -500,6 +517,19 @@ const handleGoBack = () => {
   align-items: center;
   justify-content: center;
   animation: bounce 2s infinite ease-in-out;
+}
+
+.icon-bubble.is-cancelled {
+  background-color: #ef4444;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+}
+
+.node-dot.dot-cancelled {
+  background-color: #ef4444 !important;
+}
+
+.timeline-node.cancelled .node-text {
+  color: #ef4444;
 }
 
 @keyframes bounce {

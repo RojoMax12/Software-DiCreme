@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Usuario_distribuidoresServices;
+use App\Helpers\ImageHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Rules\RutChilenoRule;
@@ -59,19 +60,19 @@ class Usuario_distribuidoresController extends Controller
             );
 
             return response()->json(['status' => 'success', 'data' => $usuario, 'message' => 'Usuario creado'], 201);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al crear usuario', $e);
         }
     }
 
     public function update(Request $request, $id): JsonResponse
     {
+        $fileRule = class_exists('finfo') ? 'nullable|file|mimes:jpeg,jpg,png,webp,svg|max:10240' : 'nullable|file|max:10240';
         $data = $request->validate([
             'correo_electronico' => ['sometimes', 'required', 'email:rfc,dns', Rule::unique('usuarios_distribuidores', 'correo_electronico')->ignore($id)],
             'telefono'           => ['sometimes', 'required', new TelefonoChilenoRule],
             'direccion'          => 'sometimes|required|string|max:255',
             'comuna'             => 'sometimes|required|string|max:255',
-            'id_rol'             => 'nullable|integer|exists:rol,id',
             'contrasena'         => 'nullable|string|min:6',
             'rut_empresa'        => ['sometimes', 'required', new RutChilenoRule, Rule::unique('usuarios_distribuidores', 'rut_empresa')->ignore($id)],
             'nombre_empresa'     => 'sometimes|required|string|max:255',
@@ -80,9 +81,12 @@ class Usuario_distribuidoresController extends Controller
         ]);
 
         if ($request->hasFile('foto_perfil') || $request->hasFile('avatar')) {
+            $usuarioAnterior = $this->usuarioDistribuidoresService->getUsuarioDistribuidorById($id);
+            if ($usuarioAnterior && !empty($usuarioAnterior->foto_perfil)) {
+                ImageHelper::deleteOldImage($usuarioAnterior->foto_perfil);
+            }
             $file = $request->file('foto_perfil') ?? $request->file('avatar');
-            $path = $file->store('avatars', 'public');
-            $data['foto_perfil'] = '/storage/' . $path;
+            $data['foto_perfil'] = ImageHelper::storeAsWebp($file, 'avatars');
         }
 
         try {
@@ -98,7 +102,7 @@ class Usuario_distribuidoresController extends Controller
             );
 
             return response()->json(['status' => 'success', 'data' => $usuario, 'message' => 'Usuario actualizado'], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al actualizar usuario', $e);
         }
     }
@@ -138,7 +142,7 @@ class Usuario_distribuidoresController extends Controller
                 'status' => 'success',
                 'data' => $this->usuarioDistribuidoresService->getAllUsuariosDistribuidores()
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al listar distribuidores', $e);
         }
     }
@@ -147,10 +151,13 @@ class Usuario_distribuidoresController extends Controller
     {
         try {
             $usuario = $this->usuarioDistribuidoresService->getUsuarioDistribuidorById($id);
+            if (!$usuario && !is_numeric($id)) {
+                $usuario = $this->usuarioDistribuidoresService->getUsuarioDistribuidorByRut($id);
+            }
             if (!$usuario) return response()->json(['status' => 'error', 'message' => 'Usuario no encontrado'], 404);
             
             return response()->json(['status' => 'success', 'data' => $usuario], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener usuario', $e);
         }
     }
@@ -211,12 +218,25 @@ class Usuario_distribuidoresController extends Controller
         return $data;
     }
 
-    private function errorResponse(string $message, Exception $e): JsonResponse
+    private function errorResponse(string $message, \Throwable $e): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::error($message . ': ' . $e->getMessage(), ['exception' => $e]);
         return response()->json([
             'status'  => 'error',
-            'message' => $message,
-            'debug'   => config('app.debug') ? $e->getMessage() : null
+            'message' => $message . ($e->getMessage() ? ': ' . $e->getMessage() : ''),
+            'error'   => $e->getMessage()
         ], 500);
+    }
+
+    public function getUsuarioDistribuidorByRut($rut): JsonResponse
+    {
+        try {
+            $usuario = $this->usuarioDistribuidoresService->getUsuarioDistribuidorByRut($rut);
+            if (!$usuario) return response()->json(['status' => 'error', 'message' => 'Usuario no encontrado'], 404);
+            
+            return response()->json(['status' => 'success', 'data' => $usuario], 200);
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al obtener usuario', $e);
+        }
     }
 }

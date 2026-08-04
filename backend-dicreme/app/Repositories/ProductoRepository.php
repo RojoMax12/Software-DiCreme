@@ -175,7 +175,7 @@ class ProductoRepository
         return false;
     }
 
-    private function clearCache()
+    public function clearCache()
     {
         Cache::forget(self::CACHE_KEY); // Adiós fotografía vieja
     }

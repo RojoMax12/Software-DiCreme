@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { LogOut, User as UserIcon, Menu, Store, LayoutDashboard } from 'lucide-vue-next'
 import { useNotification } from '@/composables/useNotification';
+import carruselService from '@/services/carruselService';
 
 const { notify } = useNotification();
 
 const router = useRouter()
+const route = useRoute()
 const username = ref('')
 const userRole = ref('Usuario') // 🌟 Nueva variable reactiva para el rol
 
+const isStoreView = computed(() => route.path === '/admin/vista-tienda')
+
+const toggleStoreOrAdmin = () => {
+  if (isStoreView.value) {
+    router.push('/admin')
+  } else {
+    router.push('/admin/vista-tienda')
+  }
+}
+
 const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
-  if (userParsed) {
+  if (userParsed && userParsed !== 'undefined' && userParsed !== 'null') {
     try {
       const userObj = JSON.parse(userParsed)
       username.value = userObj.nombre_usuario || userObj.nombre || 'Usuario'
@@ -32,8 +44,32 @@ const checkAuth = () => {
   }
 }
 
+const tickerMessages = ref<string[]>([])
+
+const loadAvisos = async () => {
+  try {
+    const res = await carruselService.getAvisos();
+    const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    if (data && data.length > 0) {
+      tickerMessages.value = data;
+    }
+  } catch (e) {
+    console.error('Error al cargar avisos en AdminNavbar:', e);
+  }
+};
+
+watch(() => route.path, () => {
+  loadAvisos();
+});
+
 onMounted(() => {
   checkAuth()
+  loadAvisos()
+  window.addEventListener('avisos-actualizados', loadAvisos)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('avisos-actualizados', loadAvisos)
 })
 
 const emit = defineEmits(['toggleSidebar'])
@@ -54,40 +90,74 @@ const toggleSidebar = () => {
 </script>
 
 <template>
-  <nav class="admin-navbar">
-    <div class="nav-left">
-      <button class="btn-menu" @click="toggleSidebar" title="Menú lateral">
-        <Menu :size="24" />
-      </button>
-      
-      <div class="brand-group" @click="goToAdminHome">
-        <img src="@/assets/logo_dicreme.webp" alt="Di Creme Logo" class="brand-logo" />
-        <div class="brand-info">
-          <span class="brand-text">Di Creme</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="nav-right">
-      <div class="session-display">
-        <div class="user-avatar">
-          <UserIcon :size="20" />
-        </div>
-        <div class="user-details">
-          <span class="user-role">{{ userRole }}</span>
-          <span class="user-name">{{ username }}</span>
+  <header class="admin-header">
+    <nav class="admin-navbar">
+      <div class="nav-left">
+        <button class="btn-menu" @click="toggleSidebar" title="Menú lateral">
+          <Menu :size="24" />
+        </button>
+        
+        <div class="brand-group" @click="goToAdminHome">
+          <img src="@/assets/logo_dicreme.webp" alt="Di Creme Logo" class="brand-logo" />
+          <div class="brand-info">
+            <span class="brand-text">Di Creme</span>
+          </div>
         </div>
       </div>
 
-      <button class="btn-logout-icon" @click="handleLogout" title="Cerrar Sesión">
-        <LogOut :size="20" />
-      </button>
+      <div class="nav-right">
+        <button 
+          type="button" 
+          class="btn-store-preview" 
+          :class="{ 'in-store-view': isStoreView }"
+          @click="toggleStoreOrAdmin"
+          :title="isStoreView ? 'Volver al Panel de Administrador' : 'Ver Catálogo de la Tienda'"
+        >
+          <LayoutDashboard v-if="isStoreView" :size="18" />
+          <Store v-else :size="18" />
+          <span>{{ isStoreView ? 'Panel de Administrador' : 'Ver Tienda' }}</span>
+        </button>
+
+        <div class="session-display">
+          <div class="user-avatar">
+            <UserIcon :size="20" />
+          </div>
+          <div class="user-details">
+            <span class="user-role">{{ userRole }}</span>
+            <span class="user-name">{{ username }}</span>
+          </div>
+        </div>
+
+        <button class="btn-logout-icon" @click="handleLogout" title="Cerrar Sesión">
+          <LogOut :size="20" />
+        </button>
+      </div>
+    </nav>
+
+    <div class="ticker-wrapper" v-if="tickerMessages.length > 0">
+      <div class="ticker-track">
+        <div class="ticker-content">
+          <span v-for="(msg, index) in tickerMessages" :key="index">{{ msg }}</span>
+        </div>
+        <div class="ticker-content" aria-hidden="true">
+          <span v-for="(msg, index) in tickerMessages" :key="'dup-'+index">{{ msg }}</span>
+        </div>
+      </div>
     </div>
-  </nav>
+  </header>
 </template>
 
 <style scoped>
 /* Los estilos se mantienen exactamente igual a como los tenías */
+.admin-header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
 .admin-navbar {
   background-color: white;
   height: 80px;
@@ -96,9 +166,6 @@ const toggleSidebar = () => {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
 }
 
 .nav-left {
@@ -214,12 +281,88 @@ const toggleSidebar = () => {
   transform: scale(1.05);
 }
 
+.btn-store-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fff0f3;
+  color: #e4869f;
+  border: 1px solid #fecdd3;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-store-preview:hover {
+  background-color: #e4869f;
+  color: white;
+}
+
+.btn-store-preview.in-store-view {
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.btn-store-preview.in-store-view:hover {
+  background-color: #334155;
+  color: white;
+}
+
+.ticker-wrapper {
+  background-color: #e4869f;
+  color: white;
+  height: 32px;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-move 28s linear infinite;
+}
+
+.ticker-content {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding-right: 40px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@keyframes ticker-move {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-wrapper:hover .ticker-track {
+  animation-play-state: paused;
+}
+
 @media (max-width: 768px) {
   .admin-navbar {
     padding: 0 20px;
   }
   .user-details {
     display: none;
+  }
+  .btn-store-preview span {
+    display: none;
+  }
+  .ticker-wrapper {
+    height: 28px;
+    font-size: 0.78rem;
   }
 }
 </style>

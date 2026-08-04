@@ -79,14 +79,13 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   margin: 0;          /* Asegura que no haya márgenes externos */
   max-width: 100vw; 
-  overflow-x: hidden;
 }
 
 /* El track container también debe ser 100% */
 .carousel-track-container {
   width: 100%;
   height: auto;
-  aspect-ratio: 1920 / 600; /* Define la proporción exacta de tu imagen */
+  aspect-ratio: 1920 / 350; /* Define la proporción exacta de tu imagen */
   position: relative;
   overflow: hidden;
 }
@@ -111,7 +110,6 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Centra la imagen y enfoca un poco más arriba para no cortar los logos */
   object-position: center 30%;
 }
 

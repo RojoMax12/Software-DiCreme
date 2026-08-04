@@ -26,6 +26,7 @@ const userId = ref<number | null>(null)
 const quotationItems = ref<any[]>([])
 const errorMessage = ref('')
 const showToast = ref(false)
+const isSubmitting = ref(false)
 
 // Dispara la alerta integrada en la interfaz
 const triggerAlert = (message: string) => {
@@ -112,7 +113,8 @@ const totalEstimated = computed(() => {
 
 // Envía el payload plano y corregido rumbo al endpoint del backend
 const handleConfirmQuotation = async () => {
-  
+  if (isSubmitting.value) return;
+
   // --- VALIDACIONES DE ENTRADA VISUAL ---
   if (!email.value.trim()) { triggerAlert('Por favor, ingresa el correo electrónico.'); return; }
   if (!phone.value.trim()) { triggerAlert('Por favor, ingresa el teléfono.'); return; }
@@ -122,6 +124,8 @@ const handleConfirmQuotation = async () => {
   if (!companyRut.value.trim()) { triggerAlert('Por favor, ingresa el RUT de la empresa.'); return; }
   if (!address.value.trim()) { triggerAlert('Por favor, ingresa la dirección de despacho.'); return; }
   if (!commune.value.trim()) { triggerAlert('Por favor, ingresa la comuna.'); return; }
+
+  isSubmitting.value = true;
 
   // --- GENERACIÓN DE MARCAS DE TIEMPO ---
   const now = new Date()
@@ -219,6 +223,7 @@ const handleConfirmQuotation = async () => {
   } catch (error) {
     console.error('Error dispatching payload structurally:', error)
     triggerAlert('Hubo un problema al conectar con el servidor.')
+    isSubmitting.value = false;
   }
 }
 </script>
@@ -318,8 +323,12 @@ const handleConfirmQuotation = async () => {
           </div>
 
           <div class="action-row">
-            <button class="btn-confirm-cotizacion" @click="handleConfirmQuotation">
-              Confirmar cotización
+            <button 
+              class="btn-confirm-cotizacion" 
+              :disabled="isSubmitting" 
+              @click="handleConfirmQuotation"
+            >
+              {{ isSubmitting ? 'Procesando...' : 'Confirmar cotización' }}
             </button>
           </div>
         </section>
@@ -368,7 +377,8 @@ const handleConfirmQuotation = async () => {
 .total-value { font-size: 1.05rem; font-weight: bold; color: #1a1624; }
 .action-row { display: flex; justify-content: flex-end; margin-top: 30px; }
 .btn-confirm-cotizacion { background-color: #322c44; color: white; border: none; padding: 14px 38px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 10px rgba(50, 44, 68, 0.2); }
-.btn-confirm-cotizacion:hover { background-color: #1a1624; }
+.btn-confirm-cotizacion:hover:not(:disabled) { background-color: #1a1624; }
+.btn-confirm-cotizacion:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
 
 .disabled-input {
   background-color: #f4f4f5 !important;
