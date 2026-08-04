@@ -24,7 +24,7 @@ class Usuario_dicremeController extends Controller
                 'status' => 'success', 
                 'data' => $this->usuarioDicremeServices->getAllUsuariosDicreme()
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al listar usuarios', $e);
         }
     }
@@ -36,7 +36,7 @@ class Usuario_dicremeController extends Controller
             if (!$usuario) return response()->json(['status' => 'error', 'message' => 'Usuario no encontrado'], 404);
             
             return response()->json(['status' => 'success', 'data' => $usuario], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener el usuario', $e);
         }
     }
@@ -55,50 +55,116 @@ class Usuario_dicremeController extends Controller
             
             $usuario = $this->usuarioDicremeServices->createUsuarioDicreme($data);
             
+            \App\Models\HistorialMovimiento::registrar(
+                'usuario',
+                $usuario->id,
+                'creacion_usuario',
+                "Se creó el usuario de sistema '{$usuario->nombre_usuario}' ({$usuario->correo_electronico})",
+                null
+            );
+
             return response()->json([
                 'status' => 'success', 
                 'data' => $usuario,
                 'message' => 'Usuario creado correctamente'
             ], 201); 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al crear el usuario', $e);
         }
     }
 
     public function update(Request $request, $id): JsonResponse
     {
-        $data = $request->validate([
-            'nombre_usuario'     => 'sometimes|required|string|max:255',
-            'correo_electronico' => 'sometimes|required|string|email|max:255|unique:usuarios_dicreme,correo_electronico,' . $id,
-            'contrasena'         => [
-                'required',
-                'string',
-                'min:8',              // Mínimo 8 caracteres
-                'confirmed',          // Requiere un campo 'contrasena_confirmation'
-                'regex:/[a-z]/',      // Al menos una minúscula
-                'regex:/[A-Z]/',      // Al menos una mayúscula
-                'regex:/[0-9]/',      // Al menos un número
-                'regex:/[@$!%*#?&]/', // Al menos un carácter especial
-            ],
-            'id_rol'             => 'sometimes|required|integer|exists:rol,id',
-        ]);
+        try {
+            $data = $request->validate([
+                'nombre_usuario'     => 'sometimes|required|string|max:255',
+                'correo_electronico' => 'sometimes|required|string|email|max:255|unique:usuarios_dicreme,correo_electronico,' . $id,
+                'contrasena'         => 'sometimes|nullable|string|min:8',
+                'id_rol'             => 'sometimes|nullable|integer|exists:rol,id',
+                'foto_perfil'        => 'sometimes|nullable',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Datos de validación inválidos',
+                'errors'  => $ve->errors()
+            ], 422);
+        }
 
         try {
+            $usuario = $this->usuarioDicremeServices->getUsuarioDicremeById($id);
+            if (!$usuario) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Usuario no encontrado (ID ' . $id . ')'
+                ], 404);
+            }
 
-            unset($data['contrasena_confirmation']);
+            if ($request->hasFile('foto_perfil')) {
+                $file = $request->file('foto_perfil');
+                if ($file && $file->isValid()) {
+                    $filename = 'avatar_' . $id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'webp');
+                    $targetDir = public_path('storage/avatars');
+                    if (!file_exists($targetDir)) {
+                        @mkdir($targetDir, 0777, true);
+                    }
+                    
+                    if (file_exists($targetDir) && is_writable($targetDir)) {
+                        $file->move($targetDir, $filename);
+                        $data['foto_perfil'] = '/storage/avatars/' . $filename;
+                    } else {
+                        $path = $file->storeAs('avatars', $filename, 'public');
+                        $data['foto_perfil'] = '/storage/' . $path;
+                    }
+                }
+            } else if ($request->filled('foto_perfil') && str_starts_with($request->foto_perfil, 'data:image')) {
+                $base64Image = $request->foto_perfil;
+                @list($type, $file_data) = explode(';', $base64Image);
+                @list(, $file_data) = explode(',', $file_data);
+                if ($file_data) {
+                    $fileName = 'avatar_' . $id . '_' . time() . '.webp';
+                    $targetDir = public_path('storage/avatars');
+                    if (!file_exists($targetDir)) {
+                        @mkdir($targetDir, 0777, true);
+                    }
+                    if (file_exists($targetDir)) {
+                        file_put_contents($targetDir . '/' . $fileName, base64_decode($file_data));
+                        $data['foto_perfil'] = '/storage/avatars/' . $fileName;
+                    } else {
+                        \Illuminate\Support\Facades\Storage::disk('public')->put('avatars/' . $fileName, base64_decode($file_data));
+                        $data['foto_perfil'] = '/storage/avatars/' . $fileName;
+                    }
+                }
+            }
+
+            if (empty($data['contrasena'])) {
+                unset($data['contrasena']);
+            }
             
             if (isset($data['correo_electronico'])) {
                 $data['correo_electronico'] = strtolower(trim($data['correo_electronico']));
             }
             
-            $usuario = $this->usuarioDicremeServices->updateUsuarioDicreme($id, $data);
+            $usuarioActualizado = $this->usuarioDicremeServices->updateUsuarioDicreme($id, $data);
             
+            try {
+                \App\Models\HistorialMovimiento::registrar(
+                    'usuario',
+                    $id,
+                    'modificacion_usuario',
+                    "Se actualizó el usuario de sistema '{$usuarioActualizado->nombre_usuario}'",
+                    null
+                );
+            } catch (\Throwable $th) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo registrar historial movimiento: ' . $th->getMessage());
+            }
+
             return response()->json([
                 'status' => 'success', 
-                'data' => $usuario,
+                'data' => $usuarioActualizado,
                 'message' => 'Usuario actualizado correctamente'
             ], 200); 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al actualizar el usuario', $e);
         }
     }
@@ -108,15 +174,23 @@ class Usuario_dicremeController extends Controller
         try {
             $usuario_destroy = $this->usuarioDicremeServices->deleteUsuarioDicreme($id);
 
+            \App\Models\HistorialMovimiento::registrar(
+                'usuario',
+                $id,
+                'eliminacion_usuario',
+                "Se eliminó el usuario de sistema #{$id}",
+                null
+            );
+
             return response()->json([
             'status' => 'success', 
             'data' =>  $usuario_destroy,
             'message' =>"Usuario eliminado correctamente"], 
             200); 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al eliminar el usuario' . $e->getMessage()
+                'message' => 'Error al eliminar el usuario: ' . $e->getMessage()
             ], 400);
         }
     }
@@ -128,7 +202,7 @@ class Usuario_dicremeController extends Controller
                 'status' => 'success',
                 'data' => $this->usuarioDicremeServices->getUsuariosDicremeDespachador()
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse('Error al obtener despachadores', $e);
         }
     }
@@ -144,6 +218,16 @@ class Usuario_dicremeController extends Controller
             ], 404);
         }
 
+        $isActivo = (bool)$resultado->estado_usuario;
+
+        \App\Models\HistorialMovimiento::registrar(
+            'usuario',
+            $id,
+            $isActivo ? 'activacion_usuario' : 'desactivacion_usuario',
+            "Se cambió el estado del usuario '{$resultado->nombre_usuario}' a " . ($isActivo ? 'Activo' : 'Inactivo'),
+            null
+        );
+
         return response()->json([
             'status' => 'success',
             'message' => 'Estado del usuario cambiado correctamente.',
@@ -156,12 +240,21 @@ class Usuario_dicremeController extends Controller
         ], 200);
     }
 
-    private function errorResponse(string $message, Exception $e): JsonResponse
+    private function errorResponse(string $message, \Throwable $e): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::error($message . ': ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+
         return response()->json([
             'status'  => 'error',
-            'message' => $message,
-            'debug'   => config('app.debug') ? $e->getMessage() : null
+            'message' => $message . ': ' . $e->getMessage(),
+            'debug'   => [
+                'error' => $e->getMessage(),
+                'file'  => basename($e->getFile()),
+                'line'  => $e->getLine()
+            ]
         ], 500);
     }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Home, FileText, ShoppingBag, X, User } from 'lucide-vue-next'
+import { Home, FileText, ShoppingBag, X, User, Package } from 'lucide-vue-next'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps<{
@@ -10,6 +11,17 @@ const emit = defineEmits(['close'])
 
 const router = useRouter()
 const route = useRoute()
+const userRole = ref<number>(0)
+
+onMounted(() => {
+  const stored = localStorage.getItem('user')
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored)
+      userRole.value = Number(parsed.id_rol || 0)
+    } catch (e) {}
+  }
+})
 
 const navigateTo = (path: string) => {
   router.push(path)
@@ -78,6 +90,19 @@ const isActive = (path: string) => {
             >
               <User :size="20" />
               <span>Mi perfil</span>
+            </button>
+          </div>
+
+          <div v-if="userRole === 1 || userRole === 2" class="nav-section" style="margin-top: 16px; border-top: 1px solid #eeedee; padding-top: 16px;">
+            <span class="section-title">Administración</span>
+            
+            <button 
+              class="nav-item" 
+              :class="{ active: isActive('/admin/catalogo') }"
+              @click="navigateTo('/admin/catalogo')"
+            >
+              <Package :size="20" />
+              <span>Catálogo e Historial</span>
             </button>
           </div>
         </nav>

@@ -46,6 +46,19 @@ class Usuario_distribuidoresRepository
         return Usuario_distribuidores::where("correo_electronico", $correo)->first();
     }
 
+    public function getUsuarioDistribuidorByRut($rut){
+        $cleanRut = strtoupper(preg_replace('/[^kK0-9]/', '', $rut));
+        $formattedRut = null;
+        if (strlen($cleanRut) > 1) {
+            $formattedRut = substr($cleanRut, 0, -1) . '-' . substr($cleanRut, -1);
+        }
+
+        return Usuario_distribuidores::where("rut_empresa", $cleanRut)
+            ->orWhere("rut_empresa", $formattedRut)
+            ->orWhere("rut_empresa", $rut)
+            ->first();
+    }
+
     public function activarydesactivar($id)
     {
         $usuarioDistribuidor = Usuario_distribuidores::find($id);

@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('correo_electronico')->unique();
             $table->string('comuna');
             $table->boolean('estado_usuario')->default(true);
+            $table->string('foto_perfil')->nullable();
             $table->timestamps();
         });
     }

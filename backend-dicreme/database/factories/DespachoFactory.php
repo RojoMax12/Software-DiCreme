@@ -25,7 +25,7 @@ class DespachoFactory extends Factory
             'direccion_entrega' => $this->faker->address(),
             'comuna' => $this->faker->city(),
             'persona_recibe' => $this->faker->name(),
-            'estado_despacho' => $this->faker->randomElement(['Pendiente']),
+            'id_estado_despacho' => \App\Models\Estado_despacho::inRandomOrder()->first()?->id ?? \App\Models\Estado_despacho::factory(),
             'id_usuario_dicreme' => \App\Models\Usuario_dicreme::inRandomOrder()->first()?->id ?? \App\Models\Usuario_dicreme::factory(),
         ];
     }

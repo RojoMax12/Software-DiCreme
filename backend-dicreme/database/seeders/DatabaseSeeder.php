@@ -15,7 +15,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $roles = ['Admin', 'Dicreme', 'Distribuidor', 'Despachador'];
-        $estadosPedido = ['Validacion', 'Preparacion', 'Despachado', 'Entregado','Pendiente', 'Cancelado'];
+        $estadosPedido = ['Validacion', 'Preparacion', 'Listo para Despacho', 'En Despacho','Entregado', 'Pendiente', 'Cancelado'];
+        $estadosDespacho = ['Pendiente asignacion', 'Asignado', 'En ruta', 'Entrega exitosa', 'Intento Fallido', 'Retornado a bodega'];
         $estadosPago = ['Por pagar','Pagado'];
         $estadosCotizacion = ['Por Tomar','En Revision', 'Completado', 'Cancelado'];
         $categorias = ['Al agua', 'Leche de avena', 'Tradicional', 'Sin azúcar'];
@@ -23,6 +24,10 @@ class DatabaseSeeder extends Seeder
         
         foreach ($estadosCotizacion as $estado){
         \App\Models\Estado_cotizacion::firstOrCreate(['nombre_estado' => $estado]);
+        }
+
+        foreach ($estadosDespacho as $estado){
+        \App\Models\Estado_despacho::firstOrCreate(['nombre_estado' => $estado]);
         }
         
         foreach ($roles as $rol) {
@@ -58,8 +63,21 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        foreach ($formatos as $formato) {
-            \App\Models\Formato::firstOrCreate(['nombre_formato' => $formato]);
+        $formatosConPrecio = [
+            ['nombre_formato' => '10L',  'precio_formato' => 23900, 'imagen_formato' => '/storage/formatos/10L.webp'],
+            ['nombre_formato' => '5L',   'precio_formato' => 16900, 'imagen_formato' => '/storage/formatos/5L.webp'],
+            ['nombre_formato' => '2.5L', 'precio_formato' => 8900,  'imagen_formato' => '/storage/formatos/2.5L.webp'],
+            ['nombre_formato' => '1L',   'precio_formato' => 3900,  'imagen_formato' => '/storage/formatos/1L.webp'],
+        ];
+
+        foreach ($formatosConPrecio as $f) {
+            \App\Models\Formato::updateOrCreate(
+                ['nombre_formato' => $f['nombre_formato']],
+                [
+                    'precio_formato' => $f['precio_formato'],
+                    'imagen_formato' => $f['imagen_formato']
+                ]
+            );
         }
 
         \App\Models\Bodega::factory(5)->create();

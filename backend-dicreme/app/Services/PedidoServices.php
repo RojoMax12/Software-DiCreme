@@ -88,7 +88,7 @@ class PedidoServices
         // 1. Buscamos el pedido para saber en qué estado se encuentra hoy
         $pedido = $this->pedidoRepository->getPedidoById($id_pedido);
         if (!$pedido) {
-            return null; // El pedido no existe
+            throw new \Exception("El pedido #{$id_pedido} no existe.");
         }
 
         $estadoActual = (int)$pedido->id_estado_pedido;
@@ -102,23 +102,19 @@ class PedidoServices
         // Buscamos el despacho asociado
         $despacho = $this->despachoRepository->getDespachoByIdpedido($id_pedido);
 
-        // 3. EFECTOS SECUNDARIOS: Si está en 3 (Preparación) y va a avanzar a 4 (Despachado)
-        if ($idNuevoEstado === 3) {
+        // 3. EFECTOS SECUNDARIOS: Sincronización con despacho
+        if ($idNuevoEstado === 4) { // En Despacho
             if ($despacho) {
                 $this->despachoRepository->updateDespacho($despacho->id, [
-                    "estado_despacho" => "despachado"
+                    "id_estado_despacho" => 3 // En ruta
                 ]);
             }
         }
 
-        // 4. EFECTOS SECUNDARIOS: Si el nuevo estado que va a asumir va a ser el de Entrega
-        // Nota: Si el flujo avanza de 3 a 4, tu condición original de la fecha de entrega
-        // debería ejecutarse cuando efectivamente pasa a estar en manos del cliente.
-
-        if ($idNuevoEstado === 4) {
+        if ($idNuevoEstado === 5) { // Entregado
             if ($despacho) {
                 $this->despachoRepository->updateDespacho($despacho->id, [
-                    "estado_despacho" => "entregado",
+                    "id_estado_despacho" => 4, // Entrega exitosa
                     'fecha_entrega'   => now()
                 ]);
             }
@@ -165,6 +161,7 @@ class PedidoServices
         $usuario_distribuidor = $this->usuariodistribuidorRepository->getUsuarioDistribuidorById($pedido->id_usuario_distribuidor);
         $cotizacion = $this->cotizacionRepository->getCotizacionById($pedido->id_cotizacion);
         $pedido_productos= $this->pedidoproductoRepository->getPedidoProductosByPedidoId($pedido->id);
+        $despacho = $this->despachoRepository->getDespachoByIdpedido($pedido->id);
 
         // 3. RECORREMOS LA LISTA: Combinamos el pivote con la info del catálogo del producto
         $listaProductosData = [];
@@ -174,9 +171,14 @@ class PedidoServices
             $infoProducto = $this->productoRepository->getProductoById($itemPivote->id_producto);
 
             if ($infoProducto) {
+                $categoria = \App\Models\Categoria::find($infoProducto->id_categoria);
+                $formato = \App\Models\Formato::find($infoProducto->id_formato);
+
                 $listaProductosData[] = [
                     'id_producto'           => $infoProducto->id,
                     'nombre_producto'       => $infoProducto->nombre_producto,
+                    'nombre_categoria'      => $categoria ? $categoria->nombre_categoria : '',
+                    'nombre_formato'        => $formato ? $formato->nombre_formato : '',
                     'id_categoria'          => $infoProducto->id_categoria,
                     'id_formato'            => $infoProducto->id_formato,
                     'cantidad'              => $itemPivote->cantidad,
@@ -188,17 +190,21 @@ class PedidoServices
 
         // 4. RETORNAMOS EL PAQUETE COMPLETO
         return [
-            'id_pedido'        => $pedido->id,
-            'persona_recibe'       => $cotizacion->persona_recibe,
+            'id_pedido'            => $pedido->id,
+            'persona_recibe'       => $despacho ? $despacho->persona_recibe : ($cotizacion ? $cotizacion->persona_recibe : ''),
+            'direccion_entrega'    => $despacho ? $despacho->direccion_entrega : ($usuario_distribuidor ? $usuario_distribuidor->direccion : ''),
+            'comuna'               => $despacho ? $despacho->comuna : ($usuario_distribuidor ? $usuario_distribuidor->comuna : ''),
             'total_cotizacion'     => $pedido->monto_final,
             'subtotal_cotizacion'  => $pedido->monto_estimado,
-            'id_estado_pedido' => $pedido->id_estado_pedido,
-            'id_estado_pago' => $pedido->id_estado_pedido,
+            'id_estado_pedido'     => $pedido->id_estado_pedido,
+            'id_estado_pago'       => $pedido->id_estado_pago,
             'fecha_creacion'       => $pedido->fecha_creacion,
-            'descuento_total'       => $cotizacion->descuento_general_aplicado + $cotizacion->descuento_productos_total,
+            'hora_creacion'        => $pedido->hora_creacion,
+            'descuento_total'      => $cotizacion ? ($cotizacion->descuento_general_aplicado + $cotizacion->descuento_productos_total) : 0,
 
             // Objeto con la información del distribuidor
             'distribuidor'         => $usuario_distribuidor, 
+            'despacho'             => $despacho,
             
             // Array estructurado con sus productos, cantidades y nombres reales
             'productos'            => $listaProductosData

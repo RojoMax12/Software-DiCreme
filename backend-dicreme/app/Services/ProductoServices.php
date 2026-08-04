@@ -35,6 +35,11 @@ class ProductoServices
         return $this->productoRepository->getResumenTodosLosProductos();
     }
 
+    public function getProductosPocoStock($umbral = 10)
+    {
+        return $this->productoRepository->getProductosPocoStock($umbral);
+    }
+
     public function getProductoById($id)
     {
         return $this->productoRepository->getProductoById($id);

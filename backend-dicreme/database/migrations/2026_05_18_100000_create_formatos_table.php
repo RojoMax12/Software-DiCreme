@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('formatos', function (Blueprint $table) {
             $table->id();
             $table->string('nombre_formato');
+            $table->integer('precio_formato');
+            $table->string('imagen_formato');
             $table->timestamps();
         });
     }

@@ -36,14 +36,19 @@ class Pedido extends Model
         return $this->belongsTo(Usuario_dicreme::class, 'id_usuario_dicreme');
     }
 
-    public function estadoPedido(): HasOne
+    public function distribuidor(): BelongsTo
     {
-        return $this->HasOne(Estado_pedido::class, 'id_estado_pedido');
+        return $this->belongsTo(Usuario_distribuidores::class, 'id_usuario_distribuidor');
     }
 
-    public function estadoPago(): HasOne
+    public function estadoPedido(): BelongsTo
     {
-        return $this->HasOne(Estado_pago::class, 'id_estado_pago');
+        return $this->belongsTo(Estado_pedido::class, 'id_estado_pedido');
+    }
+
+    public function estadoPago(): BelongsTo
+    {
+        return $this->belongsTo(Estado_pago::class, 'id_estado_pago');
     }
 
     public function despacho(): HasOne

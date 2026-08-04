@@ -17,7 +17,8 @@ class Usuario_dicreme extends Authenticatable
         'correo_electronico',
         'contrasena',
         'id_rol',
-        'estado_usuario'
+        'estado_usuario',
+        'foto_perfil'
     ];
 
     protected $hidden = [

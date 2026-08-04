@@ -69,6 +69,7 @@ import CartModal from '@/components/CartModal.vue'
 import ProductDetailModal from '@/components/ProductDetailModal.vue';
 import LoginNoticeModal from '@/components/LoginNoticeModal.vue';
 import fotoCaja from '@/assets/caja_dicreme.webp'
+import { getStorageUrl } from '@/utils/imageUrl';
 import { ShoppingCart, IceCream } from 'lucide-vue-next'
 import categoryService from '@/services/productCategoryService';
 import productService from '@/services/productService';
@@ -76,12 +77,14 @@ import Footer from '@/components/Footer.vue'
 import Carousel from '@/components/Carousel.vue';
 import imgBanner1 from '@/assets/banner1.webp'
 import imgBanner2 from '@/assets/banner2.webp'
+import imgBanner3 from '@/assets/local_horario.webp'
 const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 
 const bannerImages = [
   imgBanner1,
-  imgBanner2
+  imgBanner2,
+  imgBanner3
 ];
 
 // Estados reactivos
@@ -108,13 +111,14 @@ const checkAuthStatus = () => {
 
   if (token){
     isLoggedIn.value = true;
-    if (userParsed) {
+    if (userParsed && userParsed !== 'undefined' && userParsed !== 'null') {
       try {
         const userObj = JSON.parse(userParsed);
         console.log("Contenido real de lo que hay en 'user':", userObj);
-        currentUser.value = userObj.nombre_empresa || 'Distribuidor';
+        currentUser.value = userObj.nombre_empresa || userObj.nombre_usuario || userObj.nombre || 'Distribuidor';
       } catch (error) {
         console.error("Error al parsear el usuario:", error);
+        localStorage.removeItem('user');
         currentUser.value = 'Distribuidor';
       }
     } else {
@@ -131,9 +135,13 @@ watch(() => router.currentRoute.value.path, () => {
 });
 
 
+const getImageUrl = (path: string | null | undefined) => {
+  return getStorageUrl(path) || fotoCaja;
+};
+
 const getDynamicImage = (flavorName: string) => {
-  // Transforma: "Limón al Agua" -> "limon-al-agua"
-  const formattedName = flavorName
+  if (!flavorName) return fotoCaja;
+  const formattedName = String(flavorName)
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // <-- ¡IMPORTANTE! Quita las tildes para evitar errores
     .replace(/\s+/g, '-');
@@ -172,7 +180,7 @@ const filteredIceCreams = computed(() => {
   if (searchQueryText.value.trim() !== '') {
     const searchLow = searchQueryText.value.toLowerCase();
     results = results.filter(item => 
-      item.name.toLowerCase().includes(searchLow)
+      (item.name || '').toLowerCase().includes(searchLow)
     );
   }
   return results;  
@@ -285,7 +293,9 @@ const fetchIceCreams = async () => {
       throw new Error('Error al obtener los datos del catálogo');
     }
 
-    const dbProducts = response.data;
+    //quiero hacer un filtro en que a partir de la respuesta se filtre para solo tener los productos con estado activo
+    const activeProducts = response.data.filter((product: any) => product.estado_producto === true);
+    const dbProducts = activeProducts;
     
     // Usamos Map porque es el mecanismo más rápido en JS para agrupar elementos dinámicos
     const grouped = new Map<string, any>();
@@ -307,11 +317,13 @@ const fetchIceCreams = async () => {
 
       // Si es la primera vez que vemos este sabor de helado, creamos su base
       if (!grouped.has(flavorName)) {
+        const dynamicImg = getDynamicImage(flavorName);
+        const finalImg = (dynamicImg && dynamicImg !== fotoCaja) ? dynamicImg : (prod.foto_producto ? getImageUrl(prod.foto_producto) : fotoCaja);
         grouped.set(flavorName, {
           name: flavorName,
           category: categoryName,
           color: 'var(--DC-pink)',
-          image: getDynamicImage(flavorName),
+          image: finalImg,
           id10l: null, price10l: 'No disponible',
           id5l: null, price5l: 'No disponible',
           id25l: null, price25l: 'No disponible',

@@ -152,12 +152,10 @@ const goToLogin = () => {
 <template>
   <div class="register-container">
     <div class="register-wrapper">
-      <div class="back-button" @click="goBack" v-if="!showSuccessModal">
-        <ArrowLeft :size="24" color="#e4869f" />
-        <span>Volver</span>
-      </div>
-
       <div class="register-card">
+        <div class="back-button" @click="goBack" v-if="!showSuccessModal">
+          <ArrowLeft :size="24" color="#e4869f" />
+        </div>
         <div class="logo-section">
           <img src="../assets/logo_dicreme.png" alt="DiCreme Logo" class="logo" />
         </div>
@@ -359,8 +357,8 @@ const goToLogin = () => {
 
 .back-button {
   position: absolute;
-  left: -6.5rem;
-  top: 0;
+  left: 1.5rem;
+  top: -1;
   display: flex;
   flex-direction: column;
   align-items: center;

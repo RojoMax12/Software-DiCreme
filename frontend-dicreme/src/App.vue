@@ -4,24 +4,15 @@ import { useRoute } from 'vue-router';
 import Navbar from './components/Navbar.vue';
 import AdminNavbar from './components/AdminNavbar.vue';
 import AdminSideMenu from './components/AdminSideMenu.vue';
-import { useNotification } from '@/composables/useNotification';
+import NotificationContainer from '@/components/NotificationContainer.vue';
 import GlobalLoader from '@/components/LoadingScreen.vue';
 import { globalLoading } from '@/composables/useLoading';
 
 const route = useRoute();
-const { notifications } = useNotification();
-
 const isAdminSidebarOpen = ref(false);
 
 const toggleAdminSidebar = () => {
   isAdminSidebarOpen.value = !isAdminSidebarOpen.value;
-};
-
-// Función rápida para determinar el ícono según el tipo de alerta
-const getIcon = (type: string) => {
-  if (type === 'success') return '✅';
-  if (type === 'warning') return '⚠️';
-  return '❌';
 };
 </script>
 
@@ -37,98 +28,9 @@ const getIcon = (type: string) => {
   <GlobalLoader />
   <router-view v-if="!globalLoading"/>
 
-  <div class="notification-container">
-    <TransitionGroup name="toast">
-      <div 
-        v-for="notification in notifications" 
-        :key="notification.id" 
-        :class="['toast-card', `toast-${notification.type}`]"
-      >
-        <span class="toast-icon">{{ getIcon(notification.type) }}</span>
-        <span class="toast-text">{{ notification.message }}</span>
-      </div>
-    </TransitionGroup>
-  </div>
+  <NotificationContainer />
 </template>
 
 <style scoped>
-/* 🎨 4. ESTILOS DE LOS TOASTS FLOTANTES */
-
-.notification-container {
-  position: fixed;
-  top: 70px;
-  right: 20px;
-  z-index: 9999; 
-  display: flex;
-  flex-direction: column;
-  gap: 10px; 
-  pointer-events: none; 
-}
-
-.toast-card {
-  pointer-events: auto; 
-  background-color: #fff;
-  padding: 14px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 280px;
-  max-width: 400px;
-  border-left: 5px solid #ccc;
-  font-family: 'Inter', sans-serif;
-}
-
-.toast-success {
-  border-left-color: #2ec4b6;
-  background-color: #f0fdfa;
-  color: #115e59;
-}
-
-.toast-error {
-  border-left-color: #e63946;
-  background-color: #fff5f5;
-  color: #9b1c1c;
-}
-
-/* 2. CORRECCIÓN: Agregamos estilos para el warning */
-.toast-warning {
-  border-left-color: #f59e0b;
-  background-color: #fffbeb;
-  color: #92400e;
-}
-
-.toast-icon {
-  font-size: 1.2rem;
-}
-
-.toast-text {
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-
-/* ✨ ANIMACIONES Y TRANSICIONES */
-
-/* 3. CORRECCIÓN: Agregamos .toast-move para que las alertas se reacomoden suavemente */
-.toast-move,
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.4s ease;
-}
-
-.toast-enter-from {
-  opacity: 0;
-  transform: translateX(50px) scale(0.9);
-}
-
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(100px);
-}
-
-/* 3. CORRECCIÓN: Fundamental para que el elemento que sale no estorbe a los que suben */
-.toast-leave-active {
-  position: absolute;
-}
+/* Base App Layout Styles */
 </style>

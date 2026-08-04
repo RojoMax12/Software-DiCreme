@@ -250,8 +250,8 @@ const filteredBatches = computed(() => {
   
   const lowerCaseQuery = searchQuery.value.toLowerCase();
   return batchesData.value.filter(batch => 
-    batch.number.toLowerCase().includes(lowerCaseQuery) ||
-    batch.Warehouse.toLowerCase().includes(lowerCaseQuery)
+    (batch.number || '').toLowerCase().includes(lowerCaseQuery) ||
+    (batch.Warehouse || '').toLowerCase().includes(lowerCaseQuery)
   );
 });
 </script>

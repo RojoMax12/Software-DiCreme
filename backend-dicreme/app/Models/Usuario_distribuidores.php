@@ -20,6 +20,7 @@ class Usuario_distribuidores extends Authenticatable
         'telefono',
         'correo_electronico',
         'comuna',
+        'foto_perfil',
         'estado_usuario'
     ];
 

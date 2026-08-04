@@ -62,6 +62,17 @@ class LoteRepository
         return Lote::where('id_bodega', $idBodega)->get();
     }
 
+    public function getLotesPorVencer($meses = 1)
+    {
+        $fechaLimite = now()->addMonths((int)$meses)->toDateString();
+        
+        return Lote::with(['producto.formato', 'bodega'])
+            ->where('cantidad_producto', '>', 0)
+            ->whereDate('fecha_vencimiento', '<=', $fechaLimite)
+            ->orderBy('fecha_vencimiento', 'asc')
+            ->get();
+    }
+
     # Seters
     public function updateLote($id, $data)
     {

@@ -122,12 +122,56 @@ class ProductoFactory extends Factory
         // Incrementamos el contador para preparar el siguiente registro
         self::$contadorGlobal++;
 
+        $fotoPath = self::getFotoForSabor($itemSabor['sabor']);
+
         return [
             'id_categoria'    => $idCategoria,
             'id_formato'      => $idFormato,
             'nombre_producto' => $itemSabor['sabor'], 
             'precio_producto' => $precioElegido, // Ahora va perfectamente de la mano con el tamaño del envase
-            'estado_producto' => $this->faker->boolean(true), // 80% de probabilidad de ser true
+            'foto_producto'   => $fotoPath,
+            'estado_producto' => true, // Todos creados activos por defecto
         ];
+    }
+
+    public static function getFotoForSabor(string $sabor): string
+    {
+        $map = [
+            'Piña' => 'pina.webp',
+            'Limón Manzana' => 'limon-manzana.webp',
+            'Chirimoya Alegre' => 'chirimoya-alegre.webp',
+            'Limón Menta Jengibre' => 'limon-menta-jengibre.webp',
+            'Piña Colada' => 'pina-colada.webp',
+            'Melón Tuna' => 'melon-tuna.webp',
+            'Frambuesa' => 'frambuesa.webp',
+            'Chirimoya' => 'chirimoya.webp',
+            'Chocolate' => 'chocolate.webp',
+            'Tropical' => 'tropical.webp',
+            'Frutos del Bosque' => 'frutos-del-bosque.webp',
+            'Pie de Limón' => 'pie-de-limon.webp',
+            'Cookies and Cream' => 'cookies-and-cream.webp',
+            'Menta Chips' => 'menta-chips.webp',
+            'Vainilla' => 'vainilla.webp',
+            'Lúcuma' => 'lucuma.webp',
+            'Cola de Mono' => 'cola-de-mono.webp',
+            'Pistacho' => 'pistacho.webp',
+            'Pasas al Ron' => 'pasas-al-ron.webp',
+            'Mora' => 'mora.webp',
+            'Suspiro Limeño' => 'suspiro-limeno.webp',
+            'Chocolate Avellana' => 'chocolate-avellana.webp',
+            'Cheesecake Frutos Rojos' => 'cheesecake-frutos-rojos.webp',
+            'Frutilla' => 'frutilla.webp',
+            'Dulce de Leche' => 'dulce-de-leche.webp',
+            'Banana Split' => 'banana-split.webp',
+            'Mango' => 'mango.webp',
+            'Arroz con leche' => 'arroz-con-leche.webp',
+            'Tres Leches' => 'tres-leches.webp',
+            'Chocolate sin Azúcar' => 'chocolate-sin-azucar.webp',
+            'Pistacho sin Azúcar' => 'pistacho-sin-azucar.webp',
+            'Frutos del Bosque sin Azúcar' => 'frutos-del-bosque-sin-azucar.webp',
+            'Vainilla sin Azúcar' => 'vainilla-sin-azucar.webp'
+        ];
+
+        return isset($map[$sabor]) ? '/storage/productos/' . $map[$sabor] : '/storage/productos/pina.webp';
     }
 }

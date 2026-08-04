@@ -71,6 +71,11 @@ class DespachoServices
     }
 
 
+    public function getDespachosDisponibles()
+    {
+        return $this->despachoRepository->getDespachosDisponibles();
+    }
+
     public function asignardespachoaldespachador($id_despacho, $id_despachador){
 
         $despacho = $this->despachoRepository->getDespachoById($id_despacho);
@@ -85,7 +90,83 @@ class DespachoServices
         }
 
         return $this->despachoRepository->asignardespachoundespachador($id_despacho, $id_despachador);
+    }
 
+    public function iniciarRuta($id_despacho)
+    {
+        $despacho = $this->despachoRepository->getDespachoById($id_despacho);
+        if (!$despacho) {
+            return null;
+        }
+
+        // 1. Cambiar estado despacho a 3 ("En ruta")
+        $this->despachoRepository->updateDespacho($id_despacho, [
+            'id_estado_despacho' => 3
+        ]);
+
+        // 2. Cambiar estado pedido a 4 ("En Despacho")
+        if ($despacho->id_pedido) {
+            $this->pedidoRepository->updatePedido($despacho->id_pedido, [
+                'id_estado_pedido' => 4
+            ]);
+        }
+
+        // 3. Enviar notificación por correo de forma automática al distribuidor
+        $this->enviarNotificacionDespacho($id_despacho);
+
+        return $this->despachoRepository->getDespachoById($id_despacho);
+    }
+
+    public function finalizarEntrega($id_despacho, $notasEntrega = null, $fotoFile = null)
+    {
+        $despacho = $this->despachoRepository->getDespachoById($id_despacho);
+        if (!$despacho) {
+            return null;
+        }
+
+        $fotoUrl = $despacho->foto_comprobante;
+
+        // Manejar subida de archivo si existe
+        if ($fotoFile && $fotoFile->isValid()) {
+            $destinationPath = storage_path('app/public/comprobantes');
+            if (!file_exists($destinationPath)) {
+                @mkdir($destinationPath, 0775, true);
+            }
+            if (class_exists('finfo')) {
+                $path = $fotoFile->store('comprobantes', 'public');
+            } else {
+                $extension = $fotoFile->getClientOriginalExtension() ?: 'jpg';
+                $filename = \Illuminate\Support\Str::random(40) . '.' . $extension;
+                $path = $fotoFile->storeAs('comprobantes', $filename, 'public');
+            }
+            $fotoUrl = '/storage/' . $path;
+        }
+
+        // 1. Actualizar despacho a estado 4 ("Entrega exitosa")
+        $this->despachoRepository->updateDespacho($id_despacho, [
+            'id_estado_despacho' => 4,
+            'fecha_entrega' => \Carbon\Carbon::now('America/Santiago')->toDateString(),
+            'foto_comprobante' => $fotoUrl,
+            'notas_entrega' => $notasEntrega
+        ]);
+
+        // 2. Actualizar pedido a estado 5 ("Entregado")
+        if ($despacho->id_pedido) {
+            $this->pedidoRepository->updatePedido($despacho->id_pedido, [
+                'id_estado_pedido' => 5
+            ]);
+        }
+
+        \App\Models\HistorialMovimiento::registrar(
+            'usuario',
+            $id_despacho,
+            'finalizacion_entrega',
+            "Se finalizó la entrega del despacho #{$id_despacho}",
+            null,
+            ['notas_entrega' => $notasEntrega, 'foto_comprobante' => $fotoUrl]
+        );
+
+        return $this->despachoRepository->getDespachoById($id_despacho);
     }
 
     // Metodos extras 
@@ -115,16 +196,51 @@ class DespachoServices
         $correo_cliente = $cliente->correo_electronico;
         $urlFrontend = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/') . '/pedido/' . $id_pedido;
 
-        //Enviamos el correo con plantilla Blade
-        Mail::send('emails.notificacion_despacho', [
-            'url' => $urlFrontend,
-            'despacho' => $despacho,
-            'cliente' => $cliente
-        ], function ($message) use ($correo_cliente) {
-            $message->to($correo_cliente);
-            $message->subject('Notificación de Despacho - DiCreme');
-        });
+        // Enviamos el correo con plantilla Blade
+        try {
+            Mail::send('emails.notificacion_despacho', [
+                'url' => $urlFrontend,
+                'despacho' => $despacho,
+                'cliente' => $cliente
+            ], function ($message) use ($correo_cliente) {
+                $message->to($correo_cliente);
+                $message->subject('Notificación de Despacho - DiCreme');
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error enviando correo de despacho: ' . $e->getMessage());
+            return false;
+        }
 
         return true;
+    }
+
+    public function liberarDespacho($id_despacho)
+    {
+        $despacho = $this->despachoRepository->getDespachoById($id_despacho);
+        if (!$despacho) {
+            return ['status' => 'error', 'code' => 404, 'message' => 'El despacho no existe'];
+        }
+
+        if ($despacho->id_estado_despacho != 1 && $despacho->id_estado_despacho != 2) {
+            return ['status' => 'error', 'code' => 400, 'message' => 'Solo se pueden liberar despachos que estén en estado 1 (Pendiente) o 2 (Asignado)'];
+        }
+
+        $despachadorAnterior = $despacho->id_despachador;
+
+        $this->despachoRepository->updateDespacho($id_despacho, [
+            'id_despachador' => null,
+            'id_estado_despacho' => 1
+        ]);
+
+        \App\Models\HistorialMovimiento::registrar(
+            'usuario',
+            $id_despacho,
+            'liberacion',
+            "Se liberó el despacho #{$id_despacho} devolviéndolo a pedidos disponibles",
+            null,
+            ['despachador_anterior' => $despachadorAnterior]
+        );
+
+        return ['status' => 'success', 'data' => $this->despachoRepository->getDespachoById($id_despacho)];
     }
 }

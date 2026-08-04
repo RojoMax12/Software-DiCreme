@@ -79,21 +79,25 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   margin: 0;          /* Asegura que no haya márgenes externos */
   max-width: 100vw; 
-  overflow-x: hidden;
 }
 
 /* El track container también debe ser 100% */
 .carousel-track-container {
   width: 100%;
-  height: 460px;
-  overflow: hidden; /* Asegura que las imágenes no se salgan del carrusel */
+  height: auto;
+  aspect-ratio: 1920 / 350; /* Define la proporción exacta de tu imagen */
+  position: relative;
+  overflow: hidden;
 }
 
 .carousel-track {
-  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  transition: transform 0.5s ease-in-out; /* Animación fluida de deslizamiento */
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .carousel-slide {
@@ -105,8 +109,8 @@ onUnmounted(() => {
 .carousel-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;     /* Mantiene la proporción de la foto sin deformarla ni estirarla feo */
-  object-position: center; /* Centra la imagen para que el recorte sea simétrico */
+  object-fit: cover;
+  object-position: center 30%;
 }
 
 /* Flechas de navegación */
@@ -125,7 +129,7 @@ onUnmounted(() => {
 }
 
 .carousel-button:hover {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(228, 134, 159, 0.9);
 }
 
 .prev { left: 25px; }
