@@ -509,9 +509,19 @@
             </div>
           </div>
 
+          <div v-if="!editingProduct" class="form-group" style="margin-top: 15px;">
+            <label style="margin-bottom: 10px; display: block;">Formatos Iniciales (Opcional)</label>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+              <label v-for="fmt in formats" :key="fmt.id" style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem; color: #475569;">
+                <input type="checkbox" :value="fmt.id" v-model="productForm.formatos_seleccionados" style="accent-color: #00aea7; width: 16px; height: 16px;" />
+                {{ fmt.nombre_formato }}
+              </label>
+            </div>
+          </div>
+
           <div class="auto-formats-info" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 0.85rem; color: #475569;">
-            <p style="margin: 0; font-weight: 600;">Formatos vinculados automáticamente:</p>
-            <p style="margin: 4px 0 0 0; color: #64748b;">Al guardar, este helado se creará automáticamente en todos los formatos (10L, 5L, 2.5L y 1L) aplicando sus precios base correspondientes.</p>
+            <p style="margin: 0; font-weight: 600;">Comportamiento de formatos:</p>
+            <p style="margin: 4px 0 0 0; color: #64748b;">Al guardar, el helado se creará en todos los formatos del sistema. Los formatos que no selecciones arriba se crearán de igual manera pero en estado "Inactivo". Si no seleccionas ninguno, se activarán todos por defecto.</p>
           </div>
 
           <div class="modal-footer">
@@ -708,6 +718,7 @@ const productForm = ref({
   nombre_producto: '',
   id_categoria: '' as number | '',
   estado_producto: true,
+  formatos_seleccionados: [] as number[],
 });
 
 const showCategoryModal = ref(false);
@@ -1026,13 +1037,15 @@ const openProductModal = (prod?: any) => {
       nombre_producto: prod.nombre_producto,
       id_categoria: prod.id_categoria,
       estado_producto: Boolean(prod.estado_producto),
+      formatos_seleccionados: [],
     };
     productPhotoPreview.value = prod.foto_producto ? getImageUrl(prod.foto_producto) : null;
   } else {
     productForm.value = {
       nombre_producto: '',
-      id_categoria: categories.value[0]?.id || '',
+      id_categoria: '',
       estado_producto: true,
+      formatos_seleccionados: formats.value.map((f: any) => f.id),
     };
     productPhotoPreview.value = null;
   }
@@ -1063,6 +1076,12 @@ const saveProduct = async () => {
     formData.append('nombre_producto', productForm.value.nombre_producto);
     formData.append('id_categoria', String(productForm.value.id_categoria));
     formData.append('estado_producto', productForm.value.estado_producto ? '1' : '0');
+
+    if (!editingProduct.value && productForm.value.formatos_seleccionados.length > 0) {
+      productForm.value.formatos_seleccionados.forEach((fId) => {
+        formData.append('formatos[]', String(fId));
+      });
+    }
 
     if (productPhotoFile.value) {
       formData.append('foto_producto', productPhotoFile.value);

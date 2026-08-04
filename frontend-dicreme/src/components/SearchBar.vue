@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { Search } from 'lucide-vue-next';
 
 // 1. Recibimos la categoría, el texto de búsqueda y la lista de Laravel
@@ -10,12 +11,31 @@ defineProps<{
 
 // 2. Definimos los emisores para actualizar de forma reactiva al padre
 const emit = defineEmits(['update:modelValue', 'update:searchQuery']);
+
+const isDistribuidor = ref(false);
+const userName = ref('');
+
+onMounted(() => {
+  try {
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      if (user.id_rol === 3 || user.rol === 3) {
+        isDistribuidor.value = true;
+        userName.value = user.nombre_empresa || user.nombre_usuario || user.nombre || 'Distribuidor';
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing user in SearchBar", e);
+  }
+});
 </script>
 
 <template>
   <div class="search-section">
     <div class="search-controls">
-      <h2 class="title">Cotiza con DiCreme</h2>
+      <h2 class="title" v-if="isDistribuidor">Hola {{ userName }} ¿qué llevarás hoy?</h2>
+      <h2 class="title" v-else>Cotiza con DiCreme</h2>
       
       <div class="inputs-group">
         <select 

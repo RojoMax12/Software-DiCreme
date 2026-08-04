@@ -22,6 +22,8 @@ class ProductoController extends Controller
         $data = $request->validate([
             'id_categoria'    => 'required|integer|exists:categorias,id',
             'id_formato'      => 'nullable|integer|exists:formatos,id',
+            'formatos'        => 'nullable|array',
+            'formatos.*'      => 'integer|exists:formatos,id',
             'nombre_producto' => 'required|string|max:255',
             'precio_producto' => 'nullable|integer|min:0',
             'estado_producto' => 'required|boolean',
@@ -49,10 +51,17 @@ class ProductoController extends Controller
             $productosCreados = [];
 
             if ($formatos->count() > 0) {
+                $formatosSeleccionados = $request->input('formatos'); // Puede ser null
+
                 foreach ($formatos as $fmt) {
                     $itemData = $data;
                     $itemData['id_formato'] = $fmt->id;
                     $itemData['precio_producto'] = $fmt->precio_formato;
+
+                    // Si mandaron un array de formatos, los que no estén se crean pero desactivados
+                    if (is_array($formatosSeleccionados)) {
+                        $itemData['estado_producto'] = in_array($fmt->id, $formatosSeleccionados) ? 1 : 0;
+                    }
 
                     $prod = \App\Models\Producto::updateOrCreate(
                         [
