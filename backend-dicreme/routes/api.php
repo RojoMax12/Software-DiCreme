@@ -99,6 +99,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::put('/formatos/{id}', [FormatoController::class, 'update'])->middleware('role:1,2');
         Route::delete('/formatos/{id}', [FormatoController::class, 'destroy'])->middleware('role:1,2');
         Route::post('/productos/umbral-poco-stock', [ProductoController::class, 'setUmbralPocoStock'])->middleware('role:1,2');
+        Route::post('/productos/bulk-estado', [ProductoController::class, 'bulkToggleEstado'])->middleware('role:1,2');
         Route::post('/productos', [ProductoController::class, 'store'])->middleware('role:1,2');
         Route::put('/productos/{id}', [ProductoController::class, 'update'])->middleware('role:1,2');
         Route::post('/productos/{id}', [ProductoController::class, 'update'])->middleware('role:1,2');
