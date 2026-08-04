@@ -704,6 +704,7 @@ const confirmQuote = async () => {
 
       if (!validateRUT(rutParaValidar)) {
         notify('El RUT ingresado no es válido.', 'error');
+        isSubmitting.value = false;
         return;
       }
 

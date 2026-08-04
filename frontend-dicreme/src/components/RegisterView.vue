@@ -109,6 +109,8 @@ const formatRutInput = (rut: string) => {
 }
 
 const handleRegister = async () => {
+  if (isLoading.value) return;
+
   // 1. Validaciones básicas antes de enviar
   if (!form.value.rut_empresa || !form.value.nombre_empresa || !form.value.correo_electronico || !form.value.contrasena) {
     errorMessage.value = 'Por favor, completa todos los campos obligatorios.'

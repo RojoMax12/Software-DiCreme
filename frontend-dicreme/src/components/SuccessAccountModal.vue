@@ -24,7 +24,7 @@ const emit = defineEmits(['accept'])
       </p>
 
       <button class="accept-button" @click="emit('accept')">
-        {{ buttonText || 'IR AL LOGIN' }}
+        {{ buttonText || 'INICIAR SESIÓN' }}
       </button>
     </div>
   </div>

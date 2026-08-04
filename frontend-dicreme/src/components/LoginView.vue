@@ -16,6 +16,8 @@ const goBack = () => {
 }
 
 const handleLogin = async () => {
+  if (isLoading.value) return;
+
   if (!username.value || !password.value) {
     errorMessage.value = 'Por favor, ingresa tu correo y contraseña.'
     return

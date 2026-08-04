@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ShieldCheck, IceCream } from 'lucide-vue-next'
+import { ClipboardCheck, Package, PackageCheck, Truck, CheckCircle2, XCircle, IceCream } from 'lucide-vue-next'
 import orderService from '@/services/orderService' 
 import boxPlaceholderImage from '@/assets/caja_dicreme.jpg'
 const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
@@ -33,6 +33,15 @@ const getDynamicImage = (flavorName: string) => {
   const path = `/src/assets/FotoHelados/${formattedName}.webp`;
   return heladoImages[path] || boxPlaceholderImage;
 };
+
+const isCancelled = computed(() => {
+  if (!orderData.value) return false
+  const rawStatus = orderData.value.id_estado_pedido || orderData.value.estado_id;
+  const statusId = Number(rawStatus);
+  const statusName = String(orderData.value.estado_nombre || orderData.value.nombre_estado || '').toLowerCase();
+
+  return statusId === 7 || statusName.includes('cancelad');
+})
 
 // CONTROL DE ESTADOS DE LA LÍNEA DE TIEMPO (Paso 1, 2, 3, 4 o 5)
 const currentStep = computed(() => {
@@ -256,8 +265,13 @@ const handleGoBack = () => {
           <div class="timeline-wrapper">
             
             <div class="floating-icon-container" :class="'step-active-' + currentStep">
-              <div class="icon-bubble">
-                <ShieldCheck :size="24" color="white" />
+              <div class="icon-bubble" :class="{ 'is-cancelled': isCancelled }">
+                <XCircle v-if="isCancelled" :size="24" color="white" />
+                <ClipboardCheck v-else-if="currentStep === 1" :size="24" color="white" />
+                <Package v-else-if="currentStep === 2" :size="24" color="white" />
+                <PackageCheck v-else-if="currentStep === 3" :size="24" color="white" />
+                <Truck v-else-if="currentStep === 4" :size="24" color="white" />
+                <CheckCircle2 v-else :size="24" color="white" />
               </div>
             </div>
 
@@ -490,11 +504,15 @@ const handleGoBack = () => {
 }
 
 .node-text {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #7c7289;
   margin-top: 8px;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
+  word-break: break-word;
+  max-width: 80px;
 }
 
 .timeline-node.active .node-text {
@@ -525,6 +543,11 @@ const handleGoBack = () => {
   align-items: center;
   justify-content: center;
   animation: bounce 2s infinite ease-in-out;
+}
+
+.icon-bubble.is-cancelled {
+  background-color: #ef4444;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
 }
 
 @keyframes bounce {
