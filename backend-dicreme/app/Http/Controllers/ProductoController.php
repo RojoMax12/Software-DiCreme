@@ -108,10 +108,10 @@ class ProductoController extends Controller
             );
 
             return response()->json([
-                'status' => 'success', 
+                'status' => 'success',
                 'data' =>  $producto_creado,
                 'message' => "Producto creado correctamente con todos sus formatos"
-            ], 200); 
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -180,16 +180,14 @@ class ProductoController extends Controller
                 }
             }
 
-            // Sincronizar todos los formatos del mismo sabor
+            // Sincronizar categoría, foto y nombre (manteniendo el estado independiente por formato)
             if ($productoAnterior) {
-                $updateFields = array_intersect_key($data, array_flip(['id_categoria', 'estado_producto', 'foto_producto']));
+                $updateFields = array_intersect_key($data, array_flip(['id_categoria', 'foto_producto']));
                 if (!empty($data['nombre_producto'])) {
                     $updateFields['nombre_producto'] = $data['nombre_producto'];
                 }
                 \App\Models\Producto::where('nombre_producto', $productoAnterior->nombre_producto)->update($updateFields);
             }
-
-            $producto_actualizado = $this->productoServices->updateProducto($id, $data);
 
             $producto_actualizado = $this->productoServices->updateProducto($id, $data);
 
@@ -210,10 +208,10 @@ class ProductoController extends Controller
             );
 
             return response()->json([
-                'status' => 'success', 
+                'status' => 'success',
                 'data' =>  $producto_actualizado,
                 'message' => "Producto actualizado correctamente"
-            ], 200); 
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -223,7 +221,7 @@ class ProductoController extends Controller
     }
 
     public function destroy($id)
-    {   
+    {
         try {
             $producto = $this->productoServices->getProductoById($id);
             $producto_destroy = $this->productoServices->deleteProducto($id);
@@ -239,10 +237,10 @@ class ProductoController extends Controller
             }
 
             return response()->json([
-                'status' => 'success', 
+                'status' => 'success',
                 'data' =>  $producto_destroy,
                 'message' => "Producto eliminado correctamente"
-            ], 200); 
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -340,6 +338,46 @@ class ProductoController extends Controller
         return response()->json([
             'status' => 'success',
             'umbral' => (int)$umbral
+        ], 200);
+    }
+
+    public function bulkToggleEstado(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'integer|exists:productos,id',
+            'estado_producto' => 'required|boolean'
+        ]);
+
+        $productIds = $request->input('product_ids');
+        $estadoNuevo = (bool) $request->input('estado_producto');
+        $estadoTxt = $estadoNuevo ? 'activados' : 'desactivados';
+
+        // Actualización masiva instantánea en SQL
+        $afectados = \App\Models\Producto::whereIn('id', $productIds)
+            ->update(['estado_producto' => $estadoNuevo]);
+
+        // Limpiar la caché de productos para que la API entregue los datos frescos al instante
+        (new \App\Repositories\ProductoRepository())->clearCache();
+        \Illuminate\Support\Facades\Cache::forget('catalogo_completo_productos');
+
+        // Auditoría única en el historial de movimientos
+        \App\Models\HistorialMovimiento::registrar(
+            'producto',
+            null,
+            $estadoNuevo ? 'activacion' : 'desactivacion',
+            "Se actualizaron masivamente {$afectados} formato(s) de helados a estado '{$estadoTxt}'",
+            null,
+            ['ids_actualizados' => $productIds, 'nuevo_estado' => $estadoNuevo]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Se actualizaron {$afectados} formatos a '{$estadoTxt}' correctamente.",
+            'data' => [
+                'afectados' => $afectados,
+                'estado_nuevo' => $estadoNuevo
+            ]
         ], 200);
     }
 }
