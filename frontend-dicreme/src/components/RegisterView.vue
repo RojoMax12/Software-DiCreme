@@ -391,7 +391,7 @@ const goToLogin = () => {
 .back-button {
   position: absolute;
   left: 1.5rem;
-  top: -1;
+  top: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -410,6 +410,7 @@ const goToLogin = () => {
 }
 
 .register-card {
+  position: relative;
   background-color: white;
   padding: 2rem;
   border-radius: 1.5rem;
