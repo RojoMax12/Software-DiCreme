@@ -15,10 +15,10 @@ const actionType = ref<'activar' | 'desactivar'>('activar')
 const selectedFormats = ref<number[]>([1, 2, 3, 4]) // Default all formats (10L, 5L, 2.5L, 1L)
 
 const availableFormats = [
-  { id: 1, name: '10L' },
-  { id: 2, name: '5L' },
+  { id: 4, name: '1L' },
   { id: 3, name: '2.5L' },
-  { id: 4, name: '1L' }
+  { id: 2, name: '5L' },
+  { id: 1, name: '10L' }
 ]
 
 watch(

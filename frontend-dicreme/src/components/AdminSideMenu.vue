@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, ShoppingBag, FilePlus, X, Users, Package2, Boxes, BookOpen, LayoutTemplate} from 'lucide-vue-next'
+import { FileText, ShoppingBag, FilePlus, X, Users, Package2, Boxes, BookOpen, LayoutTemplate, Store } from 'lucide-vue-next'
 import { useRouter, useRoute } from 'vue-router'
 
 const props = defineProps<{
@@ -110,6 +110,15 @@ const isActive = (path: string) => {
             >
               <LayoutTemplate :size="20" />
               <span>Apariencia de la Tienda</span>
+            </button>
+
+            <button 
+              class="nav-item" 
+              :class="{ active: isActive('/admin/vista-tienda') }"
+              @click="navigateTo('/admin/vista-tienda')"
+            >
+              <Store :size="20" />
+              <span>Vista Tienda</span>
             </button>
 
           </div>

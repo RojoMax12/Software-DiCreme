@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { LogOut, User as UserIcon, Menu } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { LogOut, User as UserIcon, Menu, Store, LayoutDashboard } from 'lucide-vue-next'
 import { useNotification } from '@/composables/useNotification';
 
 const { notify } = useNotification();
 
 const router = useRouter()
+const route = useRoute()
 const username = ref('')
 const userRole = ref('Usuario') // 🌟 Nueva variable reactiva para el rol
+
+const isStoreView = computed(() => route.path === '/admin/vista-tienda')
+
+const toggleStoreOrAdmin = () => {
+  if (isStoreView.value) {
+    router.push('/admin')
+  } else {
+    router.push('/admin/vista-tienda')
+  }
+}
 
 const checkAuth = () => {
   const userParsed = localStorage.getItem('user')
@@ -69,6 +80,18 @@ const toggleSidebar = () => {
     </div>
 
     <div class="nav-right">
+      <button 
+        type="button" 
+        class="btn-store-preview" 
+        :class="{ 'in-store-view': isStoreView }"
+        @click="toggleStoreOrAdmin"
+        :title="isStoreView ? 'Volver al Panel de Administrador' : 'Ver Catálogo de la Tienda'"
+      >
+        <LayoutDashboard v-if="isStoreView" :size="18" />
+        <Store v-else :size="18" />
+        <span>{{ isStoreView ? 'Panel de Administrador' : 'Ver Tienda' }}</span>
+      </button>
+
       <div class="session-display">
         <div class="user-avatar">
           <UserIcon :size="20" />
@@ -214,11 +237,45 @@ const toggleSidebar = () => {
   transform: scale(1.05);
 }
 
+.btn-store-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fff0f3;
+  color: #e4869f;
+  border: 1px solid #fecdd3;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-store-preview:hover {
+  background-color: #e4869f;
+  color: white;
+}
+
+.btn-store-preview.in-store-view {
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.btn-store-preview.in-store-view:hover {
+  background-color: #334155;
+  color: white;
+}
+
 @media (max-width: 768px) {
   .admin-navbar {
     padding: 0 20px;
   }
   .user-details {
+    display: none;
+  }
+  .btn-store-preview span {
     display: none;
   }
 }

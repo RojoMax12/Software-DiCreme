@@ -924,7 +924,21 @@ const groupedFlavorProducts = computed(() => {
     }
   });
 
-  const resultList = Array.from(map.values());
+  const getFormatOrderRank = (fmt: any) => {
+    switch (fmt.id_formato) {
+      case 4: return 1; // 1L
+      case 3: return 2; // 2.5L
+      case 2: return 3; // 5L
+      case 1: return 4; // 10L
+      default: return fmt.id_formato;
+    }
+  };
+
+  const resultList = Array.from(map.values()).map(item => {
+    item.formats.sort((a: any, b: any) => getFormatOrderRank(a) - getFormatOrderRank(b));
+    return item;
+  });
+
   return resultList.filter((item) => {
     if (filterStatus.value === 'activo') return item.estado_producto === true;
     if (filterStatus.value === 'inactivo') return item.estado_producto === false;

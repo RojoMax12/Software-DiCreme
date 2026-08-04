@@ -16,12 +16,23 @@ watch(
   () => props.product,
   (newProd) => {
     if (newProd && newProd.formats) {
-      formatsState.value = newProd.formats.map((f: any) => ({
-        id_producto: f.id_producto,
-        id_formato: f.id_formato,
-        nombre_formato: f.nombre_formato || getFormatName(f.id_formato),
-        estado_producto: f.estado_producto !== undefined ? Boolean(f.estado_producto) : true
-      }))
+      const getRank = (idFmt: number) => {
+        switch (idFmt) {
+          case 4: return 1 // 1L
+          case 3: return 2 // 2.5L
+          case 2: return 3 // 5L
+          case 1: return 4 // 10L
+          default: return idFmt
+        }
+      }
+      formatsState.value = newProd.formats
+        .map((f: any) => ({
+          id_producto: f.id_producto,
+          id_formato: f.id_formato,
+          nombre_formato: f.nombre_formato || getFormatName(f.id_formato),
+          estado_producto: f.estado_producto !== undefined ? Boolean(f.estado_producto) : true
+        }))
+        .sort((a: any, b: any) => getRank(a.id_formato) - getRank(b.id_formato))
     } else {
       formatsState.value = []
     }
