@@ -60,6 +60,7 @@ Route::middleware('throttle:api_lectura')->group(function() {
 
 	Route::get('/carruseles', [CarruselController::class, 'index']);
 	Route::get('/carruseles/{id}', [CarruselController::class, 'show']);
+	Route::get('/avisos', [CarruselController::class, 'getAvisos']);
 });
 
 
@@ -119,6 +120,7 @@ Route::middleware('jwt.auth', 'audit.pii', 'purify.input')->group(function () {
         Route::post('/carruseles/{id}', [CarruselController::class, 'update'])->middleware('role:1,2');
         Route::put('/carruseles/{id}/toggle-estado', [CarruselController::class, 'toggleEstado'])->middleware('role:1,2');
         Route::delete('/carruseles/{id}', [CarruselController::class, 'destroy'])->middleware('role:1,2');
+        Route::post('/avisos', [CarruselController::class, 'saveAvisos'])->middleware('role:1,2');
         Route::put('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update'])->middleware('role:1,2,3', 'audit.pii');
         Route::post('/usuarios_distribuidores/{id}', [Usuario_distribuidoresController::class, 'update'])->middleware('role:1,2,3', 'audit.pii');
         Route::put('/usuarios_distribuidores/{id}/toggle-estado', [Usuario_distribuidoresController::class, 'toggleestadousuario'])->middleware('role:1,2', 'audit.pii');

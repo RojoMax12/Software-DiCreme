@@ -84,9 +84,9 @@ class CotizacionServices
         return $this->cotizacionRepository->deleteCotizacion($id);
     }
 
-    public function getAllCotizaciones()
+    public function getAllCotizaciones($fecha = null)
     {
-        return $this->cotizacionRepository->getAllCotizaciones();
+        return $this->cotizacionRepository->getAllCotizaciones($fecha);
     }
 
 public function transformarCotizacionEnPedido($idCotizacion)
@@ -106,10 +106,39 @@ public function transformarCotizacionEnPedido($idCotizacion)
     // --- OPTIMIZACIÓN MASIVA ---
     // Extraemos todos los id_producto de la cotización de una sola vez
     $idProductos = $cotizacion->cotizacionProductos->pluck('id_producto')->toArray();
-
     // Traemos todos los lotes agrupados en una Sola Consulta SQL masiva
     $lotesAgrupados = $this->loteRepository->getLotesDeProductos($idProductos);
     // ----------------------------
+
+    // FASE 0: Verificar stock de TODOS los productos antes de crear el pedido o descontar lotes
+    $productosFaltantes = [];
+
+    foreach ($cotizacion->cotizacionProductos as $item) {
+        $cantidadRequerida = $item->cantidad;
+        $lotesDelProducto = $lotesAgrupados->get($item->id_producto) ?? collect();
+        $stockDisponibleEnLotes = $lotesDelProducto->sum('cantidad_producto');
+
+        if ($stockDisponibleEnLotes < $cantidadRequerida) {
+            $nombre = $item->producto?->nombre_producto ?? 'Desconocido';
+            $categoria = $item->producto?->categoria?->nombre_categoria ?? 'Sin categoría';
+            $formato = $item->producto?->formato?->nombre_formato ?? 'Sin formato';
+            
+            $productosFaltantes[] = [
+                'id_producto' => (int)$item->id_producto,
+                'nombre_producto' => $nombre,
+                'categoria' => $categoria,
+                'formato' => $formato,
+                'cantidad_requerida' => (int)$cantidadRequerida,
+                'cantidad_disponible' => (int)$stockDisponibleEnLotes,
+                'cantidad_faltante' => (int)($cantidadRequerida - $stockDisponibleEnLotes),
+                'message' => "Falta stock para {$nombre} ({$formato}): Requerido: {$cantidadRequerida}, Disponible: {$stockDisponibleEnLotes} (Faltan: " . ($cantidadRequerida - $stockDisponibleEnLotes) . ")"
+            ];
+        }
+    }
+
+    if (!empty($productosFaltantes)) {
+        throw new \App\Exceptions\MultiplesProductosSinStockException($productosFaltantes);
+    }
 
     // Creamos el pedido (Cabecera)
     $pedido = $this->pedidoRepository->createPedido([
@@ -153,14 +182,6 @@ public function transformarCotizacionEnPedido($idCotizacion)
                 $lote->cantidad_producto = 0;
                 $lote->save();
             }
-        }
-
-        // Si después de revisar los lotes en memoria falta stock, cancelamos
-        if ($cantidadPorDescontar > 0) {
-            $nombre = $item->producto?->nombre_producto ?? 'Desconocido';
-            $categoria = $item->producto?->categoria?->nombre_categoria ?? 'Sin categoría';
-            $formato = $item->producto?->formato?->nombre_formato ?? 'Sin categoría';
-            throw new \Exception("Stock insuficiente en lotes para el producto: {$nombre} (Categoría: {$categoria}) (Formato: {$formato})");
         }
     }
 
@@ -302,7 +323,7 @@ public function transformarCotizacionEnPedido($idCotizacion)
             'persona_recibe'       => $cotizacion->persona_recibe,
             'total_cotizacion'     => (float) $cotizacion->total_cotizacion,
             'id_estado_cotizacion' => $cotizacion->id_estado_cotizacion,
-            'fecha_creacion'       => $cotizacion->created_at,
+            'fecha_creacion'       => $cotizacion->fecha_creacion,
             'tipo_descuento_general' => $cotizacion->tipo_descuento_general,
             'valor_descuento_general' => $cotizacion->valor_descuento_general,
             'descuento_general_aplicado' => $cotizacion->descuento_general_aplicado,

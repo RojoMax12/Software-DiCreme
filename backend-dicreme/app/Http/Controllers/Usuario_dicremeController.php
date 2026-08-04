@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Usuario_dicremeServices;
+use App\Helpers\ImageHelper;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,41 +101,12 @@ class Usuario_dicremeController extends Controller
                 ], 404);
             }
 
-            if ($request->hasFile('foto_perfil')) {
-                $file = $request->file('foto_perfil');
-                if ($file && $file->isValid()) {
-                    $filename = 'avatar_' . $id . '_' . time() . '.' . ($file->getClientOriginalExtension() ?: 'webp');
-                    $targetDir = public_path('storage/avatars');
-                    if (!file_exists($targetDir)) {
-                        @mkdir($targetDir, 0777, true);
-                    }
-                    
-                    if (file_exists($targetDir) && is_writable($targetDir)) {
-                        $file->move($targetDir, $filename);
-                        $data['foto_perfil'] = '/storage/avatars/' . $filename;
-                    } else {
-                        $path = $file->storeAs('avatars', $filename, 'public');
-                        $data['foto_perfil'] = '/storage/' . $path;
-                    }
+            $fileInput = $request->hasFile('foto_perfil') ? $request->file('foto_perfil') : $request->input('foto_perfil');
+            if ($fileInput && ($fileInput instanceof \Illuminate\Http\UploadedFile || (is_string($fileInput) && str_starts_with($fileInput, 'data:image')))) {
+                if ($usuarioAnterior && !empty($usuarioAnterior->foto_perfil)) {
+                    ImageHelper::deleteOldImage($usuarioAnterior->foto_perfil);
                 }
-            } else if ($request->filled('foto_perfil') && str_starts_with($request->foto_perfil, 'data:image')) {
-                $base64Image = $request->foto_perfil;
-                @list($type, $file_data) = explode(';', $base64Image);
-                @list(, $file_data) = explode(',', $file_data);
-                if ($file_data) {
-                    $fileName = 'avatar_' . $id . '_' . time() . '.webp';
-                    $targetDir = public_path('storage/avatars');
-                    if (!file_exists($targetDir)) {
-                        @mkdir($targetDir, 0777, true);
-                    }
-                    if (file_exists($targetDir)) {
-                        file_put_contents($targetDir . '/' . $fileName, base64_decode($file_data));
-                        $data['foto_perfil'] = '/storage/avatars/' . $fileName;
-                    } else {
-                        \Illuminate\Support\Facades\Storage::disk('public')->put('avatars/' . $fileName, base64_decode($file_data));
-                        $data['foto_perfil'] = '/storage/avatars/' . $fileName;
-                    }
-                }
+                $data['foto_perfil'] = ImageHelper::storeAsWebp($fileInput, 'avatars');
             }
 
             if (empty($data['contrasena'])) {

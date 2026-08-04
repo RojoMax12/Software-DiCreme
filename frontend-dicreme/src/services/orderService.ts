@@ -1,8 +1,8 @@
 import api from './api';
 
 export default { 
-    getOrders() {
-        return api.get('/pedidos');
+    getOrders(fecha?: string) {
+        return api.get('/pedidos', { params: fecha ? { fecha } : {} });
     },
 
     getOrdersByDistributor(distributorId: number) {

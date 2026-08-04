@@ -92,6 +92,71 @@ class DatabaseSeeder extends Seeder
         \App\Models\Pedido_producto::factory(30)->create();
         \App\Models\Cotizacion::factory(30)->create();
         \App\Models\Cotizacion_producto::factory(30)->create();
+
+        // 1. Asegurar copia de imágenes por defecto de HomeView en el storage
+        $storageCarruselDir = storage_path('app/public/carruseles');
+        if (!file_exists($storageCarruselDir)) {
+            @mkdir($storageCarruselDir, 0775, true);
+        }
+
+        $frontendAssetsDir = base_path('../frontend-dicreme/src/assets');
+        $imagenesAssets = ['banner1.webp', 'banner2.webp', 'local_horario.webp'];
+        foreach ($imagenesAssets as $imgName) {
+            $origin = $frontendAssetsDir . '/' . $imgName;
+            $dest = $storageCarruselDir . '/' . $imgName;
+            if (file_exists($origin) && !file_exists($dest)) {
+                @copy($origin, $dest);
+            }
+        }
+
+        // 2. Sembrar imágenes iniciales del carrusel en la BD
+        $carruselesIniciales = [
+            [
+                'titulo' => 'Banner Principal Di Creme',
+                'descripcion' => 'Helados artesanales de la más alta calidad',
+                'imagen_url' => '/storage/carruseles/banner1.webp',
+                'orden' => 1,
+                'estado' => true
+            ],
+            [
+                'titulo' => 'Promoción Distribuidores',
+                'descripcion' => 'Descuentos especiales por compras al por mayor',
+                'imagen_url' => '/storage/carruseles/banner2.webp',
+                'orden' => 2,
+                'estado' => true
+            ],
+            [
+                'titulo' => 'Horario de Atención',
+                'descripcion' => 'Atención presencial y despachos a toda la región',
+                'imagen_url' => '/storage/carruseles/local_horario.webp',
+                'orden' => 3,
+                'estado' => true
+            ]
+        ];
+
+        foreach ($carruselesIniciales as $c) {
+            \App\Models\Carrusel::firstOrCreate(
+                ['imagen_url' => $c['imagen_url']],
+                $c
+            );
+        }
+
+        // 3. Sembrar barra de avisos inicial en la base de datos (tabla avisos)
+        $avisosIniciales = [
+            "📢 Aviso: Horario de atención hasta las 17:00 hrs.",
+            "🚛 Envíos gratuitos a toda la Región Metropolitana por compras sobre $50.000.",
+            "🍦 Descuentos especiales para distribuidores registrados."
+        ];
+
+        foreach ($avisosIniciales as $index => $msg) {
+            \App\Models\Aviso::firstOrCreate(
+                ['mensaje' => $msg],
+                [
+                    'orden' => $index + 1,
+                    'estado' => true
+                ]
+            );
+        }
     }
 }
 

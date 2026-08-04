@@ -93,9 +93,10 @@ class PedidoController extends Controller
     }
 
 
-        public function index()
+    public function index(Request $request)
     {
-        return response()->json($this->pedidoService->getAllPedidos());
+        $fecha = $request->query('fecha');
+        return response()->json($this->pedidoService->getAllPedidos($fecha));
     }
 
     public function show($id)

@@ -17,7 +17,9 @@ import {
   Bell,
   LogOut,
   AlertCircle,
-  FileText
+  FileText,
+  RefreshCw,
+  IceCream
 } from 'lucide-vue-next';
 import dispatchService from '@/services/dispatchService';
 import userService from '@/services/userService';
@@ -48,7 +50,7 @@ const activeTab = ref<'disponibles' | 'mis-despachos'>('disponibles');
 // Filters for Available Orders
 const searchAvailable = ref('');
 const selectedComunaAvailable = ref('');
-const sortAvailable = ref<'oldest' | 'newest'>('oldest');
+const sortAvailable = ref<'oldest' | 'newest'>('newest');
 
 // Filters for My Dispatches
 const searchMy = ref('');
@@ -106,6 +108,22 @@ const loadData = async (silent = false) => {
   }
 };
 
+const isRefreshing = ref(false);
+
+const handleManualRefresh = async () => {
+  if (isRefreshing.value) return;
+  isRefreshing.value = true;
+  try {
+    await loadData(true);
+  } catch (e) {
+    console.error('Error al refrescar despachos:', e);
+  } finally {
+    setTimeout(() => {
+      isRefreshing.value = false;
+    }, 600);
+  }
+};
+
 useAutoRefresh((silent) => loadData(silent), {
   intervalMs: 15000,
   enabled: () => !showCompleteModal.value && !showDetailModal.value && !isSubmittingDelivery.value
@@ -125,10 +143,57 @@ const comunasMyOptions = computed(() => {
 // Helper for waiting time in days
 const getDaysWaiting = (dateStr: string | null) => {
   if (!dateStr) return 0;
-  const created = new Date(dateStr);
+  const rawDate = String(dateStr).split('T')[0].split(' ')[0];
+  const parts = rawDate.split('-');
+  if (parts.length !== 3) return 0;
+
+  const createdYear = Number(parts[0]);
+  const createdMonth = Number(parts[1]) - 1;
+  const createdDay = Number(parts[2]);
+
+  const createdMidnight = new Date(createdYear, createdMonth, createdDay);
+  if (isNaN(createdMidnight.getTime())) return 0;
+
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - created.getTime());
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const diffTime = nowMidnight.getTime() - createdMidnight.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays < 0 ? 0 : diffDays;
+};
+
+const formatDaysWaitingText = (dateStr: string | null) => {
+  const days = getDaysWaiting(dateStr);
+  if (days === 0) return 'Hoy (0 días)';
+  if (days === 1) return '1 día';
+  return `${days} días`;
+};
+
+const formatDeliveryDateTime = (dateStr: string | null) => {
+  if (!dateStr) return '';
+
+  const clean = String(dateStr).replace('T', ' ').trim();
+  const parts = clean.split(' ');
+  const dateParts = parts[0].split('-');
+  if (dateParts.length === 3) {
+    const day = dateParts[2].padStart(2, '0');
+    const month = dateParts[1].padStart(2, '0');
+    const year = dateParts[0];
+
+    if (parts.length > 1 && parts[1]) {
+      const timeParts = parts[1].split(':');
+      if (timeParts.length >= 2) {
+        const hours = timeParts[0].padStart(2, '0');
+        const minutes = timeParts[1].padStart(2, '0');
+        if (hours !== '00' || minutes !== '00') {
+          return `${day}-${month}-${year} a las ${hours}:${minutes} hrs`;
+        }
+      }
+    }
+    return `${day}-${month}-${year}`;
+  }
+
+  return dateStr;
 };
 
 const getBadgeInfo = (dateStr: string | null) => {
@@ -476,7 +541,7 @@ const getProofUrl = (url: string | undefined) => {
 const handleFinalizeDelivery = async () => {
   if (!selectedDispatchToComplete.value) return;
   if (!selectedPhotoFile.value) {
-    alert('Es necesario adjuntar una foto del comprobante de entrega.');
+    notify('Es necesario adjuntar una foto del comprobante de entrega.', 'warning');
     return;
   }
 
@@ -490,11 +555,11 @@ const handleFinalizeDelivery = async () => {
 
     await dispatchService.completeDelivery(selectedDispatchToComplete.value.id_despacho, formData);
     showCompleteModal.value = false;
-    showSuccessNotification('¡Entrega finalizada con éxito!');
+    notify('¡Entrega finalizada con éxito!', 'success');
     await loadData();
   } catch (err: any) {
     console.error('Error al finalizar entrega:', err);
-    alert(err.response?.data?.message || 'Error al finalizar la entrega.');
+    notify(err.response?.data?.message || 'Error al finalizar la entrega.', 'error');
   } finally {
     isSubmittingDelivery.value = false;
   }
@@ -624,9 +689,15 @@ const formatPrice = (val: number) => {
     <main class="main-content">
       <!-- TAB 1: PEDIDOS DISPONIBLES -->
       <section v-if="activeTab === 'disponibles'" class="tab-section">
-        <div class="section-title-box">
-          <h1 class="page-title">Pedidos disponibles</h1>
-          <p class="page-subtitle">Estos pedidos están listos para despacho y aún no han sido asignados.</p>
+        <div class="section-title-box flex-title-bar">
+          <div>
+            <h1 class="page-title">Pedidos disponibles</h1>
+            <p class="page-subtitle">Estos pedidos están listos para despacho y aún no han sido asignados.</p>
+          </div>
+          <button class="btn btn-outline btn-refresh-dispatch" @click="handleManualRefresh" :disabled="isRefreshing" title="Actualizar pedidos">
+            <RefreshCw :size="16" :class="{ 'spin-icon': isRefreshing }" />
+            <span>Actualizar</span>
+          </button>
         </div>
 
         <!-- Filters Bar -->
@@ -658,7 +729,7 @@ const formatPrice = (val: number) => {
 
         <!-- List of Available Orders -->
         <div v-if="isLoading" class="loading-box">
-          <div class="spinner"></div>
+          <IceCream class="spinner" :size="48" color="#e4869f" />
           <span>Cargando pedidos disponibles...</span>
         </div>
 
@@ -722,9 +793,15 @@ const formatPrice = (val: number) => {
 
       <!-- TAB 2: MIS DESPACHOS -->
       <section v-else class="tab-section">
-        <div class="section-title-box">
-          <h1 class="page-title">Mis Despachos</h1>
-          <p class="page-subtitle">Estos son los pedidos que tienes asignados.</p>
+        <div class="section-title-box flex-title-bar">
+          <div>
+            <h1 class="page-title">Mis Despachos</h1>
+            <p class="page-subtitle">Estos son los pedidos que tienes asignados.</p>
+          </div>
+          <button class="btn btn-outline btn-refresh-dispatch" @click="handleManualRefresh" :disabled="isRefreshing" title="Actualizar mis despachos">
+            <RefreshCw :size="16" :class="{ 'spin-icon': isRefreshing }" />
+            <span>Actualizar</span>
+          </button>
         </div>
 
         <!-- Status Pills Filters -->
@@ -798,7 +875,7 @@ const formatPrice = (val: number) => {
 
         <!-- List of My Dispatches -->
         <div v-if="isLoading" class="loading-box">
-          <div class="spinner"></div>
+          <IceCream class="spinner" :size="48" color="#e4869f" />
           <span>Cargando mis despachos...</span>
         </div>
 
@@ -970,10 +1047,12 @@ const formatPrice = (val: number) => {
             </div>
 
             <div class="summary-box">
-              <span class="box-label">Días en espera / Entrega</span>
-              <span v-if="selectedOrder.fecha_entrega" class="box-val small-val">{{ formatDate(selectedOrder.fecha_entrega) }}</span>
-              <span v-else class="badge badge-green">
-                {{ getDaysWaiting(selectedOrder.created_at || selectedOrder.fecha_creacion) }} días
+              <span class="box-label">{{ selectedOrder.fecha_entrega ? 'Fecha de Entrega' : 'Días en espera' }}</span>
+              <strong v-if="selectedOrder.fecha_entrega" class="box-val small-val" style="color: #15803d;">
+                {{ formatDeliveryDateTime(selectedOrder.fecha_entrega) }}
+              </strong>
+              <span v-else class="badge" :class="getBadgeInfo(selectedOrder.created_at || selectedOrder.fecha_creacion).colorClass">
+                {{ formatDaysWaitingText(selectedOrder.created_at || selectedOrder.fecha_creacion) }}
               </span>
             </div>
           </div>
@@ -1214,6 +1293,43 @@ const formatPrice = (val: number) => {
 
 .section-title-box {
   margin-bottom: 1.25rem;
+}
+
+.flex-title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-refresh-dispatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid #e4869f;
+  color: #e4869f;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh-dispatch:hover {
+  background: #fdf2f8;
+}
+
+.spin-icon {
+  animation: spin-refresh 1s linear infinite;
+}
+
+@keyframes spin-refresh {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .page-title {

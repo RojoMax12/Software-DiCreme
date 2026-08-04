@@ -17,10 +17,11 @@ class CotizacionController extends Controller
         $this->cotizacionServices = $cotizacionServices;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
-            $cotizaciones = $this->cotizacionServices->getAllCotizaciones();
+            $fecha = $request->query('fecha');
+            $cotizaciones = $this->cotizacionServices->getAllCotizaciones($fecha);
             return response()->json([
                 'status' => 'success',
                 'data'   => $cotizaciones
@@ -151,10 +152,17 @@ class CotizacionController extends Controller
                 'data'    => $pedido
             ], 200);
         } catch (\Throwable $e) {
-            return response()->json([
+            $payload = [
                 'status'  => 'error',
-                'message' => $e->getMessage() // Captura stock insuficiente
-            ], 422);
+                'message' => $e->getMessage()
+            ];
+            if ($e instanceof \App\Exceptions\MultiplesProductosSinStockException) {
+                $payload['productos_faltantes'] = $e->getProductosFaltantes();
+            } else if ($e instanceof \App\Exceptions\StockInsuficienteException) {
+                $payload['id_producto'] = $e->getIdProducto();
+                $payload['nombre_producto'] = $e->getNombreProducto();
+            }
+            return response()->json($payload, 422);
         }
     }
 

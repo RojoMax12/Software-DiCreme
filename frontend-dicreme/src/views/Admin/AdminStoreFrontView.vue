@@ -66,7 +66,8 @@
 
       <div class="editor-footer">
         <button class="btn-save" @click="saveCarousel" :disabled="isSavingCarousel">
-          <Save :size="18" />
+          <IceCream v-if="isSavingCarousel" class="spinner" :size="18" color="#ffffff" style="margin-right: 6px;" />
+          <Save v-else :size="18" />
           <span>{{ isSavingCarousel ? 'Guardando...' : 'Guardar Carrusel' }}</span>
         </button>
       </div>
@@ -135,7 +136,8 @@
 
       <div class="editor-footer">
         <button class="btn-save" @click="saveTicker" :disabled="isSavingTicker">
-          <Save :size="18" />
+          <IceCream v-if="isSavingTicker" class="spinner" :size="18" color="#ffffff" style="margin-right: 6px;" />
+          <Save v-else :size="18" />
           <span>{{ isSavingTicker ? 'Guardando...' : 'Guardar Avisos' }}</span>
         </button>
       </div>
@@ -149,8 +151,13 @@ import { ref, onMounted } from 'vue';
 import { 
   Upload, Trash2, ImageOff, Save, 
   Megaphone, Plus, MessageSquareOff, 
-  Image, MessageCircle 
+  Image, MessageCircle, IceCream 
 } from 'lucide-vue-next';
+import carruselService from '@/services/carruselService';
+import { getStorageUrl } from '@/utils/imageUrl';
+import { useNotification } from '@/composables/useNotification';
+
+const { notify } = useNotification();
 
 // --- ESTADO GENERAL ---
 const activeTab = ref<'carousel' | 'ticker'>('carousel');
@@ -162,6 +169,7 @@ interface CarouselImage {
   file?: File;
 }
 const carouselImages = ref<CarouselImage[]>([]);
+const deletedImageIds = ref<(number | string)[]>([]);
 const isSavingCarousel = ref(false);
 
 // --- ESTADO TICKER ---
@@ -169,15 +177,31 @@ const messages = ref<string[]>([]);
 const newMessage = ref('');
 const isSavingTicker = ref(false);
 
+const loadCarousel = async () => {
+  try {
+    const res = await carruselService.getCarruseles();
+    const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    carouselImages.value = data.map((item: any) => ({
+      id: item.id,
+      url: getStorageUrl(item.imagen_url)
+    }));
+  } catch (error) {
+    console.error('Error al cargar carrusel:', error);
+  }
+};
+
+const loadAvisos = async () => {
+  try {
+    const res = await carruselService.getAvisos();
+    messages.value = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+  } catch (error) {
+    console.error('Error al cargar avisos:', error);
+  }
+};
+
 onMounted(() => {
-  // Cargar datos simulados (AQUÍ REEMPLAZAS POR TUS LLAMADAS A LA API)
-  carouselImages.value = [
-    { url: 'https://via.placeholder.com/1920x600/fdf2f8/e4869f?text=Banner+1' }
-  ];
-  messages.value = [
-    "📢 Aviso: Horario de atención hasta las 17:00 hrs.",
-    "🚛 Envíos gratuitos a toda la Región Metropolitana."
-  ];
+  loadCarousel();
+  loadAvisos();
 });
 
 // --- FUNCIONES CARRUSEL ---
@@ -195,37 +219,44 @@ const handleFiles = (event: Event) => {
 };
 
 const removeImage = (index: number) => {
+  const removed = carouselImages.value[index];
+  if (removed && removed.id) {
+    deletedImageIds.value.push(removed.id);
+  }
   carouselImages.value.splice(index, 1);
 };
 
 const saveCarousel = async () => {
   isSavingCarousel.value = true;
   try {
-    const formData = new FormData();
+    // 1. Eliminar imágenes borradas de la BD y servidor
+    for (const id of deletedImageIds.value) {
+      try {
+        await carruselService.deleteCarrusel(id);
+      } catch (err) {
+        console.error(`Error al eliminar carrusel ${id}:`, err);
+      }
+    }
+    deletedImageIds.value = [];
 
-    // Recorremos las imágenes actuales y las metemos al FormData
-    carouselImages.value.forEach((img, index) => {
+    // 2. Guardar/subir imágenes nuevas
+    for (let i = 0; i < carouselImages.value.length; i++) {
+      const img = carouselImages.value[i];
       if (img.file) {
-        // Es una imagen NUEVA recién subida
-        formData.append(`nuevas_imagenes[${index}]`, img.file);
-      } else {
-        // Es una imagen que YA existía en la BD (solo enviamos la URL o ID)
-        formData.append(`imagenes_existentes[${index}]`, img.url);
+        const formData = new FormData();
+        formData.append('imagen_url', img.file);
+        formData.append('orden', (i + 1).toString());
+        formData.append('estado', '1');
+        await carruselService.createCarrusel(formData);
       }
-    });
+    }
 
-    // Ajusta la ruta '/api/carousel' a la que corresponda en tu Laravel
-    await axios.post('http://localhost:8000/api/carousel', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    alert('Carrusel guardado con éxito');
+    await loadCarousel();
+    notify('Carrusel guardado y subido al servidor con éxito', 'success');
 
   } catch (error) {
     console.error('Error al guardar el carrusel:', error);
-    alert('Error al guardar el carrusel');
+    notify('Error al guardar el carrusel', 'error');
   } finally {
     isSavingCarousel.value = false;
   }
@@ -243,26 +274,16 @@ const removeMessage = (index: number) => {
   messages.value.splice(index, 1);
 };
 
-// IMPORTANTE: Asegúrate de importar axios o tu servicio de API arriba
-// import api from '@/services/api' o import axios from 'axios'
-
 const saveTicker = async () => {
   isSavingTicker.value = true;
   try {
-    // 1. Aquí haces la petición REAL a tu backend
-    // Ajusta la ruta '/api/ticker' a la que hayas creado en las rutas de Laravel
-    await axios.post('http://localhost:8000/api/ticker', { 
-      messages: messages.value 
-    });
-
-    // 2. Si usas tu composable de notificaciones, reemplaza el alert:
-    // notify('Avisos guardados en la base de datos', 'success');
-    alert('Avisos guardados con éxito');
-
+    await carruselService.saveAvisos(messages.value);
+    await loadAvisos();
+    window.dispatchEvent(new Event('avisos-actualizados'));
+    notify('Avisos de la barra guardados con éxito', 'success');
   } catch (error) {
     console.error('Error al guardar avisos:', error);
-    // notify('Error al guardar los avisos', 'error');
-    alert('Error al guardar los avisos');
+    notify('Error al guardar los avisos', 'error');
   } finally {
     isSavingTicker.value = false;
   }
@@ -476,5 +497,15 @@ const saveTicker = async () => {
   padding: 12px 28px; border: none; border-radius: 9999px; font-weight: 700; cursor: pointer;
 }
 .btn-save:hover:not(:disabled) { background: #1e1b2e; }
+
+.spinner {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
 .btn-save:disabled { background: #cbd5e1; cursor: not-allowed; }
 </style>

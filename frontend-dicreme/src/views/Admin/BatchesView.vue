@@ -1,5 +1,12 @@
 <template>
   <div class="batch-detail-container">
+    <div v-if="returnQuoteId" class="return-quote-bar">
+      <div class="return-info">
+        <ClipboardList :size="20" color="#db2777" />
+        <span>Estás creando stock para la <strong>Cotización #{{ returnQuoteId }}</strong></span>
+      </div>
+    </div>
+
     <div class="header-section">
       <h2 class="title">Detalle {{ productName }} - {{ productFormat }}</h2>
       <hr class="divider" />
@@ -98,13 +105,27 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { Filter, Search, Warehouse } from 'lucide-vue-next';
+import { useRoute, useRouter } from 'vue-router';
+import { Filter, Search, Warehouse, ClipboardList, ArrowLeft } from 'lucide-vue-next';
 import batchService from '@/services/batchService';
 import UpdateBatchModal from '@/components/UpdateBatchModal.vue';
 import AddBatchModal from '@/components/AddBAtchModal.vue';
+import { useNotification } from '@/composables/useNotification';
 
 const route = useRoute();
+const router = useRouter();
+const { notify } = useNotification();
+
+const returnQuoteId = computed(() => route.query.returnQuote ? String(route.query.returnQuote) : null);
+
+const returnToQuote = () => {
+  if (returnQuoteId.value) {
+    router.push({
+      path: '/admin/quotes',
+      query: { openQuote: returnQuoteId.value }
+    });
+  }
+};
 
 const productId= route.params.id;
 const productName = route.query.product_name || 'Producto Desconocido';
@@ -206,12 +227,23 @@ const handleAddNewBatch = async (batchData: any) => {
 
     isAddBatchModalOpen.value = false;
 
-    triggerToast("Lote agregado exitosamente");
+    if (returnQuoteId.value) {
+      notify(`Lote creado con éxito. Haz clic aquí o en el botón para volver a la Cotización #${returnQuoteId.value}.`, 'success', {
+        title: 'Lote Creado',
+        actionText: `Volver a Cotización #${returnQuoteId.value}`,
+        onAction: () => returnToQuote(),
+        route: `/admin/quotes?openQuote=${returnQuoteId.value}`,
+        duration: 12000
+      });
+    } else {
+      notify("Lote agregado exitosamente", 'success');
+    }
     
     await loadBatches();
     
   } catch (error) {
     console.error("Error al crear el lote", error);
+    notify("Error al crear el lote", 'error');
   }
 };
 

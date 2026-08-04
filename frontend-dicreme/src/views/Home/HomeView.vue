@@ -81,11 +81,13 @@ import imgBanner3 from '@/assets/local_horario.webp'
 const heladoImages = import.meta.glob('@/assets/FotoHelados/*.webp', { eager: true, import: 'default' }) as Record<string, string>;
 
 
-const bannerImages = [
+import carruselService from '@/services/carruselService';
+
+const bannerImages = ref<string[]>([
   imgBanner1,
   imgBanner2,
   imgBanner3
-];
+]);
 
 // Estados reactivos
 const isLoading = ref(true)
@@ -356,7 +358,24 @@ const fetchIceCreams = async () => {
   }
 }
 
+const loadCarousel = async () => {
+  try {
+    const res = await carruselService.getCarruseles(true);
+    const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    const activeUrls = data
+      .filter((item: any) => item.estado)
+      .map((item: any) => getStorageUrl(item.imagen_url));
+
+    if (activeUrls.length > 0) {
+      bannerImages.value = activeUrls;
+    }
+  } catch (error) {
+    console.error('Error al cargar carrusel en HomeView:', error);
+  }
+};
+
 onMounted(() => {
+  loadCarousel();
   fetchIceCreams();
   fetchCategory();
   checkAuthStatus();
