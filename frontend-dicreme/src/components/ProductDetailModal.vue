@@ -16,16 +16,25 @@ const activeImage = ref('');
 const selectedSize = ref<'10L' | '5L' | '2.5L' | '1L'>('10L'); // Formato seleccionado por defecto
 const quantity = ref(1); // Cantidad por defecto
 
+const isFormatAvailable = (size: '10L' | '5L' | '2.5L' | '1L') => {
+  if (!props.product) return false;
+  if (size === '10L') return props.product.price10l !== 'No disponible' && Boolean(props.product.id10l);
+  if (size === '5L') return props.product.price5l !== 'No disponible' && Boolean(props.product.id5l);
+  if (size === '2.5L') return props.product.price25l !== 'No disponible' && Boolean(props.product.id25l);
+  if (size === '1L') return props.product.price1l !== 'No disponible' && Boolean(props.product.id1l);
+  return false;
+};
+
 // Resetear estados cuando se abre un producto diferente
 watch(() => props.product, (newProduct) => {
   if (newProduct) {
-    // TRUCO 1: Usar la imagen de la tarjeta que el navegador YA tiene en caché.
-    // Esto hace que el modal no tenga tiempo de carga inicial al abrirse.
     activeImage.value = newProduct.image || getImageUrl('10L.webp'); 
-    selectedSize.value = '10L';
     quantity.value = 1;
 
-    // TRUCO 2: Precargar el resto de formatos de forma invisible
+    const sizes: Array<'10L' | '5L' | '2.5L' | '1L'> = ['10L', '5L', '2.5L', '1L'];
+    const available = sizes.find(s => isFormatAvailable(s));
+    selectedSize.value = available || '10L';
+
     preloadFormatImages();
   }
 }, { immediate: true });
@@ -129,10 +138,11 @@ const handleAddToCart = () => {
               <div class="liters-buttons-container">
                 <button 
                   class="liter-btn"
-                  :class="{ active: selectedSize === '10L' }"
-                  @mouseenter="activeImage = getImageUrl('10L.webp')"
+                  :class="{ active: selectedSize === '10L', disabled: !isFormatAvailable('10L') }"
+                  :disabled="!isFormatAvailable('10L')"
+                  @mouseenter="isFormatAvailable('10L') && (activeImage = getImageUrl('10L.webp'))"
                   @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
-                  @click="selectSize('10L', '10L.webp')"
+                  @click="isFormatAvailable('10L') && selectSize('10L', '10L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">10L</span>
@@ -142,10 +152,11 @@ const handleAddToCart = () => {
 
                 <button 
                   class="liter-btn"
-                  :class="{ active: selectedSize === '5L' }"
-                  @mouseenter="activeImage = getImageUrl('5L.webp')"
+                  :class="{ active: selectedSize === '5L', disabled: !isFormatAvailable('5L') }"
+                  :disabled="!isFormatAvailable('5L')"
+                  @mouseenter="isFormatAvailable('5L') && (activeImage = getImageUrl('5L.webp'))"
                   @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
-                  @click="selectSize('5L', '5L.webp')"
+                  @click="isFormatAvailable('5L') && selectSize('5L', '5L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">5L</span>
@@ -155,10 +166,11 @@ const handleAddToCart = () => {
 
                 <button 
                   class="liter-btn"
-                  :class="{ active: selectedSize === '2.5L' }"
-                  @mouseenter="activeImage = getImageUrl('2.5L.webp')"
+                  :class="{ active: selectedSize === '2.5L', disabled: !isFormatAvailable('2.5L') }"
+                  :disabled="!isFormatAvailable('2.5L')"
+                  @mouseenter="isFormatAvailable('2.5L') && (activeImage = getImageUrl('2.5L.webp'))"
                   @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
-                  @click="selectSize('2.5L', '2.5L.webp')"
+                  @click="isFormatAvailable('2.5L') && selectSize('2.5L', '2.5L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">2.5L</span>
@@ -168,10 +180,11 @@ const handleAddToCart = () => {
 
                 <button 
                   class="liter-btn"
-                  :class="{ active: selectedSize === '1L' }"
-                  @mouseenter="activeImage = getImageUrl('1L.webp')"
+                  :class="{ active: selectedSize === '1L', disabled: !isFormatAvailable('1L') }"
+                  :disabled="!isFormatAvailable('1L')"
+                  @mouseenter="isFormatAvailable('1L') && (activeImage = getImageUrl('1L.webp'))"
                   @mouseleave="activeImage = getImageUrl(productImages[selectedSize])"
-                  @click="selectSize('1L', '1L.webp')"
+                  @click="isFormatAvailable('1L') && selectSize('1L', '1L.webp')"
                 >
                   <div class="btn-main-row">
                     <span class="btn-title">1L</span>
@@ -404,4 +417,22 @@ const handleAddToCart = () => {
 .pop-enter-active, .pop-leave-active { transition: all 0.3s ease; }
 .pop-enter-from, .pop-leave-to { opacity: 0; }
 .pop-enter-from .modal-wrapper, .pop-leave-to .modal-wrapper { transform: scale(0.95); }
+
+/* Estilos de botones de formato deshabilitados */
+.liter-btn.disabled, .liter-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: none !important;
+}
+
+.liter-btn.disabled .btn-title, .liter-btn:disabled .btn-title {
+  text-decoration: line-through;
+  color: #94a3b8 !important;
+}
+
+.liter-btn.disabled .btn-price, .liter-btn:disabled .btn-price {
+  color: #ef4444 !important;
+}
 </style>
