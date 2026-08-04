@@ -40,26 +40,43 @@
 
       <router-link v-role="[1,2]" to="/admin/inventario" class="admin-option-card">
         <div class="icon-container">
-          <Package2  :size="48" />
+          <Boxes  :size="48" />
         </div>
-        <h2>Inventario</h2>
+        <h2>Gestion de Inventario</h2>
         <p>Administra el inventario de los productos y sus lotes</p>
       </router-link>
 
       <router-link v-role="[1,2]" to="/admin/catalogo" class="admin-option-card">
         <div class="icon-container">
-          <Package2 :size="48" />
+          <BookOpen :size="48" />
         </div>
-        <h2>Catálogo</h2>
+        <h2>Gestion de Catálogo</h2>
         <p>Administrar el catálogo de los productos y sus precios</p>
       </router-link>
+
+      <router-link v-role="[1]" to="/admin/Apariencia" class="admin-option-card">
+        <div class="icon-container">
+          <LayoutTemplate :size="48" />
+        </div>
+        <h2>Apariencia de la Tienda</h2>
+        <p>Administrar el catálogo de los productos y sus precios</p>
+      </router-link>
+
+      <router-link v-role="[1]" to="/admin/vista-tienda" class="admin-option-card">
+        <div class="icon-container">
+          <Store :size="48" />
+        </div>
+        <h2>Vista Tienda</h2>
+        <p>Administrar la vista de la tienda</p>
+      </router-link>
+
 
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { FileText, ShoppingBag, FilePlus,Package2 ,Users } from 'lucide-vue-next';
+import { FileText, ShoppingBag, FilePlus, X, Users, Package2, Boxes, BookOpen, LayoutTemplate, Store } from 'lucide-vue-next';
 
 const getPanelTitle = () => {
   try {
