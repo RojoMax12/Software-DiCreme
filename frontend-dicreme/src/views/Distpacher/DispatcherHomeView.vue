@@ -570,6 +570,28 @@ const openDetailModal = (item: any) => {
   showDetailModal.value = true;
 };
 
+const openMap = (direccion: string, comuna: string) => {
+  const fullAddress = `${direccion}, ${comuna}`;
+  if (!fullAddress || fullAddress.trim() === ',') return;
+  
+  // Agregamos "Chile" para asegurar la precisión del GPS
+  const addressQuery = encodeURIComponent(`${fullAddress}, Chile`);
+  
+  // Detección de dispositivo Apple (iOS)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // Abre Apple Maps nativo
+    const appleMapsUrl = `http://maps.apple.com/?daddr=${addressQuery}`;
+    window.open(appleMapsUrl, '_blank');
+  } else {
+    // Abre Google Maps nativo (Android) o web (PC)
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${addressQuery}`;
+    window.open(googleMapsUrl, '_blank');
+  }
+};
+
 const showSuccessNotification = (msg: string) => {
   successMsg.value = msg;
   setTimeout(() => {
@@ -1090,7 +1112,17 @@ const formatPrice = (val: number) => {
             <div class="delivery-info-card">
               <div class="info-group">
                 <label>Dirección</label>
-                <p>{{ selectedOrder.direccion_entrega }}, {{ selectedOrder.comuna }}</p>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                  <p>{{ selectedOrder.direccion_entrega }}, {{ selectedOrder.comuna }}</p>
+                  
+                  <button 
+                    class="btn-abrir-mapa" 
+                    @click="openMap(selectedOrder.direccion_entrega, selectedOrder.comuna)"
+                  >
+                    <MapPin :size="16" />
+                    <span>Ruta</span>
+                  </button>
+                </div>
               </div>
               <div class="info-group">
                 <label>Referencia</label>
@@ -2235,4 +2267,26 @@ const formatPrice = (val: number) => {
 
 .slide-enter-active, .slide-leave-active { transition: opacity 0.25s ease; }
 .slide-enter-from, .slide-leave-to { opacity: 0; }
+
+/* Botón de Mapas */
+.btn-abrir-mapa {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap; /* Evita que el botón se rompa en dos líneas */
+}
+
+.btn-abrir-mapa:hover {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
 </style>
