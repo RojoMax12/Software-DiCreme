@@ -16,7 +16,7 @@
       <div class="footer-info-section">
         <h4 class="section-subtitle">Soporte y Contacto</h4>
         <ul class="info-list">
-          <li><strong>Email:</strong> contacto@dicreme.cl o contacto.dicreme@gmail.com</li>
+          <li><strong>Email:</strong> contacto@dicreme.cl</li>
           <li><strong>Teléfono:</strong> +56 9 9583 8926</li>
           <li><strong>Dirección:</strong> Alhué 2643, Pedro Aguirre Cerda, Santiago, Chile</li>
         </ul>
