@@ -32,6 +32,16 @@
             <Search :size="18" class="search-icon" />
           </div>
 
+          <button 
+            v-if="searchQuery || selectedFormat !== 'todos'" 
+            class="btn-clear-filter" 
+            @click="clearFilters" 
+            title="Limpiar todos los filtros"
+          >
+            <X :size="14" />
+            <span>Limpiar Filtro</span>
+          </button>
+
           <button class="btn-check-toolbar" @click="openCheckerModal" title="Simular pedido y verificar quiebres de stock">
             <ShieldAlert :size="16" />
             <span>Verificar Disponibilidad</span>
@@ -53,8 +63,11 @@
             
             <tbody v-if="isLoading">
               <tr>
-                <td colspan="5" style="padding: 30px; color: #9793a0; font-style: italic;">
-                  Cargando inventario desde la base de datos...
+                <td colspan="5" style="text-align: center; padding: 30px 0;">
+                  <div class="table-loading-box">
+                    <IceCream class="spinner" :size="36" color="#e4869f" />
+                    <span>Cargando inventario desde la base de datos...</span>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -99,7 +112,9 @@
               v-else 
               v-for="alert in deficitAlerts" 
               :key="alert.id" 
-              class="alert-item"
+              class="alert-item clickable-alert"
+              @click="filterByAlert(alert)"
+              title="Haz clic para filtrar por este lote"
             >
               <span class="item-name">{{ alert.name }}</span>
               <span class="status-pill" :class="alert.pillClass">
@@ -123,7 +138,9 @@
               v-else 
               v-for="batch in expiringbatchesAlerts" 
               :key="batch.id" 
-              class="alert-item"
+              class="alert-item clickable-alert"
+              @click="filterByAlert(batch)"
+              title="Haz clic para filtrar por este lote"
             >
               <span class="item-name">{{ batch.name }}</span>
               <span class="status-pill" :class="batch.pillClass">
@@ -240,7 +257,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ShieldAlert, AlertTriangle } from 'lucide-vue-next'
+import { Search, ShieldAlert, AlertTriangle, X, IceCream } from 'lucide-vue-next'
 import productService from '@/services/productService'
 import batchService from '@/services/batchService'
 import { useNotification } from '@/composables/useNotification'
@@ -309,6 +326,8 @@ const fetchAlertsData = async () => {
     apiLowStockAlerts.value = lowStockList.map((item: any) => ({
       id: item.id,
       name: item.name || `${item.nombre_producto} - ${item.formato?.nombre_formato || 'N/A'}`,
+      raw_nombre_producto: item.nombre_producto || item.name?.split(' - ')[0],
+      raw_formato: item.formato?.nombre_formato || item.name?.split(' - ')[1],
       statusText: item.statusText,
       pillClass: item.pillClass
     }))
@@ -316,7 +335,9 @@ const fetchAlertsData = async () => {
     const expiringList = resPorVencer.data?.data || resPorVencer.data || []
     apiExpiringBatches.value = expiringList.map((b: any) => ({
       id: b.id,
-      name: b.name || `${b.nombre_producto} - ${b.formato || 'N/A'}`,
+      name: b.name || `${b.nombre_producto} - ${b.formato?.nombre_formato || b.formato || 'N/A'}`,
+      raw_nombre_producto: b.nombre_producto || b.name?.split(' - ')[0],
+      raw_formato: b.formato?.nombre_formato || b.formato || b.name?.split(' - ')[1],
       batchNumber: b.batchNumber || `Lote N°${b.id}`,
       cantidad_producto: b.cantidad_producto,
       statusText: b.statusText || b.batchNumber || `Lote N°${b.id}`,
@@ -357,6 +378,8 @@ const deficitAlerts = computed(() => {
     return {
       id: item.id,
       name: `${item.nombre_producto || 'N/A'} - ${item.formato?.nombre_formato || 'N/A'}`,
+      raw_nombre_producto: item.nombre_producto,
+      raw_formato: item.formato?.nombre_formato,
       statusText,
       pillClass
     }
@@ -366,6 +389,35 @@ const deficitAlerts = computed(() => {
 const expiringbatchesAlerts = computed(() => {
   return apiExpiringBatches.value
 })
+
+// Función para filtrar automáticamente al hacer clic en una alerta
+const filterByAlert = (alert: any) => {
+  let productName = alert.raw_nombre_producto
+  let formatName = alert.raw_formato
+
+  if (!productName && alert.name) {
+    const parts = alert.name.split(' - ')
+    productName = parts[0]
+    if (parts.length > 1) {
+      formatName = parts[1]
+    }
+  }
+
+  if (productName) {
+    searchQuery.value = productName.trim()
+  }
+
+  if (formatName && ['1L', '2.5L', '5L', '10L'].includes(formatName.trim())) {
+    selectedFormat.value = formatName.trim()
+  } else {
+    selectedFormat.value = 'todos'
+  }
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  selectedFormat.value = 'todos'
+}
 
 const handleSaveProduct = async (datosSimulados: any) => {
   console.log('Datos del nuevo producto:', datosSimulados)
@@ -749,6 +801,39 @@ const runStockCheck = async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
+.clickable-alert {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clickable-alert:hover {
+  border-color: #e4869f;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(228, 134, 159, 0.2);
+  background-color: #fff0f3;
+}
+
+.btn-clear-filter {
+  background-color: #f1f3f5;
+  border: 1px solid #ced4da;
+  color: #495057;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-filter:hover {
+  background-color: #e4869f;
+  color: white;
+  border-color: #e4869f;
+}
+
 .item-name {
   font-size: 0.95rem;
   font-weight: 800;
@@ -1021,5 +1106,26 @@ const runStockCheck = async () => {
   .main-content-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.table-loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 0;
+  color: #9793a0;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+.spinner {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

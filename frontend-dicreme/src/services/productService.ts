@@ -67,5 +67,12 @@ export default {
 
     toggleProductState(nombreProducto: string) {
         return api.put(`/productos/${encodeURIComponent(nombreProducto)}/toggle-estado`);
+    },
+
+    bulkToggleState(productIds: number[], estadoProducto: boolean) {
+        return api.post('/productos/bulk-estado', {
+            product_ids: productIds,
+            estado_producto: estadoProducto
+        });
     }
 }
